@@ -270,7 +270,7 @@ try:
                 st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
                 
         with col_tabela:
-            st.markdown('<h4 style="color: #333;">💎 Cargas VIP (Top 10)</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #333;">💎 Cargas com Maior valor agregado (Top 10)</h4>', unsafe_allow_html=True)
             tkt_forn = rec.groupby('FORNECEDOR/SELLER').agg(QTD_CARGAS=('VALOR_REAL', 'count'), TICKET_MEDIO=('VALOR_REAL', 'mean')).reset_index().sort_values('TICKET_MEDIO', ascending=False).head(10)
             if not tkt_forn.empty:
                 tkt_forn['Ticket'] = tkt_forn['TICKET_MEDIO'].apply(formatar_moeda_br)
