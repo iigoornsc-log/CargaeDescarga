@@ -59,9 +59,8 @@ def carregar_dados():
     client = conectar_google()
     sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
     ws_historico = sh.worksheet("HISTÓRICO 2025")
-    dados_h = ws_historico.get_all_values()
-    df_h = pd.DataFrame(dados_h[1:], columns=dados_h[0])
-    return df_h
+    dados_h = pd.DataFrame(ws_historico.get_all_values()[1:], columns=ws_historico.get_all_values()[0])
+    return dados_h
 
 # --- 4. TRATAMENTO SÊNIOR ---
 def formatar_moeda_br(valor):
@@ -69,10 +68,8 @@ def formatar_moeda_br(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def tratar_dados(df_h):
-    # Padronização Inicial e Desduplicação
     df_h['STATUS'] = df_h['STATUS'].astype(str).str.strip().str.upper()
     df_h['AGENDA WMS'] = df_h['AGENDA WMS'].astype(str).str.strip().str.upper()
-    
     df_h['DATA AGENDA'] = df_h['DATA AGENDA'].astype(str).str.strip()
     df_h['DATA AGENDADA'] = pd.to_datetime(df_h['DATA AGENDA'], dayfirst=True, errors='coerce')
     df_h = df_h.dropna(subset=['DATA AGENDADA']).copy()
@@ -84,16 +81,13 @@ def tratar_dados(df_h):
     df_com_wms = df_h[mask_wms_valido].drop_duplicates(subset=['AGENDA WMS'], keep='first')
     df_sem_wms = df_h[~mask_wms_valido]
     
-    df_h = pd.concat([df_com_wms, df_sem_wms], ignore_index=True)
-    df_h = df_h.drop(columns=['PRIORIDADE_STATUS'])
+    df_h = pd.concat([df_com_wms, df_sem_wms], ignore_index=True).drop(columns=['PRIORIDADE_STATUS'])
 
-    # Datas
     df_h['ANO'] = df_h['DATA AGENDADA'].dt.year.astype('Int64')
     df_h['MES_ORDENACAO'] = df_h['DATA AGENDADA'].dt.to_period('M')
     meses_pt = {1:'Jan', 2:'Fev', 3:'Mar', 4:'Abr', 5:'Mai', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Set', 10:'Out', 11:'Nov', 12:'Dez'}
     df_h['MES_NOME'] = df_h['DATA AGENDADA'].dt.month.map(meses_pt) + "/" + df_h['ANO'].astype(str)
 
-    # Limpeza Moeda
     def limpar_moeda(valor):
         if pd.isna(valor) or str(valor).strip() == '': return 0.0
         v = str(valor).upper().replace('R$', '').replace(' ', '').strip()
@@ -106,44 +100,31 @@ def tratar_dados(df_h):
 
     df_h['VALOR_REAL'] = df_h['VALOR'].apply(limpar_moeda) if 'VALOR' in df_h.columns else 0.0
     
-    # Textos
     df_h['LINHA'] = df_h['LINHA'].astype(str).str.strip().str.upper()
     df_h['FORNECEDOR/SELLER'] = df_h['FORNECEDOR/SELLER'].astype(str).str.strip().str.upper()
     df_h['CATEGORIA'] = df_h['CATEGORIA'].astype(str).str.strip().str.upper()
 
-    # ==========================================
-    # 1º PASSO: FILTRO GERAL DE OPERAÇÕES INTERNAS (CDs, Filiais, etc)
-    # ==========================================
+    # 1. Filtro de Intercompany
     def eh_interno(forn):
         if forn.startswith(('MAGAZINE', 'FILIAL')): return True
         if re.match(r'^C[D\d]', forn): return True 
         return False
-        
     df_h = df_h[~df_h['FORNECEDOR/SELLER'].apply(eh_interno)]
 
-    # ==========================================
-    # 2º PASSO: SEPARAÇÃO DA MALHA FULL (OPORTUNIDADE EXTERNA)
-    # ==========================================
+    # 2. Separação da Malha FULL
     mask_full = df_h['LINHA'].str.contains('FULL', na=False) | df_h['CATEGORIA'].str.contains('FULL', na=False)
-    
-    df_full = df_h[mask_full].copy() # Base separada só com os FULL Externos
-    df_main = df_h[~mask_full].copy() # Base oficial de faturamento
+    df_full = df_h[mask_full].copy()
+    df_main = df_h[~mask_full].copy()
 
-    # Só mantém pagantes na base principal
     pag_l = df_main[df_main['VALOR_REAL'] > 0]['LINHA'].unique()
     pag_c = df_main[df_main['VALOR_REAL'] > 0]['CATEGORIA'].unique()
-    pag_l = [l for l in pag_l if l != '']
-    pag_c = [c for c in pag_c if c != '']
-    df_main = df_main[(df_main['LINHA'].isin(pag_l)) | (df_main['CATEGORIA'].isin(pag_c))].copy()
+    df_main = df_main[(df_main['LINHA'].isin([l for l in pag_l if l != ''])) | (df_main['CATEGORIA'].isin([c for c in pag_c if c != '']))].copy()
 
-    # ==========================================
-    # CÁLCULO DAS MÉDIAS E IMPUTAÇÃO
-    # ==========================================
+    # Médias Reais
     df_ok = df_main[(df_main['STATUS'] == 'OK') & (df_main['VALOR_REAL'] > 0)]
     m_linha = df_ok.groupby('LINHA')['VALOR_REAL'].mean().to_dict()
     m_cat = df_ok.groupby('CATEGORIA')['VALOR_REAL'].mean().to_dict()
 
-    # Imputação de Ausentes na Base Principal (Faturamento Real)
     df_main['VALOR_PERDIDO'] = 0.0
     mask_aus = df_main['STATUS'] == 'AUSENTE'
     df_main.loc[mask_aus, 'VALOR_PERDIDO'] = df_main.loc[mask_aus, 'LINHA'].map(m_linha)
@@ -151,27 +132,20 @@ def tratar_dados(df_h):
     df_main.loc[mask_zero, 'VALOR_PERDIDO'] = df_main.loc[mask_zero, 'CATEGORIA'].map(m_cat)
     df_main['VALOR_PERDIDO'] = df_main['VALOR_PERDIDO'].fillna(0).round(2)
 
-    # ==========================================
-    # 🚀 CALIBRAGEM INTELIGENTE DO TICKET MALHA FULL
-    # ==========================================
-    # 1. Tenta puxar a média real da categoria (Vai funcionar perfeitamente para MADEIRA, etc)
+    # Oportunidade FULL
     df_full['VALOR_ESTIMADO'] = df_full['CATEGORIA'].map(m_cat)
-    
-    # 2. Regra Comercial: Se a categoria for DIVERSOS (Vans menores), trava o ticket em R$ 350
     df_full.loc[df_full['CATEGORIA'] == 'DIVERSOS', 'VALOR_ESTIMADO'] = 350.00
-    
-    # 3. O que não achou categoria (vazio), joga a média combinada de R$ 500 (range 400-600)
     df_full['VALOR_ESTIMADO'] = df_full['VALOR_ESTIMADO'].fillna(500.00).round(2)
 
     return df_main, df_full
 
 # --- 5. RENDERIZAÇÃO E FILTROS ---
 try:
-    with st.spinner('Sincronizando com Base de Dados e Calculando Oportunidades...'):
+    with st.spinner('Sincronizando com Base de Dados e Calculando Custos...'):
         df_raw = carregar_dados()
         df, df_full = tratar_dados(df_raw)
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR (AGORA COM PARÂMETROS DE CUSTO) ---
     st.sidebar.markdown('<h2 style="color: #0086FF;">🔍 Filtros</h2>', unsafe_allow_html=True)
     hoje = datetime.date.today()
     ontem = hoje - datetime.timedelta(days=1)
@@ -189,15 +163,25 @@ try:
             data_ini = selecao[0] if isinstance(selecao, (tuple, list)) else selecao
             data_fim = data_ini
 
+    st.sidebar.markdown("---")
+    st.sidebar.markdown('<h3 style="color: #8A2BE2;">⚙️ Custos da Equipe (Folha)</h3>', unsafe_allow_html=True)
+    st.sidebar.caption("Estes valores geram a barra de Custo (Roxa) no gráfico mensal.")
+    
+    # Parâmetros Editáveis (Você pediu 40 pessoas e R$ 2100)
+    qtd_pessoas = st.sidebar.number_input("Tamanho da Equipe (Qtd)", min_value=1, value=40, step=1)
+    salario_base = st.sidebar.number_input("Salário / Custo por Pessoa (R$)", min_value=0.0, value=2100.0, step=100.0)
+    
+    custo_mensal_equipe = qtd_pessoas * salario_base
+
     mask_data_main = (df['DATA AGENDADA'].dt.date >= data_ini) & (df['DATA AGENDADA'].dt.date <= data_fim)
     mask_data_full = (df_full['DATA AGENDADA'].dt.date >= data_ini) & (df_full['DATA AGENDADA'].dt.date <= data_fim)
     
     df_f = df[mask_data_main].copy()
     df_full_f = df_full[mask_data_full].copy()
 
-    # --- CORPO DO DASHBOARD (FATURAMENTO OFICIAL) ---
+    # --- CORPO DO DASHBOARD ---
     st.markdown('<div class="main-title">Logística Magazine Luiza 📦</div>', unsafe_allow_html=True)
-    st.markdown(f"<div style='color: #6B7280; margin-bottom: 20px;'>Visão Oficial de Faturamento | Período: <b>{data_ini.strftime('%d/%m/%Y')}</b> até <b>{data_fim.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='color: #6B7280; margin-bottom: 20px;'>Visão de Faturamento | Período: <b>{data_ini.strftime('%d/%m/%Y')}</b> até <b>{data_fim.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
 
     if not df_f.empty:
         rec = df_f[df_f['STATUS'] == 'OK']
@@ -211,7 +195,7 @@ try:
 
         col1, col2, col3, col4, col5 = st.columns(5)
         metrics = [
-            ("💰 Arrecadação", total_r, "success"), ("📉 Perda Ausentes", total_p, "danger"),
+            ("💰 Faturamento Bruto", total_r, "success"), ("📉 Perda Ausentes", total_p, "danger"),
             ("🚛 Ticket / Carga", tkt_carga, ""), ("📅 Ticket / Dia", m_dia, ""), ("📆 Ticket / Mês", m_mes, "")
         ]
         
@@ -219,15 +203,100 @@ try:
             with [col1, col2, col3, col4, col5][i]:
                 st.markdown(f'<div class="kpi-card {style}"><div class="kpi-title">{title}</div><div class="kpi-value">{formatar_moeda_br(val)}</div></div>', unsafe_allow_html=True)
 
-        # Tabelas TOP 10 Oficiais
+        layout_clean = dict(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter, sans-serif", color='#4B5563'))
+
+        # ==========================================
+        # Seção Dividida: GRÁFICO DE DRE (70%) + TABELA VIP (30%)
+        # ==========================================
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+        col_grafico, col_tabela = st.columns([7, 3])
+        
+        with col_grafico:
+            st.markdown('<h4 style="color: #333;">📊 DRE Logístico: Faturamento vs Custo vs % Perda</h4>', unsafe_allow_html=True)
+            
+            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(
+                ARRECADADO=('VALOR_REAL', 'sum'), 
+                PERDIDO=('VALOR_PERDIDO', 'sum')
+            ).reset_index().sort_values('MES_ORDENACAO')
+            
+            if not ev_mes.empty:
+                # Lógica do DRE Mensal
+                ev_mes['TOTAL_POTENCIAL'] = ev_mes['ARRECADADO'] + ev_mes['PERDIDO']
+                ev_mes['PERDA_PERCENTUAL'] = (ev_mes['PERDIDO'] / ev_mes['TOTAL_POTENCIAL'].replace(0, 1)) * 100
+                
+                # Injetando o custo da folha de pagamento no gráfico
+                ev_mes['FOLHA_CUSTO'] = custo_mensal_equipe
+                ev_mes['LUCRO_BRUTO'] = ev_mes['ARRECADADO'] - ev_mes['FOLHA_CUSTO']
+                
+                ev_mes['TXT_ARRECADADO'] = ev_mes['ARRECADADO'].apply(formatar_moeda_br)
+                ev_mes['TXT_CUSTO'] = ev_mes['FOLHA_CUSTO'].apply(formatar_moeda_br)
+                ev_mes['TXT_LUCRO'] = ev_mes['LUCRO_BRUTO'].apply(formatar_moeda_br)
+                ev_mes['TXT_PERDA'] = ev_mes['PERDIDO'].apply(formatar_moeda_br)
+                ev_mes['TXT_PERCENT'] = ev_mes['PERDA_PERCENTUAL'].apply(lambda x: f"{x:.1f}%")
+
+                fig3 = make_subplots(specs=[[{"secondary_y": True}]])
+                
+                # 1. Barra Azul (Faturamento)
+                fig3.add_trace(go.Bar(
+                    x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturamento", 
+                    marker_color='#0086FF', text=ev_mes['TXT_ARRECADADO'], textposition='outside',
+                    hovertemplate="<b>Mês:</b> %{x}<br><b>Faturado:</b> %{text}<br><b>Lucro (Pós-Folha):</b> %{customdata}<extra></extra>",
+                    customdata=ev_mes['TXT_LUCRO']
+                ), secondary_y=False)
+                
+                # 2. Barra Roxa (Folha de Pagamento)
+                fig3.add_trace(go.Bar(
+                    x=ev_mes['MES_NOME'], y=ev_mes['FOLHA_CUSTO'], name="Custo Folha", 
+                    marker_color='#8A2BE2', text=ev_mes['TXT_CUSTO'], textposition='outside',
+                    hovertemplate="<b>Mês:</b> %{x}<br><b>Custo Equipe:</b> %{text}<extra></extra>"
+                ), secondary_y=False)
+
+                # 3. Linha Vermelha (% de Perda)
+                fig3.add_trace(go.Scatter(
+                    x=ev_mes['MES_NOME'], y=ev_mes['PERDA_PERCENTUAL'], name="Taxa de Perda (%)", 
+                    mode='lines+markers+text', marker=dict(color='#FF3366', size=10), 
+                    line=dict(color='#FF3366', width=4, shape='spline'), 
+                    text=ev_mes['TXT_PERCENT'], textposition='top center', 
+                    textfont=dict(color='#FF3366', size=14, weight='bold'), 
+                    customdata=ev_mes['TXT_PERDA'], 
+                    hovertemplate="<b>Mês:</b> %{x}<br><b>Taxa de Perda:</b> %{text}<br><b>Valor Perdido:</b> %{customdata}<extra></extra>"
+                ), secondary_y=True)
+                
+                fig3.update_layout(**layout_clean)
+                
+                # barmode='group' é o segredo para colocar as barras Azul e Roxa lado a lado!
+                fig3.update_layout(
+                    barmode='group',
+                    showlegend=True, 
+                    legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), 
+                    margin=dict(t=80, b=10, l=0, r=0)
+                )
+                
+                max_y = max(ev_mes['ARRECADADO'].max(), ev_mes['FOLHA_CUSTO'].max())
+                fig3.update_yaxes(visible=False, secondary_y=False, range=[0, max_y * 1.3]) 
+                fig3.update_yaxes(visible=False, secondary_y=True, range=[0, max(ev_mes['PERDA_PERCENTUAL'].max() * 1.5, 10)])
+                
+                st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+            else:
+                st.info("Sem dados mensais para exibir.")
+                
+        with col_tabela:
+            st.markdown('<h4 style="color: #333;">💎 Cargas VIP (Top 10)</h4>', unsafe_allow_html=True)
+            tkt_forn = rec.groupby('FORNECEDOR/SELLER').agg(QTD_CARGAS=('VALOR_REAL', 'count'), TICKET_MEDIO=('VALOR_REAL', 'mean')).reset_index().sort_values('TICKET_MEDIO', ascending=False).head(10)
+            if not tkt_forn.empty:
+                tkt_forn['Ticket'] = tkt_forn['TICKET_MEDIO'].apply(formatar_moeda_br)
+                st.dataframe(tkt_forn[['FORNECEDOR/SELLER', 'QTD_CARGAS', 'Ticket']].rename(columns={'FORNECEDOR/SELLER':'Fornecedor', 'QTD_CARGAS':'Cargas'}), hide_index=True, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # ==========================================
+        # TABELAS TOP 10 OFICIAIS
+        # ==========================================
         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
         g1, g2 = st.columns(2)
-        
         with g1:
-            st.markdown('<h4 style="color: #333;">Fornecedores mais cobrados</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #333;">🏆 Top 10 Arrecadação por Fornecedor</h4>', unsafe_allow_html=True)
             top_f = rec.groupby('FORNECEDOR/SELLER').agg(QTD=('STATUS', 'count'), TICKET=('VALOR_REAL', 'mean'), TOTAL=('VALOR_REAL', 'sum')).reset_index()
             top_f = top_f[top_f['TOTAL'] > 0].sort_values('TOTAL', ascending=False).head(10)
-            
             if not top_f.empty:
                 total_geral_rec = max(rec['VALOR_REAL'].sum(), 1)
                 top_f['% REC'] = (top_f['TOTAL'] / total_geral_rec) * 100
@@ -235,10 +304,9 @@ try:
                 top_f['TOTAL_FMT'] = top_f['TOTAL'].apply(formatar_moeda_br)
                 st.dataframe(top_f[['FORNECEDOR/SELLER', 'QTD', 'TICKET_FMT', 'TOTAL_FMT', '% REC']], column_config={"FORNECEDOR/SELLER": "Fornecedor", "QTD": "Cargas", "TICKET_FMT": "Ticket Médio", "TOTAL_FMT": "Total Arrecadado", "% REC": st.column_config.ProgressColumn("% da Oper.", format="%.1f%%", min_value=0, max_value=100)}, hide_index=True, use_container_width=True)
         with g2:
-            st.markdown('<h4 style="color: #333;">Maiores índices de Ausencia</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #333;">⚠️ Top 10 Prejuízo de Frete (Ausentes)</h4>', unsafe_allow_html=True)
             top_p = aus.groupby('FORNECEDOR/SELLER').agg(QTD=('STATUS', 'count'), TICKET=('VALOR_PERDIDO', 'mean'), TOTAL=('VALOR_PERDIDO', 'sum')).reset_index()
             top_p = top_p[top_p['TOTAL'] > 0].sort_values('TOTAL', ascending=False).head(10)
-            
             if not top_p.empty:
                 total_geral_aus = max(aus['VALOR_PERDIDO'].sum(), 1)
                 top_p['% PERDA'] = (top_p['TOTAL'] / total_geral_aus) * 100
@@ -247,48 +315,17 @@ try:
                 st.dataframe(top_p[['FORNECEDOR/SELLER', 'QTD', 'TICKET_FMT', 'TOTAL_FMT', '% PERDA']], column_config={"FORNECEDOR/SELLER": "Fornecedor", "QTD": "Faltas", "TICKET_FMT": "Ticket", "TOTAL_FMT": "Prejuízo", "% PERDA": st.column_config.ProgressColumn("% Perda", format="%.1f%%", min_value=0, max_value=100, color="#FF3366")}, hide_index=True, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Gráfico e Tabela VIP
-        layout_clean = dict(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter, sans-serif", color='#4B5563'), margin=dict(t=40, b=10, l=0, r=0))
-        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-        col_grafico, col_tabela = st.columns([7, 3])
-        
-        with col_grafico:
-            st.markdown('<h4 style="color: #333;">📊 Evolução Mensal: Arrecadação vs % de Perda</h4>', unsafe_allow_html=True)
-            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(ARRECADADO=('VALOR_REAL', 'sum'), PERDIDO=('VALOR_PERDIDO', 'sum')).reset_index().sort_values('MES_ORDENACAO')
-            if not ev_mes.empty:
-                ev_mes['TOTAL_POTENCIAL'] = ev_mes['ARRECADADO'] + ev_mes['PERDIDO']
-                ev_mes['PERDA_PERCENTUAL'] = (ev_mes['PERDIDO'] / ev_mes['TOTAL_POTENCIAL'].replace(0, 1)) * 100
-                
-                fig3 = make_subplots(specs=[[{"secondary_y": True}]])
-                fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Arrecadado", marker_color='#0086FF', text=ev_mes['ARRECADADO'].apply(formatar_moeda_br), textposition='outside'), secondary_y=False)
-                fig3.add_trace(go.Scatter(x=ev_mes['MES_NOME'], y=ev_mes['PERDA_PERCENTUAL'], name="Taxa de Perda (%)", mode='lines+markers+text', marker=dict(color='#FF3366', size=10), line=dict(color='#FF3366', width=4, shape='spline'), text=ev_mes['PERDA_PERCENTUAL'].apply(lambda x: f"{x:.1f}%"), textposition='top center'), secondary_y=True)
-                
-                fig3.update_layout(**layout_clean)
-                fig3.update_layout(showlegend=False, margin=dict(t=30, b=10, l=0, r=0))
-                fig3.update_yaxes(visible=False)
-                
-                st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
-                
-        with col_tabela:
-            st.markdown('<h4 style="color: #333;">💎 Cargas com Maior valor agregado (Top 10)</h4>', unsafe_allow_html=True)
-            tkt_forn = rec.groupby('FORNECEDOR/SELLER').agg(QTD_CARGAS=('VALOR_REAL', 'count'), TICKET_MEDIO=('VALOR_REAL', 'mean')).reset_index().sort_values('TICKET_MEDIO', ascending=False).head(10)
-            if not tkt_forn.empty:
-                tkt_forn['Ticket'] = tkt_forn['TICKET_MEDIO'].apply(formatar_moeda_br)
-                st.dataframe(tkt_forn[['FORNECEDOR/SELLER', 'QTD_CARGAS', 'Ticket']].rename(columns={'FORNECEDOR/SELLER':'Fornecedor', 'QTD_CARGAS':'Cargas'}), hide_index=True, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
     # ==========================================
     # 🚀 SIMULAÇÃO DE MALHA FULL (C-LEVEL)
     # ==========================================
     st.markdown("---")
-    st.markdown('<h2 style="color: #111827; font-weight: 800;"> Estudo de Oportunidade: Recebimento cargas FULL</h2>', unsafe_allow_html=True)
-    st.markdown("<p style='color: #6B7280;'>Projeção financeira considerando ticket médio histórico para categorias de linha pesada (ex: Madeira) e ticket calibrado em R$ 350,00 para categoria Diversos (Vans).</p>", unsafe_allow_html=True)
+    st.markdown('<h2 style="color: #111827; font-weight: 800;">🚀 Estudo de Oportunidade: Monetização da Malha FULL</h2>', unsafe_allow_html=True)
+    st.markdown("<p style='color: #6B7280;'>Projeção financeira considerando ticket médio histórico para categorias pesadas e ticket de R$ 350,00 para categoria Diversos.</p>", unsafe_allow_html=True)
     
     if df_full_f.empty:
         st.info("Nenhum veículo da malha FULL agendado neste período.")
     else:
         full_ok = df_full_f[df_full_f['STATUS'] == 'OK']
-        
         qtd_full = len(full_ok)
         receita_potencial = full_ok['VALOR_ESTIMADO'].sum()
         ticket_medio_full = full_ok['VALOR_ESTIMADO'].mean() if qtd_full > 0 else 0
@@ -298,27 +335,16 @@ try:
         with c1:
             st.markdown(f'<div class="kpi-card gold"><div class="kpi-title">🚛 Veículos FULL (Recebidos)</div><div class="kpi-value">{qtd_full} cargas</div></div>', unsafe_allow_html=True)
         with c2:
-            st.markdown(f'<div class="kpi-card gold"><div class="kpi-title">💰 Receita estimada (Deixou de Cobrar)</div><div class="kpi-value">{formatar_moeda_br(receita_potencial)}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="kpi-card gold"><div class="kpi-title">💰 Receita Potencial (Deixou de Cobrar)</div><div class="kpi-value">{formatar_moeda_br(receita_potencial)}</div></div>', unsafe_allow_html=True)
         with c3:
-            st.markdown(f'<div class="kpi-card gold"><div class="kpi-title">🎯 Ticket Médio </div><div class="kpi-value">{formatar_moeda_br(ticket_medio_full)}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="kpi-card gold"><div class="kpi-title">🎯 Ticket Médio Ponderado</div><div class="kpi-value">{formatar_moeda_br(ticket_medio_full)}</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-        st.markdown('<h4>Detalhamento de Fornecedores FULL</h4>', unsafe_allow_html=True)
-        
-        full_agrupado = full_ok.groupby('FORNECEDOR/SELLER').agg(
-            QTD=('STATUS', 'count'),
-            TICKET_MED_EST=('VALOR_ESTIMADO', 'mean'),
-            RECEITA_ESTIMADA=('VALOR_ESTIMADO', 'sum')
-        ).reset_index().sort_values('RECEITA_ESTIMADA', ascending=False)
-        
+        full_agrupado = full_ok.groupby('FORNECEDOR/SELLER').agg(QTD=('STATUS', 'count'), TICKET_MED_EST=('VALOR_ESTIMADO', 'mean'), RECEITA_ESTIMADA=('VALOR_ESTIMADO', 'sum')).reset_index().sort_values('RECEITA_ESTIMADA', ascending=False)
         full_agrupado['Ticket Médio (R$)'] = full_agrupado['TICKET_MED_EST'].apply(formatar_moeda_br)
         full_agrupado['Receita Estimada (R$)'] = full_agrupado['RECEITA_ESTIMADA'].apply(formatar_moeda_br)
-        
-        st.dataframe(
-            full_agrupado[['FORNECEDOR/SELLER', 'QTD', 'Ticket Médio (R$)', 'Receita Estimada (R$)']].rename(columns={'FORNECEDOR/SELLER':'Fornecedor FULL', 'QTD': 'Volume de Cargas'}),
-            hide_index=True, use_container_width=True
-        )
+        st.dataframe(full_agrupado[['FORNECEDOR/SELLER', 'QTD', 'Ticket Médio (R$)', 'Receita Estimada (R$)']].rename(columns={'FORNECEDOR/SELLER':'Fornecedor FULL', 'QTD': 'Volume de Cargas'}), hide_index=True, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
