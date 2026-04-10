@@ -10,86 +10,61 @@ import re
 import datetime
 from datetime import date
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA ---
+# --- 1. CONFIGURAÇÃO DA PÁGINA (MOBILE OPTIMIZED) ---
 st.set_page_config(
     page_title="Magalu | Gestão de Carga e Descarga", 
     layout="wide", 
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" # No celular, já abre recolhido (Menu Hamburguer)
 )
 
-# --- 2. CSS DE ALTO NÍVEL (CLONE UI MAGALU) ---
+# --- 2. CSS DE ALTO NÍVEL (UI/UX MOBILE MAGALU) ---
 st.markdown("""
     <style>
-    /* Fundo da aplicação (Cinza Claro) */
     .stApp { background-color: #F4F6F9; }
-    
-    /* Barra lateral */
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
-    [data-testid="stSidebar"] hr { margin: 10px 0; border-color: #E2E8F0; }
     
-    /* Tipografia e Textos */
     * { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     p, div, span { color: #334155; }
     
-    /* Títulos da Página */
-    .magalu-page-title { color: #0086FF; font-size: 24px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 10px;}
-    .magalu-page-subtitle { color: #64748B; font-size: 14px; margin-bottom: 25px; }
+    .magalu-page-title { color: #0086FF; font-size: 22px; font-weight: 800; margin-bottom: 5px; line-height: 1.2;}
+    .magalu-page-subtitle { color: #64748B; font-size: 13px; margin-bottom: 20px; }
     
-    /* Etiqueta Azul (Ribbon) */
     .magalu-ribbon {
-        background-color: #0086FF;
-        color: #FFFFFF;
-        padding: 6px 16px;
-        font-size: 14px;
-        font-weight: 600;
-        display: inline-block;
-        border-radius: 0px 4px 4px 0px;
-        margin-bottom: 15px;
-        margin-top: 20px;
-        position: relative;
-        left: -1rem; 
-        box-shadow: 0 2px 4px rgba(0,134,255,0.2);
+        background-color: #0086FF; color: #FFFFFF; padding: 6px 16px; font-size: 14px; font-weight: 600;
+        display: inline-block; border-radius: 0px 4px 4px 0px; margin-bottom: 10px; margin-top: 15px;
+        position: relative; left: -1rem; box-shadow: 0 2px 4px rgba(0,134,255,0.2);
     }
     
-    /* Containers Brancos (Cards) */
     .magalu-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 6px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        margin-bottom: 15px;
+        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); margin-bottom: 15px;
     }
     
-    /* Estilização de Botões (Azul Magalu) */
+    /* OTIMIZAÇÃO MOBILE: Botões grandes e fáceis de tocar */
     .stButton>button {
-        background-color: #0086FF;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        transition: all 0.2s;
+        background-color: #0086FF; color: white; border: none; border-radius: 8px;
+        font-weight: 700; font-size: 16px; padding: 0.8rem 1rem; height: auto;
+        box-shadow: 0 4px 6px rgba(0, 134, 255, 0.2);
     }
-    .stButton>button:hover { background-color: #0073E6; color: white; box-shadow: 0 4px 6px rgba(0, 134, 255, 0.3); }
+    .stButton>button:hover { background-color: #0073E6; color: white; }
     
-    /* Tabelas (DataFrames) */
-    .stDataFrame { border: 1px solid #E2E8F0; border-radius: 4px; overflow: hidden; }
+    /* Inputs amigáveis para dedos */
+    input, .stSelectbox div[data-baseweb="select"] { border-radius: 6px !important; min-height: 45px !important;}
     
-    /* Inputs */
-    input, .stSelectbox div[data-baseweb="select"] { border-radius: 4px !important; border-color: #CBD5E1 !important; }
+    /* KPIs responsivos */
+    .kpi-card { background-color: #FFFFFF; border-radius: 8px; padding: 12px; border-left: 4px solid #0086FF; margin-bottom: 10px;}
+    .kpi-title { color: #6B7280; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .kpi-value { color: #111827; font-size: 20px; font-weight: 800; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. CONEXÃO GOOGLE SHEETS (HÍBRIDA: CLOUD / LOCAL) ---
+# --- 3. CONEXÃO GOOGLE SHEETS ---
 def conectar_google():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
-        # Tenta conectar via Streamlit Cloud (Segurança)
         cred_dict = json.loads(st.secrets["google_json"])
         creds = Credentials.from_service_account_info(cred_dict, scopes=scopes)
     except:
-        # Se falhar (rodando no PC), usa o seu arquivo local
         creds = Credentials.from_service_account_file(r'C:\Users\IIGOORNSC\Documents\CargaDescarga\credential_key.json', scopes=scopes)
     return gspread.authorize(creds)
 
@@ -115,7 +90,7 @@ def gravar_absenteismo(dados_para_gravar):
         ws_log.append_rows(dados_para_gravar)
         return True
     except:
-        st.error("Erro: A aba 'LOG_ABSENTEISMO' não foi encontrada na planilha de equipe.")
+        st.error("Erro: Aba 'LOG_ABSENTEISMO' não encontrada.")
         return False
 
 # --- 4. TRATAMENTO DE DADOS FINANCEIROS ---
@@ -191,33 +166,29 @@ def tratar_dados(df_h):
 
 
 # ==========================================
-# 🚀 MENU DE NAVEGAÇÃO LATERAL (ROTEADOR)
+# 🚀 MENU DE NAVEGAÇÃO LATERAL (MOBILE)
 # ==========================================
-st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos do Sistema</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos do App</div>', unsafe_allow_html=True)
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["📋 Lista de Chamada (Absenteísmo)", "📊 DRE e Oportunidades (Financeiro)"]
+    ["📋 Absenteísmo (Doca)", "📊 Financeiro (Diretoria)"]
 )
 st.sidebar.markdown("---")
 
 # ==========================================
-# PÁGINA 1: MÓDULO DE ABSENTEÍSMO
+# PÁGINA 1: MÓDULO DE ABSENTEÍSMO (MOBILE)
 # ==========================================
-if pagina_selecionada == "📋 Lista de Chamada (Absenteísmo)":
-    st.markdown('<div class="magalu-page-title">📄 Lançamento de Ocorrências</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Consulte o status da equipe e acompanhe o fluxo de absenteísmo diário.</div>', unsafe_allow_html=True)
+if pagina_selecionada == "📋 Absenteísmo (Doca)":
+    st.markdown('<div class="magalu-page-title">Lançamento de Ocorrências</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Pátio / Docas</div>', unsafe_allow_html=True)
     
     try:
         df_equipe = carregar_equipe()
         
-        # Filtros no padrão superior da imagem
-        st.markdown('<div class="magalu-ribbon">▼ Filtros da Chamada</div>', unsafe_allow_html=True)
+        # Filtros empilhados para caber no celular
         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-        col_data, col_busca, col_vazia = st.columns([2, 4, 2])
-        with col_data:
-            data_chamada = st.date_input("Data da Ocorrência", date.today())
-        with col_busca:
-            busca = st.text_input("Id do Auxiliar ou Nome", placeholder="Informe o ID ou Nome")
+        data_chamada = st.date_input("Data", date.today())
+        busca = st.text_input("🔍 Buscar Colaborador", placeholder="Matrícula ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if busca:
@@ -226,19 +197,19 @@ if pagina_selecionada == "📋 Lista de Chamada (Absenteísmo)":
             df_filtrado = df_equipe.copy()
 
         df_filtrado['OCORRÊNCIA'] = "PRESENTE" 
-
-        st.markdown('<div class="magalu-ribbon">Lista de Auxiliares Para Registro</div>', unsafe_allow_html=True)
         opcoes_ocorrencia = ["PRESENTE", "FALTA", "DSR", "BH", "LICENÇA", "ATESTADO"]
 
-        # Tabela (Data Editor) - CORREÇÃO AQUI (SelectboxColumn)
+        st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
+        
+        # TRUQUE MOBILE: Ocultamos 'CARGO' e 'TURNO' visualmente (None), mas o dataframe mantém para gravar!
         df_editado = st.data_editor(
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
-                "OCORRÊNCIA": st.column_config.SelectboxColumn("Status da Integração (Motivo)", options=opcoes_ocorrencia, required=True),
-                "ID": st.column_config.TextColumn("ID da Comanda (Matrícula)", disabled=True),
-                "NOME": st.column_config.TextColumn("Colaborador", disabled=True),
-                "CARGO": st.column_config.TextColumn("Função", disabled=True),
-                "TURNO": st.column_config.TextColumn("Turno", disabled=True),
+                "OCORRÊNCIA": st.column_config.SelectboxColumn("Status", options=opcoes_ocorrencia, required=True, width="medium"),
+                "ID": st.column_config.TextColumn("Matrícula", disabled=True, width="small"),
+                "NOME": st.column_config.TextColumn("Nome", disabled=True, width="large"),
+                "CARGO": None, # Oculto no celular
+                "TURNO": None, # Oculto no celular
             },
             hide_index=True,
             use_container_width=True,
@@ -246,136 +217,88 @@ if pagina_selecionada == "📋 Lista de Chamada (Absenteísmo)":
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        col_btn1, col_btn2 = st.columns([8, 2])
-        with col_btn2:
-            if st.button("Gravar Ocorrências"):
-                ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
-                if not ocorrencias.empty:
-                    lista_final = []
-                    data_str = data_chamada.strftime("%d/%m/%Y")
-                    for index, row in ocorrencias.iterrows():
-                        lista_final.append([data_str, row['ID'], row['NOME'], row['OCORRÊNCIA'], row['TURNO']])
-                    with st.spinner("Gravando no Banco de Dados..."):
-                        sucesso = gravar_absenteismo(lista_final)
-                        if sucesso:
-                            st.success(f"✅ Sucesso! {len(lista_final)} ocorrências registradas para o dia {data_str}.")
-                            st.cache_data.clear()
-                else:
-                    st.warning("Nenhuma falta ou ocorrência foi selecionada.")
+        
+        # Botão gigante (Full Width)
+        if st.button("Gravar no Sistema", use_container_width=True):
+            ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
+            if not ocorrencias.empty:
+                lista_final = []
+                data_str = data_chamada.strftime("%d/%m/%Y")
+                for index, row in ocorrencias.iterrows():
+                    lista_final.append([data_str, row['ID'], row['NOME'], row['OCORRÊNCIA'], row['TURNO']])
+                with st.spinner("Gravando..."):
+                    sucesso = gravar_absenteismo(lista_final)
+                    if sucesso:
+                        st.success(f"✅ {len(lista_final)} registros salvos!")
+                        st.cache_data.clear()
+            else:
+                st.warning("Nenhuma falta marcada.")
 
     except Exception as e:
-        st.error(f"Erro ao carregar equipe: {e}")
+        st.error(f"Erro na conexão com RH: {e}")
 
 # ==========================================
 # PÁGINA 2: DASHBOARD FINANCEIRO E DRE
 # ==========================================
-elif pagina_selecionada == "📊 DRE e Oportunidades (Financeiro)":
+elif pagina_selecionada == "📊 Financeiro (Diretoria)":
     try:
-        with st.spinner('Sincronizando com Base de Dados Financeira...'):
+        with st.spinner('Lendo faturamento...'):
             df_raw = carregar_dados_financeiros()
             df, df_full = tratar_dados(df_raw)
 
-        # Filtros Específicos do Financeiro na Sidebar
-        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; padding: 4px 12px; font-size: 12px;">Filtros de Data</div>', unsafe_allow_html=True)
+        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; font-size: 12px;">Parâmetros</div>', unsafe_allow_html=True)
         hoje = datetime.date.today()
         ontem = hoje - datetime.timedelta(days=1)
         d_min = df['DATA AGENDADA'].min().date() if not df.empty else datetime.date(2025, 1, 1)
         d_max_limite = max(hoje, datetime.date(2026, 12, 31))
         
-        if st.sidebar.button("Filtrar Apenas Ontem"):
-            data_ini = data_fim = ontem
+        selecao = st.sidebar.date_input("Período", value=(d_min, hoje), min_value=d_min, max_value=d_max_limite)
+        if isinstance(selecao, tuple) and len(selecao) == 2:
+            data_ini, data_fim = selecao
         else:
-            selecao = st.sidebar.date_input("Selecione o Período", value=(d_min, hoje), min_value=d_min, max_value=d_max_limite)
-            if isinstance(selecao, tuple) and len(selecao) == 2:
-                data_ini, data_fim = selecao
-            else:
-                data_ini = selecao[0] if isinstance(selecao, (tuple, list)) else selecao
-                data_fim = data_ini
+            data_ini = selecao[0] if isinstance(selecao, (tuple, list)) else selecao
+            data_fim = data_ini
 
-        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; padding: 4px 12px; font-size: 12px;">Custos (Folha)</div>', unsafe_allow_html=True)
-        qtd_pessoas = st.sidebar.number_input("Tamanho da Equipe", min_value=1, value=40, step=1)
-        salario_base = st.sidebar.number_input("Custo/Pessoa (R$)", min_value=0.0, value=2100.0, step=100.0)
+        st.sidebar.markdown('<div style="font-size: 12px; color: #64748B; margin-top: 10px;">Custo de Folha</div>', unsafe_allow_html=True)
+        qtd_pessoas = st.sidebar.number_input("Equipe", min_value=1, value=40, step=1)
+        salario_base = st.sidebar.number_input("R$/Pessoa", min_value=0.0, value=2100.0, step=100.0)
         custo_mensal_equipe = qtd_pessoas * salario_base
 
         mask_data_main = (df['DATA AGENDADA'].dt.date >= data_ini) & (df['DATA AGENDADA'].dt.date <= data_fim)
         mask_data_full = (df_full['DATA AGENDADA'].dt.date >= data_ini) & (df_full['DATA AGENDADA'].dt.date <= data_fim)
-        
         df_f = df[mask_data_main].copy()
         df_full_f = df_full[mask_data_full].copy()
 
-        st.markdown('<div class="magalu-page-title">📈 Demonstrativo de Resultados (DRE)</div>', unsafe_allow_html=True)
-        st.markdown(f"<div class='magalu-page-subtitle'>Consulte o faturamento consolidado do período selecionado.</div>", unsafe_allow_html=True)
+        st.markdown('<div class="magalu-page-title">DRE Operacional</div>', unsafe_allow_html=True)
+        st.markdown(f"<div class='magalu-page-subtitle'>{data_ini.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
         if not df_f.empty:
             rec = df_f[df_f['STATUS'] == 'OK']
             aus = df_f[df_f['STATUS'] == 'AUSENTE']
             
-            total_r = rec['VALOR_REAL'].sum()
-            total_p = aus['VALOR_PERDIDO'].sum()
-            tkt_carga = rec['VALOR_REAL'].mean()
-
-            st.markdown('<div class="magalu-ribbon">Indicadores Oficiais</div>', unsafe_allow_html=True)
-            col1, col2, col3 = st.columns(3)
-            with col1: st.markdown(f'<div class="magalu-card" style="border-left: 4px solid #00C853;"><div>Faturamento Bruto</div><div style="font-size:24px; font-weight:bold;">{formatar_moeda_br(total_r)}</div></div>', unsafe_allow_html=True)
-            with col2: st.markdown(f'<div class="magalu-card" style="border-left: 4px solid #FF3366;"><div>Perda Ausentes</div><div style="font-size:24px; font-weight:bold;">{formatar_moeda_br(total_p)}</div></div>', unsafe_allow_html=True)
-            with col3: st.markdown(f'<div class="magalu-card" style="border-left: 4px solid #0086FF;"><div>Ticket Médio (Carga)</div><div style="font-size:24px; font-weight:bold;">{formatar_moeda_br(tkt_carga)}</div></div>', unsafe_allow_html=True)
+            # No celular, não usamos colunas para os KPIs principais, deixamos empilhar
+            st.markdown(f'<div class="kpi-card" style="border-left-color: #00C853;"><div class="kpi-title">💰 Faturamento</div><div class="kpi-value">{formatar_moeda_br(rec["VALOR_REAL"].sum())}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="kpi-card" style="border-left-color: #FF3366;"><div class="kpi-title">📉 Perda Ausentes</div><div class="kpi-value">{formatar_moeda_br(aus["VALOR_PERDIDO"].sum())}</div></div>', unsafe_allow_html=True)
 
             layout_clean = dict(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Segoe UI, sans-serif", color='#334155'))
 
-            # DRE E TABELA VIP
-            st.markdown('<div class="magalu-ribbon">Análise Gráfica DRE e Cargas VIP</div>', unsafe_allow_html=True)
+            st.markdown('<div class="magalu-ribbon">Gráfico DRE Mensal</div>', unsafe_allow_html=True)
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-            col_grafico, col_tabela = st.columns([7, 3])
             
-            with col_grafico:
-                ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(ARRECADADO=('VALOR_REAL', 'sum'), PERDIDO=('VALOR_PERDIDO', 'sum')).reset_index().sort_values('MES_ORDENACAO')
+            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(ARRECADADO=('VALOR_REAL', 'sum'), PERDIDO=('VALOR_PERDIDO', 'sum')).reset_index().sort_values('MES_ORDENACAO')
+            if not ev_mes.empty:
+                ev_mes['FOLHA_CUSTO'] = custo_mensal_equipe
+                ev_mes['LUCRO_BRUTO'] = ev_mes['ARRECADADO'] - ev_mes['FOLHA_CUSTO']
                 
-                if not ev_mes.empty:
-                    ev_mes['TOTAL_POTENCIAL'] = ev_mes['ARRECADADO'] + ev_mes['PERDIDO']
-                    ev_mes['PERDA_PERCENTUAL'] = (ev_mes['PERDIDO'] / ev_mes['TOTAL_POTENCIAL'].replace(0, 1)) * 100
-                    ev_mes['FOLHA_CUSTO'] = custo_mensal_equipe
-                    ev_mes['LUCRO_BRUTO'] = ev_mes['ARRECADADO'] - ev_mes['FOLHA_CUSTO']
-                    
-                    ev_mes['TXT_ARRECADADO'] = ev_mes['ARRECADADO'].apply(formatar_moeda_br)
-                    ev_mes['TXT_CUSTO'] = ev_mes['FOLHA_CUSTO'].apply(formatar_moeda_br)
-                    ev_mes['TXT_LUCRO'] = ev_mes['LUCRO_BRUTO'].apply(formatar_moeda_br)
-                    ev_mes['TXT_PERDA'] = ev_mes['PERDIDO'].apply(formatar_moeda_br)
-                    ev_mes['TXT_PERCENT'] = ev_mes['PERDA_PERCENTUAL'].apply(lambda x: f"{x:.1f}%")
-
-                    fig3 = make_subplots(specs=[[{"secondary_y": True}]])
-                    fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturamento", marker_color='#0086FF', text=ev_mes['TXT_ARRECADADO'], textposition='outside', hovertemplate="<b>Mês:</b> %{x}<br><b>Faturado:</b> %{text}<br><b>Lucro (Pós-Folha):</b> %{customdata}<extra></extra>", customdata=ev_mes['TXT_LUCRO']), secondary_y=False)
-                    fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['FOLHA_CUSTO'], name="Custo Folha", marker_color='#94A3B8', text=ev_mes['TXT_CUSTO'], textposition='outside', hovertemplate="<b>Mês:</b> %{x}<br><b>Custo Equipe:</b> %{text}<extra></extra>"), secondary_y=False)
-                    fig3.add_trace(go.Scatter(x=ev_mes['MES_NOME'], y=ev_mes['PERDA_PERCENTUAL'], name="Taxa de Perda (%)", mode='lines+markers+text', marker=dict(color='#FF3366', size=10), line=dict(color='#FF3366', width=4, shape='spline'), text=ev_mes['TXT_PERCENT'], textposition='top center', textfont=dict(color='#FF3366', size=14, weight='bold'), customdata=ev_mes['TXT_PERDA'], hovertemplate="<b>Mês:</b> %{x}<br><b>Taxa de Perda:</b> %{text}<br><b>Valor Perdido:</b> %{customdata}<extra></extra>"), secondary_y=True)
-                    
-                    fig3.update_layout(**layout_clean, barmode='group', showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), margin=dict(t=50, b=10, l=0, r=0))
-                    
-                    max_y = max(ev_mes['ARRECADADO'].max(), ev_mes['FOLHA_CUSTO'].max())
-                    fig3.update_yaxes(visible=False, secondary_y=False, range=[0, max_y * 1.3]) 
-                    fig3.update_yaxes(visible=False, secondary_y=True, range=[0, max(ev_mes['PERDA_PERCENTUAL'].max() * 1.5, 10)])
-                    
-                    st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
-                    
-            with col_tabela:
-                tkt_forn = rec.groupby('FORNECEDOR/SELLER').agg(QTD_CARGAS=('VALOR_REAL', 'count'), TICKET_MEDIO=('VALOR_REAL', 'mean')).reset_index().sort_values('TICKET_MEDIO', ascending=False).head(10)
-                if not tkt_forn.empty:
-                    tkt_forn['Ticket'] = tkt_forn['TICKET_MEDIO'].apply(formatar_moeda_br)
-                    st.dataframe(tkt_forn[['FORNECEDOR/SELLER', 'QTD_CARGAS', 'Ticket']].rename(columns={'FORNECEDOR/SELLER':'Fornecedor', 'QTD_CARGAS':'Cargas'}), hide_index=True, use_container_width=True)
+                fig3 = make_subplots(specs=[[{"secondary_y": True}]])
+                fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturamento", marker_color='#0086FF'), secondary_y=False)
+                fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['FOLHA_CUSTO'], name="Custo Folha", marker_color='#94A3B8'), secondary_y=False)
+                
+                # No celular, escondemos o texto das barras para não poluir, o gerente passa o dedo para ler (Hover)
+                fig3.update_layout(**layout_clean, barmode='group', showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), margin=dict(t=50, b=0, l=0, r=0))
+                fig3.update_yaxes(visible=False)
+                st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # OPORTUNIDADE FULL
-        st.markdown('<div class="magalu-ribbon" style="background-color: #334155;">Estudo de Oportunidade: Malha FULL</div>', unsafe_allow_html=True)
-        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-        if df_full_f.empty:
-            st.info("Nenhum veículo da malha FULL agendado neste período.")
-        else:
-            full_ok = df_full_f[df_full_f['STATUS'] == 'OK']
-            qtd_full = len(full_ok)
-            receita_potencial = full_ok['VALOR_ESTIMADO'].sum()
-
-            c1, c2 = st.columns(2)
-            with c1: st.markdown(f'<div style="font-size:16px;">Veículos Recebidos: <b>{qtd_full} cargas</b></div>', unsafe_allow_html=True)
-            with c2: st.markdown(f'<div style="font-size:16px;">Receita Potencial (Oportunidade): <b>{formatar_moeda_br(receita_potencial)}</b></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
     except Exception as e:
-        st.error(f"Erro no módulo Financeiro: {e}")
+        st.error(f"Erro no módulo: {e}")
