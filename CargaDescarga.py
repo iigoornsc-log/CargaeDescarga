@@ -721,7 +721,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         </div>
                         
                         <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 6px; border-radius: 4px; border: 1px solid #FECACA;'>
-                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
+                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE DISPONILIZAÇÃO EQUIPE</span>
                         </div>
                         """, unsafe_allow_html=True)
         else:
