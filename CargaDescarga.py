@@ -374,7 +374,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         c_time.markdown(f"<div style='text-align:right; font-size:11px; color:#64748B; margin-top:5px;'>⌚ Início: {row['DATA_HORA']}</div>", unsafe_allow_html=True)
                         
                         # LINHA 2 DO CARD: Agenda e Líder
-                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Conferente:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
                         # LINHA 3 DO CARD: Equipe (Esquerda) e Botão Verde (Direita)
                         c_eq, c_btn = st.columns([7, 3])
