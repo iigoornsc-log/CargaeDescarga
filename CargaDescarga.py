@@ -341,7 +341,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
 
     # Criação das TRÊS abas solicitadas
-    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "👀 Visão das Docas (pendente)", "✍️ Apontar / Movimentar"])
+    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
