@@ -346,6 +346,17 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha):
                 st.cache_data.clear()
                 st.rerun()
 
+def gravar_alinhamento(dados_para_gravar):
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        ws_alinhamento = sh.worksheet("ALINHAMENTO")
+        ws_alinhamento.append_row(dados_para_gravar)
+        return True
+    except Exception as e:
+        st.error(f"Erro ao gravar na aba 'ALINHAMENTO'. Verifique se ela existe. Detalhe: {e}")
+        return False
+
 # ==========================================================
 # 4. TRATAMENTO FINANCEIRO
 # ==========================================================
@@ -425,7 +436,7 @@ def tratar_dados(df_h):
 st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos Operacional CD2900</div>', unsafe_allow_html=True)
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["🚛 Gestão de Docas", "📋 Absenteísmo (Doca)", "📊 Financeiro (Diretoria)"]
+    ["🚛 Gestão de Docas", "📋 Absenteísmo (Doca)", ","📅 Registro de Alinhamento","📊 Financeiro (Diretoria)"]
 )
 st.sidebar.markdown("---")
 
@@ -977,3 +988,59 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 
     except Exception as e:
         st.error(f"Erro no módulo financeiro: {e}")
+        
+# ==========================================================
+# MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
+# ==========================================================
+elif pagina_selecionada == "📅 Registro de Alinhamento":
+    st.markdown('<div class="magalu-page-title">Registro de Alinhamento</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Programe folgas, DSRs, banco de horas e férias da equipe.</div>', unsafe_allow_html=True)
+
+    try:
+        # Puxa a mesma lista de funcionários que já usamos
+        df_equipe = carregar_equipe()
+        lista_funcionarios = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
+        lista_funcionarios = [str(nome).strip() for nome in lista_funcionarios if str(nome).strip() != '']
+        lista_funcionarios.sort()
+        
+        # O nosso container com efeito de Vidro Fosco
+        with st.container(border=True):
+            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">🗓️ Novo Alinhamento</h4>', unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                nome_sel = st.selectbox("Selecione o Colaborador", options=[""] + lista_funcionarios)
+                motivo_sel = st.selectbox("Motivo do Alinhamento", options=["DSR", "BH", "FÉRIAS", "OUTROS"])
+            
+            with col2:
+                data_sel = st.date_input("Data do Alinhamento (Folga)", format="DD/MM/YYYY")
+                
+                # A Mágica: O campo 'Outros' só aparece se a opção for selecionada
+                motivo_outro = ""
+                if motivo_sel == "OUTROS":
+                    motivo_outro = st.text_input("Descreva o motivo (Obrigatório):", placeholder="Ex: Licença paternidade, Folga prêmio...")
+                    
+            st.markdown('<br>', unsafe_allow_html=True)
+            
+            # Botão verde Premium
+            if st.button("💾 Gravar Alinhamento", use_container_width=True, type="primary"):
+                if not nome_sel:
+                    st.warning("Selecione o colaborador.")
+                elif motivo_sel == "OUTROS" and not motivo_outro.strip():
+                    st.warning("Como você selecionou 'OUTROS', por favor descreva o motivo na caixa de texto.")
+                else:
+                    motivo_final = motivo_outro.strip().upper() if motivo_sel == "OUTROS" else motivo_sel
+                    data_folga_str = data_sel.strftime("%d/%m/%Y")
+                    data_registro_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y %H:%M:%S")
+                    
+                    # Ordem dos dados: Registro (Agora), Nome, Data da Folga, Motivo
+                    linha_gravar = [data_registro_str, nome_sel, data_folga_str, motivo_final]
+                    
+                    with st.spinner("Registrando no sistema..."):
+                        if gravar_alinhamento(linha_gravar):
+                            st.success(f"✅ Sucesso! Alinhamento de {nome_sel} para o dia {data_folga_str} ({motivo_final}) registrado!")
+                            st.balloons()
+                            
+    except Exception as e:
+        st.error(f"Erro no módulo de Alinhamento: {e}")
+   
