@@ -526,31 +526,5 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     if doca_antiga != str(doca_sel).strip():
                         conflitos[pessoa] = doca_antiga
             
-            st.markdown('---')
-            encerrar = st.checkbox("🛑 Encerrar esta Doca (Liberar Equipe)")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # Ação do Botão
-            if st.button("Gravar / Atualizar Doca", use_container_width=True):
-                if not doca_sel:
-                    st.warning("Preencha o número da Doca para continuar.")
-                elif not equipe_sel and not encerrar:
-                    st.warning("Selecione a equipe atual ou marque 'Encerrar esta Doca'.")
-                else:
-                    # Se tiver conflito (e não for um encerramento), abre o Pop-up Mágico!
-                    if conflitos and not encerrar:
-                        exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
-                    else:
-                        # Se estiver tudo limpo, grava direto sem incomodar o usuário
-                        with st.spinner("Registrando movimentação..."):
-                            sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar)
-                            if sucesso:
-                                if encerrar:
-                                    st.success(f"✅ Doca {doca_sel} encerrada!")
-                                else:
-                                    st.success(f"✅ Doca {doca_sel} atualizada!")
-                                    st.balloons()
-                                st.cache_data.clear()
-
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
