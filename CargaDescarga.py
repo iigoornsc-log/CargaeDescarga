@@ -92,6 +92,16 @@ def carregar_log_produtividade():
     except:
         return pd.DataFrame()
 
+@st.cache_data(ttl=60)
+def carregar_aux():
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI") # Usando sua planilha de equipe/aux
+    try:
+        ws = sh.worksheet("aux")
+        return pd.DataFrame(ws.get_all_records())
+    except:
+        return pd.DataFrame()
+
 def gravar_absenteismo(dados_para_gravar):
     client = conectar_google()
     sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
@@ -355,6 +365,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     # --- ABA 1: VISÃO EM TEMPO REAL ---
     with aba1:
         df_log = carregar_log_produtividade()
+        df_aux = carregar_aux() # Carrega a base de agendas
+        
+        if not df_aux.empty:
+            df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
         
         if not df_log.empty:
             df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
@@ -365,36 +379,55 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
                 for index, row in df_ativos.iterrows():
-                    # st.container(border=True) desenha o card nativo do Streamlit!
-                    with st.container(border=True):
+                    # --- INTELIGÊNCIA: Busca na base AUX ---
+                    agenda_str = str(row['AGENDA']).strip()
+                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
+                    
+                    if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
+                        aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
                         
-                        # LINHA 1 DO CARD: Doca e Hora
+                        pagto_str = "✅ Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                        valor_desc = aux_row.get('R$ DESCARGA', '-')
+                        if str(valor_desc).replace('.','',1).isdigit():
+                            valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
+                            
+                        info = {
+                            'LINHA': aux_row.get('LINHA', '-'),
+                            'SKU': aux_row.get('SKU', '-'),
+                            'PEÇAS': aux_row.get('PEÇAS', '-'),
+                            'VALOR': valor_desc,
+                            'PAGTO': pagto_str,
+                            'STATUS': aux_row.get('STATUS', '-')
+                        }
+
+                    with st.container(border=True):
                         c_title, c_time = st.columns([7, 3])
                         c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
                         c_time.markdown(f"<div style='text-align:right; font-size:11px; color:#64748B; margin-top:5px;'>⌚ Início: {row['DATA_HORA']}</div>", unsafe_allow_html=True)
                         
-                        # LINHA 2 DO CARD: Agenda e Líder
-                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Conferente:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
-                        # LINHA 3 DO CARD: Equipe (Esquerda) e Botão Verde (Direita)
+                        # NOVO BLOCO: Detalhes da Carga
+                        st.markdown(f"""
+                        <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
+                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagamento:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0086FF; font-weight:bold;">{info['STATUS']}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         c_eq, c_btn = st.columns([7, 3])
                         c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
                         
                         with c_btn:
-                            # O type="primary" faz o botão puxar o CSS verde que criamos no Passo 1
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 agora_dt = datetime.datetime.now()
                                 inicio_dt = row['DATA_HORA_DT']
-                                
-                                # Cálculo de Duração
                                 duracao = agora_dt - inicio_dt
                                 total_minutos = int(duracao.total_seconds() / 60)
-                                horas = total_minutos // 60
-                                mins = total_minutos % 60
+                                horas, mins = total_minutos // 60, total_minutos % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
                                 auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
-                                
                                 dados_conclusao = [
                                     agora_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
                                     str(row['CONFERENTE']), len(auxiliares_lista), row['AUXILIARES'], 
