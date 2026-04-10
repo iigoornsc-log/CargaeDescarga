@@ -461,8 +461,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
-                        
-                        with c_btn:
+                
                             with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 # 1. Cálculos de tempo
