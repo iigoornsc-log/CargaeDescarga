@@ -235,7 +235,7 @@ try:
                 top_f['TOTAL_FMT'] = top_f['TOTAL'].apply(formatar_moeda_br)
                 st.dataframe(top_f[['FORNECEDOR/SELLER', 'QTD', 'TICKET_FMT', 'TOTAL_FMT', '% REC']], column_config={"FORNECEDOR/SELLER": "Fornecedor", "QTD": "Cargas", "TICKET_FMT": "Ticket Médio", "TOTAL_FMT": "Total Arrecadado", "% REC": st.column_config.ProgressColumn("% da Oper.", format="%.1f%%", min_value=0, max_value=100)}, hide_index=True, use_container_width=True)
         with g2:
-            st.markdown('<h4 style="color: #333;">⚠️ Top 10 Prejuízo de Frete (Ausentes)</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #333;">⚠️ Top 10 Perdas por ausência)</h4>', unsafe_allow_html=True)
             top_p = aus.groupby('FORNECEDOR/SELLER').agg(QTD=('STATUS', 'count'), TICKET=('VALOR_PERDIDO', 'mean'), TOTAL=('VALOR_PERDIDO', 'sum')).reset_index()
             top_p = top_p[top_p['TOTAL'] > 0].sort_values('TOTAL', ascending=False).head(10)
             
