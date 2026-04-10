@@ -359,9 +359,13 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if df_ativos.empty:
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
+                # Pega a hora atual exata do servidor
+                agora_dt = datetime.datetime.now()
+                
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
                     info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
+                    meta_minutos = 60 # Meta padrão caso a base falhe
                     
                     if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
                         aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
@@ -371,12 +375,53 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                             
                         info = {'LINHA': aux_row.get('LINHA', '-'), 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
+                        
+                        # --- CAPTURA DA META ---
+                        try:
+                            # Procura qualquer coluna que tenha "META" no nome
+                            col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
+                            if col_meta and pd.notna(aux_row[col_meta]):
+                                meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
+                        except: pass
 
+                    # --- CÁLCULO DO CRONÔMETRO DE SLA ---
+                    inicio_dt = row['DATA_HORA_DT']
+                    if pd.isna(inicio_dt): inicio_dt = agora_dt
+                    
+                    decorrido_min = (agora_dt - inicio_dt).total_seconds() / 60
+                    restante_min = meta_minutos - decorrido_min
+                    
+                    if restante_min >= 0:
+                        h = int(restante_min // 60)
+                        m = int(restante_min % 60)
+                        cor_timer = "#00C853" # Verde
+                        bg_timer = "#E6F9EC"
+                        txt_timer = f"⏳ Resta {h:02d}h{m:02d}m"
+                    else:
+                        atraso = abs(restante_min)
+                        h = int(atraso // 60)
+                        m = int(atraso % 60)
+                        cor_timer = "#DC2626" # Vermelho
+                        bg_timer = "#FEF2F2"
+                        txt_timer = f"🚨 Atraso -{h:02d}h{m:02d}m"
+
+                    # --- DESENHO DO CARD ---
                     with st.container(border=True):
-                        c_title, c_time = st.columns([7, 3])
+                        # Colunas reajustadas para caber o timer na direita
+                        c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
-                        c_time.markdown(f"<div style='text-align:right; font-size:11px; color:#64748B; margin-top:5px;'>⌚ Início: {row['DATA_HORA']}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
+                        
+                        # Exibição do Timer e Hora de Início
+                        c_time.markdown(f"""
+                        <div style='text-align:right;'>
+                            <div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div>
+                            <div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>
+                                {txt_timer} <span style="font-size:10px; font-weight:normal;">(Meta: {meta_minutos}m)</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
                         st.markdown(f"""
                         <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
@@ -390,10 +435,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                                agora_dt = datetime.datetime.now()
-                                duracao = agora_dt - row['DATA_HORA_DT']
-                                total_minutos = int(duracao.total_seconds() / 60)
-                                horas, mins = total_minutos // 60, total_minutos % 60
+                                # Re-calcula no momento do clique exato
+                                clique_dt = datetime.datetime.now()
+                                duracao_final = clique_dt - row['DATA_HORA_DT']
+                                total_minutos_final = int(duracao_final.total_seconds() / 60)
+                                horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
                                 auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
@@ -401,12 +447,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 
                                 for pessoa in auxiliares_lista:
                                     linhas_conclusao_multiplas.append([
-                                        agora_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
+                                        clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
                                         str(row['CONFERENTE']), len(auxiliares_lista), pessoa, 
-                                        row['DATA_HORA'], agora_dt.strftime("%H:%M:%S"), tempo_str
+                                        row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str
                                     ])
                                 
-                                linha_log_fecha = [agora_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
+                                linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
                                 
                                 with st.spinner("Finalizando..."):
                                     if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
