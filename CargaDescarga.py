@@ -82,6 +82,16 @@ def carregar_equipe():
     ws = sh.worksheet("QUADRO CARGA e DESCARGA")
     return pd.DataFrame(ws.get_all_records())
 
+@st.cache_data(ttl=10) # Atualiza a cada 10 segundos para dar a visão em "Tempo Real"
+def carregar_log_produtividade():
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        ws = sh.worksheet("LOG_PRODUTIVIDADE")
+        return pd.DataFrame(ws.get_all_records())
+    except:
+        return pd.DataFrame()
+
 def gravar_absenteismo(dados_para_gravar):
     client = conectar_google()
     sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
@@ -319,48 +329,105 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 # ==========================================
 elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Aloque a equipe e registre as descargas.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real.</div>', unsafe_allow_html=True)
     
-    try:
-        df_equipe = carregar_equipe()
-        # Filtra apenas quem é de fato auxiliar para a lista não ficar gigante
-        lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
-        lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
-        
-        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-        st.markdown('<b style="color: #0086FF;">📍 Novo Apontamento</b>', unsafe_allow_html=True)
-        
-        # Formulário Mobile Friendly
-        col1, col2 = st.columns(2)
-        with col1:
-            doca_sel = st.text_input("Número da Doca", placeholder="Ex: 68")
-        with col2:
-            agenda_sel = st.text_input("Nº da Agenda / NF", placeholder="Ex: 2002159")
-            
-        conferente_sel = st.text_input("Nome do Conferente", placeholder="Ex: Felipe")
-        
-        st.markdown('<br>', unsafe_allow_html=True)
-        st.caption("Selecione os auxiliares alocados nesta doca:")
-        equipe_sel = st.multiselect("Equipe (Auxiliares)", options=lista_auxiliares)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    # Criando as Abas para o Celular
+    aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
 
-        if st.button("Gravar Apontamento na Doca", use_container_width=True):
-            if not doca_sel or not agenda_sel or not equipe_sel:
-                st.warning("Preencha a Doca, Agenda e selecione pelo menos 1 auxiliar.")
+    # --- ABA 1: VISÃO EM TEMPO REAL ---
+    with aba1:
+        df_log = carregar_log_produtividade()
+        
+        if not df_log.empty:
+            # Converte a coluna para data/hora de verdade para podermos ordenar
+            df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+            df_log = df_log.sort_values('DATA_HORA_DT', ascending=False)
+            
+            # Pulo do Gato Sênior: Remove docas duplicadas, mantendo só o ÚLTIMO status
+            df_ativos = df_log.drop_duplicates(subset=['DOCA'], keep='first')
+            
+            # Filtra fora as docas que já foram finalizadas
+            df_ativos = df_ativos[df_ativos['AUXILIARES'].notna() & (df_ativos['AUXILIARES'] != '') & (df_ativos['AUXILIARES'] != 'ENCERRADO')]
+
+            if df_ativos.empty:
+                st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
-                # Captura o momento exato em que o botão foi clicado
-                agora_str = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                auxiliares_str = ", ".join(equipe_sel) # Transforma a lista em um texto só separado por vírgula
+                # Desenha um "Card" para cada doca ativa
+                for index, row in df_ativos.iterrows():
+                    st.markdown(f'''
+                    <div class="magalu-card" style="border-left: 4px solid #0086FF; padding: 10px 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <b style="font-size: 18px; color: #111827;">Doca {row['DOCA']}</b>
+                            <span style="color: #64748B; font-size: 11px;">⌚ {row['DATA_HORA']}</span>
+                        </div>
+                        <div style="font-size: 13px; margin-top: 8px;"><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>
+                        <div style="font-size: 13px; margin-top: 5px; color: #0086FF; background-color: #E6F2FF; padding: 5px; border-radius: 4px;">
+                            <b>Equipe:</b> {row['AUXILIARES']}
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+        else:
+            st.info("O Log ainda está vazio. Faça o primeiro apontamento!")
+
+    # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
+    with aba2:
+        try:
+            df_equipe = carregar_equipe()
+            lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
+            lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
+            
+            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+            st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
+            st.caption("Para tirar alguém, basta lançar a mesma doca novamente sem o nome da pessoa.")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                doca_sel = st.text_input("Número da Doca", placeholder="Ex: 68")
+            with col2:
+                agenda_sel = st.text_input("Nº da Agenda", placeholder="Ex: 2002159")
                 
-                dados = [agora_str, doca_sel, agenda_sel, conferente_sel, auxiliares_str]
-                
-                with st.spinner("Registrando movimentação..."):
-                    sucesso = gravar_produtividade(dados)
-                    if sucesso:
-                        st.success(f"✅ Equipe alocada na Doca {doca_sel} com sucesso!")
-                        # Dá um balão no celular para confirmar
-                        st.balloons()
-                        
-    except Exception as e:
-        st.error(f"Erro no módulo de Docas: {e}")
+            conferente_sel = st.text_input("Nome do Conferente", placeholder="Ex: Felipe")
+            
+            st.markdown('<br>', unsafe_allow_html=True)
+            equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
+            
+            st.markdown('---')
+            # Checkbox mágico para encerrar a descarga e sumir com a doca da tela
+            encerrar = st.checkbox("🛑 Encerrar esta Doca (Liberar Equipe)")
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            if st.button("Gravar / Atualizar Doca", use_container_width=True):
+                if not doca_sel:
+                    st.warning("Preencha o número da Doca para continuar.")
+                else:
+                    agora_str = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    
+                    if encerrar:
+                        auxiliares_str = "ENCERRADO"
+                        agenda_final = agenda_sel if agenda_sel else "-"
+                        conferente_final = conferente_sel if conferente_sel else "-"
+                    else:
+                        if not equipe_sel:
+                            st.warning("Selecione a equipe atual ou marque 'Encerrar esta Doca'.")
+                            st.stop()
+                        auxiliares_str = ", ".join(equipe_sel)
+                        agenda_final = agenda_sel
+                        conferente_final = conferente_sel
+
+                    dados = [agora_str, doca_sel, agenda_final, conferente_final, auxiliares_str]
+                    
+                    with st.spinner("Registrando movimentação..."):
+                        sucesso = gravar_produtividade(dados)
+                        if sucesso:
+                            if encerrar:
+                                st.success(f"✅ Doca {doca_sel} encerrada e equipe liberada!")
+                            else:
+                                st.success(f"✅ Equipe da Doca {doca_sel} atualizada!")
+                                st.balloons()
+                            
+                            # Limpa o cache para a Aba 1 ver a mudança INSTANTANEAMENTE
+                            st.cache_data.clear()
+                            
+        except Exception as e:
+            st.error(f"Erro no módulo de Docas: {e}")
