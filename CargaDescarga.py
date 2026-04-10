@@ -512,7 +512,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
             lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
             
-            # Mapeamento do Status Atual
+            # --- MAPEAMENTO DO STATUS ATUAL (Para o Pop-up saber quem tá onde) ---
             df_log = carregar_log_produtividade()
             mapa_pessoas = {}
             info_docas = {}
@@ -529,26 +529,21 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     for p in eq_atual:
                         mapa_pessoas[p] = doca_atual
 
-            # --- FORMULÁRIO DE INTERFACE ---
+            # --- INÍCIO DO FORMULÁRIO DE INTERFACE ---
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
             
-            # Carrega as agendas disponíveis na base
+            # 1. Carrega e prepara as Agendas
             df_aux = carregar_aux()
             lista_agendas = []
             if not df_aux.empty:
                 df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
                 lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
             
-            # Lista suspensa pesquisável (O usuário pode clicar e digitar para filtrar)
+            # 2. Selectbox Mágico
             opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
-            agenda_combo = st.selectbox(
-                "Nº da Agenda (Selecione ou digite para buscar na lista)", 
-                options=opcoes_agenda,
-                index=0
-            )
+            agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar na lista)", options=opcoes_agenda, index=0)
             
-            # Lógica para permitir digitação livre caso a agenda não exista na base
             if agenda_combo == "➕ DIGITAR OUTRA AGENDA...":
                 agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
             else:
@@ -557,41 +552,35 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             doca_padrao = ""
             conf_padrao = ""
             
-            # --- INTELIGÊNCIA: Auto-preenchimento Robusto ---
+            # 3. Inteligência de Busca na base AUX
             if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
                 match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
                 if not match.empty:
-                    st.success("✅ Agenda localizada na base!")
-                    
-                    # Limpa os nomes das colunas da planilha para a busca inteligente
                     colunas_limpas = [str(c).upper().strip() for c in match.columns]
                     
-                    # Caça a coluna de DOCA (mesmo que tenha espaço escondido)
                     for col_real, col_upper in zip(match.columns, colunas_limpas):
                         if 'DOCA' in col_upper:
                             val = str(match.iloc[0][col_real])
                             if val.lower() != 'nan' and val.strip() != '': doca_padrao = val.strip()
                             break
                             
-                    # Caça a coluna de CONFERENTE ou LÍDER
                     for col_real, col_upper in zip(match.columns, colunas_limpas):
                         if 'CONFERENTE' in col_upper or 'LIDER' in col_upper or 'LÍDER' in col_upper:
                             val = str(match.iloc[0][col_real])
                             if val.lower() != 'nan' and val.strip() != '': conf_padrao = val.strip()
                             break
             
+            # 4. Campos pré-preenchidos
             col1, col2 = st.columns(2)
             with col1:
-                # Usa a variável `value=doca_padrao`. Se o Python achou, já vem preenchido!
                 doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
             with col2:
                 conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
                 
             st.markdown('<br>', unsafe_allow_html=True)
-            
             equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
             
-            # Análise de Conflitos Oculta
+            # 5. Verifica se rolou conflito (o cara tá em outra doca)
             conflitos = {}
             for pessoa in equipe_sel:
                 if pessoa in mapa_pessoas:
@@ -599,5 +588,33 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     if doca_antiga != str(doca_sel).strip():
                         conflitos[pessoa] = doca_antiga
             
+            st.markdown('---')
+            encerrar = st.checkbox("🛑 Encerrar esta Doca (Liberar Equipe)")
+            st.markdown('</div>', unsafe_allow_html=True)
+            # --- FIM DO FORMULÁRIO DE INTERFACE ---
+
+            # --- BOTÃO DE GRAVAÇÃO E LÓGICA DE AÇÃO ---
+            if st.button("Gravar / Atualizar Doca", use_container_width=True):
+                if not doca_sel:
+                    st.warning("Preencha o número da Doca para continuar.")
+                elif not equipe_sel and not encerrar:
+                    st.warning("Selecione a equipe atual ou marque 'Encerrar esta Doca'.")
+                else:
+                    # Se tiver conflito (e não for um encerramento), abre o Pop-up Mágico!
+                    if conflitos and not encerrar:
+                        exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
+                    else:
+                        # Se estiver tudo limpo, grava direto
+                        with st.spinner("Registrando movimentação..."):
+                            sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar)
+                            if sucesso:
+                                if encerrar:
+                                    st.success(f"✅ Doca {doca_sel} encerrada!")
+                                else:
+                                    st.success(f"✅ Doca {doca_sel} atualizada!")
+                                    st.balloons()
+                                st.cache_data.clear()
+                                st.rerun() # Atualiza a tela pra já jogar os dados na aba 1
+
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
