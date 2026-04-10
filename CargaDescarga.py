@@ -21,6 +21,11 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     * { font-family: 'Inter', sans-serif !important; }
 
+    /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
+    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    }
+
     /* 2. ANIMAÇÃO RGB LUIZALABS (Desnecessário, mas absurdamente foda) */
     @keyframes magaluGlow {
         0% { background-position: 0% 50%; }
