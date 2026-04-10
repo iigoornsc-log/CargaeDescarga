@@ -688,58 +688,132 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
 # ==========================================================
 elif pagina_selecionada == "📊 Financeiro (Diretoria)":
     try:
-        with st.spinner('Lendo faturamento...'):
+        with st.spinner('Sincronizando com Base de Dados Financeira...'):
             df_raw = carregar_dados_financeiros()
             df, df_full = tratar_dados(df_raw)
 
-        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; font-size: 12px;">Parâmetros</div>', unsafe_allow_html=True)
+        # --- Filtros ---
+        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; font-size: 12px;">Parâmetros de Data</div>', unsafe_allow_html=True)
         hoje = datetime.date.today()
-        ontem = hoje - datetime.timedelta(days=1)
         d_min = df['DATA AGENDADA'].min().date() if not df.empty else datetime.date(2025, 1, 1)
         d_max_limite = max(hoje, datetime.date(2026, 12, 31))
         
-        selecao = st.sidebar.date_input("Período", value=(d_min, hoje), min_value=d_min, max_value=d_max_limite)
+        selecao = st.sidebar.date_input("Selecione o Período", value=(d_min, hoje), min_value=d_min, max_value=d_max_limite)
         if isinstance(selecao, tuple) and len(selecao) == 2:
             data_ini, data_fim = selecao
         else:
             data_ini = selecao[0] if isinstance(selecao, (tuple, list)) else selecao
             data_fim = data_ini
 
-        st.sidebar.markdown('<div style="font-size: 12px; color: #64748B; margin-top: 10px;">Custo de Folha</div>', unsafe_allow_html=True)
-        qtd_pessoas = st.sidebar.number_input("Equipe", min_value=1, value=40, step=1)
-        salario_base = st.sidebar.number_input("R$/Pessoa", min_value=0.0, value=2100.0, step=100.0)
-        custo_mensal_equipe = qtd_pessoas * salario_base
-
         mask_data_main = (df['DATA AGENDADA'].dt.date >= data_ini) & (df['DATA AGENDADA'].dt.date <= data_fim)
-        mask_data_full = (df_full['DATA AGENDADA'].dt.date >= data_ini) & (df_full['DATA AGENDADA'].dt.date <= data_fim)
         df_f = df[mask_data_main].copy()
-        df_full_f = df_full[mask_data_full].copy()
 
-        st.markdown('<div class="magalu-page-title">DRE Operacional</div>', unsafe_allow_html=True)
-        st.markdown(f"<div class='magalu-page-subtitle'>{data_ini.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+        st.markdown('<div class="magalu-page-title">Visão Oficial de Faturamento</div>', unsafe_allow_html=True)
+        st.markdown(f"<div class='magalu-page-subtitle'>Período: <b>{data_ini.strftime('%d/%m/%Y')}</b> até <b>{data_fim.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
 
         if not df_f.empty:
             rec = df_f[df_f['STATUS'] == 'OK']
             aus = df_f[df_f['STATUS'] == 'AUSENTE']
             
-            st.markdown(f'<div class="kpi-card" style="border-left-color: #00C853;"><div class="kpi-title">💰 Faturamento</div><div class="kpi-value">{formatar_moeda_br(rec["VALOR_REAL"].sum())}</div></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="kpi-card" style="border-left-color: #FF3366;"><div class="kpi-title">📉 Perda Ausentes</div><div class="kpi-value">{formatar_moeda_br(aus["VALOR_PERDIDO"].sum())}</div></div>', unsafe_allow_html=True)
-
-            layout_clean = dict(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Segoe UI, sans-serif", color='#334155'))
-
-            st.markdown('<div class="magalu-ribbon">Gráfico DRE Mensal</div>', unsafe_allow_html=True)
-            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+            # --- Indicadores Principais ---
+            total_r = rec['VALOR_REAL'].sum()
+            total_p = aus['VALOR_PERDIDO'].sum()
+            tkt_carga = rec['VALOR_REAL'].mean() if not rec.empty else 0
             
-            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(ARRECADADO=('VALOR_REAL', 'sum'), PERDIDO=('VALOR_PERDIDO', 'sum')).reset_index().sort_values('MES_ORDENACAO')
+            dias_unicos = rec['DATA AGENDADA'].dt.date.nunique()
+            tkt_dia = total_r / dias_unicos if dias_unicos > 0 else 0
+            
+            meses_unicos = rec['MES_ORDENACAO'].nunique()
+            tkt_mes = total_r / meses_unicos if meses_unicos > 0 else 0
+
+            # --- 5 KPIs no Topo (Design Original) ---
+            col1, col2, col3, col4, col5 = st.columns(5)
+            with col1: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #00C853; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">💰 Arrecadação</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(total_r)}</div></div>', unsafe_allow_html=True)
+            with col2: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #FF3366; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📉 Perda Ausentes</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(total_p)}</div></div>', unsafe_allow_html=True)
+            with col3: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">🚛 Ticket / Carga</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_carga)}</div></div>', unsafe_allow_html=True)
+            with col4: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📅 Ticket / Dia</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_dia)}</div></div>', unsafe_allow_html=True)
+            with col5: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📆 Ticket / Mês</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_mes)}</div></div>', unsafe_allow_html=True)
+
+            # --- Tabelas Lado a Lado ---
+            col_t1, col_t2 = st.columns(2)
+            
+            with col_t1:
+                st.markdown("<h4 style='color: #334155;'>🏆 Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
+                if not rec.empty:
+                    top_rec = rec.groupby('FORNECEDOR/SELLER').agg(
+                        Cargas=('VALOR_REAL', 'count'),
+                        Ticket_Medio=('VALOR_REAL', 'mean'),
+                        Total_Arrecadado=('VALOR_REAL', 'sum')
+                    ).reset_index().sort_values('Total_Arrecadado', ascending=False).head(10)
+                    
+                    top_rec['% da Oper.'] = (top_rec['Total_Arrecadado'] / total_r) * 100
+                    
+                    st.dataframe(
+                        top_rec,
+                        column_config={
+                            "FORNECEDOR/SELLER": "Fornecedor",
+                            "Cargas": st.column_config.NumberColumn("Cargas"),
+                            "Ticket_Medio": st.column_config.NumberColumn("Ticket Médio", format="R$ %.2f"),
+                            "Total_Arrecadado": st.column_config.NumberColumn("Total Arrecadado", format="R$ %.2f"),
+                            "% da Oper.": st.column_config.ProgressColumn("% da Oper.", format="%.1f%%", min_value=0, max_value=100)
+                        },
+                        hide_index=True, use_container_width=True
+                    )
+            
+            with col_t2:
+                st.markdown("<h4 style='color: #334155;'>⚠️ Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
+                if not aus.empty:
+                    top_aus = aus.groupby('FORNECEDOR/SELLER').agg(
+                        Faltas=('VALOR_PERDIDO', 'count'),
+                        Ticket=('VALOR_PERDIDO', 'mean'),
+                        Prejuizo=('VALOR_PERDIDO', 'sum')
+                    ).reset_index().sort_values('Prejuizo', ascending=False).head(10)
+                    
+                    top_aus['% Perda'] = (top_aus['Prejuizo'] / total_p) * 100 if total_p > 0 else 0
+                    
+                    st.dataframe(
+                        top_aus,
+                        column_config={
+                            "FORNECEDOR/SELLER": "Fornecedor",
+                            "Faltas": st.column_config.NumberColumn("Faltas"),
+                            "Ticket": st.column_config.NumberColumn("Ticket", format="R$ %.2f"),
+                            "Prejuizo": st.column_config.NumberColumn("Prejuízo", format="R$ %.2f"),
+                            "% Perda": st.column_config.ProgressColumn("% Perda", format="%.1f%%", min_value=0, max_value=100)
+                        },
+                        hide_index=True, use_container_width=True
+                    )
+
+            # --- Gráfico de Barras e Linha ---
+            st.markdown('<div class="magalu-card" style="margin-top: 15px;">', unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #334155;'>📊 Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
+            
+            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(
+                ARRECADADO=('VALOR_REAL', 'sum'), 
+                PERDIDO=('VALOR_PERDIDO', 'sum')
+            ).reset_index().sort_values('MES_ORDENACAO')
+            
             if not ev_mes.empty:
-                ev_mes['FOLHA_CUSTO'] = custo_mensal_equipe
-                fig3 = make_subplots(specs=[[{"secondary_y": True}]])
-                fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturamento", marker_color='#0086FF'), secondary_y=False)
-                fig3.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['FOLHA_CUSTO'], name="Custo Folha", marker_color='#94A3B8'), secondary_y=False)
-                fig3.update_layout(**layout_clean, barmode='group', showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), margin=dict(t=50, b=0, l=0, r=0))
-                fig3.update_yaxes(visible=False)
-                st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+                fig = make_subplots(specs=[[{"secondary_y": True}]])
+                
+                # Barras de Faturamento
+                fig.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturado (R$)", marker_color='#0086FF', hovertemplate="%{x}<br>Faturado: R$ %{y:,.2f}<extra></extra>"), secondary_y=False)
+                
+                # Linha Vermelha de Perdas
+                fig.add_trace(go.Scatter(x=ev_mes['MES_NOME'], y=ev_mes['PERDIDO'], name="Perda por Ausência (R$)", mode='lines+markers', line=dict(color='#FF3366', width=4), marker=dict(size=8), hovertemplate="%{x}<br>Perdido: R$ %{y:,.2f}<extra></extra>"), secondary_y=True)
+                
+                fig.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(t=20, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+                )
+                
+                # Tira as linhas de grade para ficar um gráfico mais limpo
+                fig.update_yaxes(showgrid=False, secondary_y=False)
+                fig.update_yaxes(showgrid=False, secondary_y=True)
+                
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Erro no módulo: {e}")
+        st.error(f"Erro no módulo financeiro: {e}")
