@@ -407,7 +407,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         # --- CAPTURA DA META ---
                         try:
-                            # Procura qualquer coluna que tenha "META" no nome
                             col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
                             if col_meta and pd.notna(aux_row[col_meta]):
                                 meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
@@ -423,24 +422,22 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     if restante_min >= 0:
                         h = int(restante_min // 60)
                         m = int(restante_min % 60)
-                        cor_timer = "#00C853" # Verde
+                        cor_timer = "#00C853"
                         bg_timer = "#E6F9EC"
                         txt_timer = f"⏳ Resta {h:02d}h{m:02d}m"
                     else:
                         atraso = abs(restante_min)
                         h = int(atraso // 60)
                         m = int(atraso % 60)
-                        cor_timer = "#DC2626" # Vermelho
+                        cor_timer = "#DC2626"
                         bg_timer = "#FEF2F2"
                         txt_timer = f"🚨 Atraso -{h:02d}h{m:02d}m"
 
                     # --- DESENHO DO CARD ---
                     with st.container(border=True):
-                        # Colunas reajustadas para caber o timer na direita
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
                         
-                        # Exibição do Timer e Hora de Início
                         c_time.markdown(f"""
                         <div style='text-align:right;'>
                             <div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div>
@@ -461,8 +458,9 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
-                
-                            with c_btn:
+                        
+                        # --- AQUI ESTAVA O ERRO DE INDENTAÇÃO. AGORA ESTÁ CORRIGIDO! ---
+                        with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 # 1. Cálculos de tempo
                                 clique_dt = datetime.datetime.now()
@@ -484,12 +482,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
                                 
-                                # 3. DECISÃO: Estourou a meta? (Usando a meta que calculamos antes no card)
+                                # 3. DECISÃO: Estourou a meta?
                                 if restante_min < 0:
-                                    # Abre o Pop-up de Justificativa
                                     exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
                                 else:
-                                    # Finaliza direto (adicionando "No Prazo" na coluna de justificativa)
                                     for linha in linhas_conclusao_multiplas:
                                         linha.append("No Prazo")
                                         
