@@ -388,7 +388,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if df_ativos.empty:
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
-                agora_dt = datetime.datetime.now()
+                agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                 
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
@@ -503,7 +503,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if df_pendentes.empty:
                 st.info("Nenhuma agenda aguardando equipe. Pátio zerado! 🎉")
             else:
-                agora_dt = datetime.datetime.now()
+                agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                 
                 for index, row in df_pendentes.iterrows():
                     agenda_str = str(row['AGENDA WMS'])
