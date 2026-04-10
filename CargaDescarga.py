@@ -793,18 +793,42 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
             ).reset_index().sort_values('MES_ORDENACAO')
             
             if not ev_mes.empty:
+                # Criando as etiquetas formatadas em R$ para exibir no gráfico
+                text_arrecadado = [formatar_moeda_br(v) for v in ev_mes['ARRECADADO']]
+                text_perdido = [formatar_moeda_br(v) for v in ev_mes['PERDIDO']]
+
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
                 
-                # Barras de Faturamento
-                fig.add_trace(go.Bar(x=ev_mes['MES_NOME'], y=ev_mes['ARRECADADO'], name="Faturado (R$)", marker_color='#0086FF', hovertemplate="%{x}<br>Faturado: R$ %{y:,.2f}<extra></extra>"), secondary_y=False)
+                # Barras de Faturamento (com valor dentro/em cima da barra)
+                fig.add_trace(go.Bar(
+                    x=ev_mes['MES_NOME'], 
+                    y=ev_mes['ARRECADADO'], 
+                    name="Faturado (R$)", 
+                    marker_color='#0086FF', 
+                    text=text_arrecadado,
+                    textposition='auto', # 'auto' coloca dentro se couber, ou fora se a barra for pequena
+                    textfont=dict(size=11, color='#FFFFFF', weight='bold'),
+                    hovertemplate="%{x}<br>Faturado: %{text}<extra></extra>"
+                ), secondary_y=False)
                 
-                # Linha Vermelha de Perdas
-                fig.add_trace(go.Scatter(x=ev_mes['MES_NOME'], y=ev_mes['PERDIDO'], name="Perda por Ausência (R$)", mode='lines+markers', line=dict(color='#FF3366', width=4), marker=dict(size=8), hovertemplate="%{x}<br>Perdido: R$ %{y:,.2f}<extra></extra>"), secondary_y=True)
+                # Linha Vermelha de Perdas (com valor acima do ponto)
+                fig.add_trace(go.Scatter(
+                    x=ev_mes['MES_NOME'], 
+                    y=ev_mes['PERDIDO'], 
+                    name="Perda por Ausência (R$)", 
+                    mode='lines+markers+text', # O '+text' obriga a mostrar o rótulo
+                    line=dict(color='#FF3366', width=4), 
+                    marker=dict(size=8), 
+                    text=text_perdido,
+                    textposition='top center', # Coloca o valor acima da linha vermelha
+                    textfont=dict(size=11, color='#FF3366', weight='bold'),
+                    hovertemplate="%{x}<br>Perdido: %{text}<extra></extra>"
+                ), secondary_y=True)
                 
                 fig.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)',
-                    margin=dict(t=20, b=10, l=0, r=0),
+                    margin=dict(t=30, b=10, l=0, r=0),
                     legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
                 )
                 
