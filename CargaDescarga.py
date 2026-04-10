@@ -115,6 +115,23 @@ def gravar_produtividade(lista_de_linhas):
         st.error("Erro: Crie a aba 'LOG_PRODUTIVIDADE' na planilha de equipe.")
         return False
 
+def gravar_conclusao_doca(dados_finalizados, linha_encerramento_log):
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        # 1. Registra o histórico definitivo com o tempo de duração
+        ws_final = sh.worksheet("DOCAS_FINALIZADAS")
+        ws_final.append_rows([dados_finalizados])
+        
+        # 2. Registra o encerramento no Log de Produtividade para a doca sumir da visão ativa
+        ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
+        ws_log.append_rows([linha_encerramento_log])
+        
+        return True
+    except Exception as e:
+        st.error(f"Erro ao finalizar doca: {e}")
+        return False
+
 # --- 4. TRATAMENTO DE DADOS FINANCEIROS ---
 def formatar_moeda_br(valor):
     if pd.isna(valor) or valor == 0: return "R$ 0,00"
@@ -336,39 +353,69 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
 
     # --- ABA 1: VISÃO EM TEMPO REAL ---
+    # --- ABA 1: VISÃO EM TEMPO REAL ---
     with aba1:
         df_log = carregar_log_produtividade()
         
         if not df_log.empty:
-            # Converte a coluna para data/hora de verdade para podermos ordenar
             df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
-            df_log = df_log.sort_values('DATA_HORA_DT', ascending=False)
-            
-            # Pulo do Gato Sênior: Remove docas duplicadas, mantendo só o ÚLTIMO status
-            df_ativos = df_log.drop_duplicates(subset=['DOCA'], keep='first')
-            
-            # Filtra fora as docas que já foram finalizadas
+            df_ativos = df_log.sort_values('DATA_HORA_DT', ascending=False).drop_duplicates(subset=['DOCA'], keep='first')
             df_ativos = df_ativos[df_ativos['AUXILIARES'].notna() & (df_ativos['AUXILIARES'] != '') & (df_ativos['AUXILIARES'] != 'ENCERRADO')]
 
             if df_ativos.empty:
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
-                # Desenha um "Card" para cada doca ativa
                 for index, row in df_ativos.iterrows():
-                    st.markdown(f'''
-                    <div class="magalu-card" style="border-left: 4px solid #0086FF; padding: 10px 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <b style="font-size: 18px; color: #111827;">Doca {row['DOCA']}</b>
-                            <span style="color: #64748B; font-size: 11px;">⌚ {row['DATA_HORA']}</span>
+                    # Container visual para a Doca
+                    with st.container():
+                        st.markdown(f'''
+                        <div class="magalu-card" style="border-left: 4px solid #0086FF; padding: 10px 15px; margin-bottom: 5px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <b style="font-size: 18px;">Doca {row['DOCA']}</b>
+                                <span style="font-size: 11px; color: #64748B;">⌚ Início: {row['DATA_HORA']}</span>
+                            </div>
+                            <div style="font-size: 13px; margin-top: 5px;"><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>
+                            <div style="font-size: 12px; color: #0086FF; margin-top: 5px;">Equipe: {row['AUXILIARES']}</div>
                         </div>
-                        <div style="font-size: 13px; margin-top: 8px;"><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>
-                        <div style="font-size: 13px; margin-top: 5px; color: #0086FF; background-color: #E6F2FF; padding: 5px; border-radius: 4px;">
-                            <b>Equipe:</b> {row['AUXILIARES']}
-                        </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
+                        ''', unsafe_allow_html=True)
+                        
+                        # Botão de Encerrar logo abaixo do card
+                        if st.button(f"🏁 Finalizar Doca {row['DOCA']}", key=f"btn_fin_{row['DOCA']}_{index}", use_container_width=True):
+                            agora_dt = datetime.datetime.now()
+                            inicio_dt = row['DATA_HORA_DT']
+                            
+                            # Cálculo de Duração
+                            duracao = agora_dt - inicio_dt
+                            total_minutos = int(duracao.total_seconds() / 60)
+                            horas = total_minutos // 60
+                            mins = total_minutos % 60
+                            tempo_str = f"{horas:02d}:{mins:02d}"
+                            
+                            auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+                            
+                            # Montagem da linha de Histórico Definitivo
+                            dados_conclusao = [
+                                agora_dt.strftime("%d/%m/%Y"), # DATA
+                                str(row['DOCA']),              # DOCA
+                                str(row['AGENDA']),            # AGENDA
+                                str(row['CONFERENTE']),        # CONFERENTE
+                                len(auxiliares_lista),         # QTD_AUX
+                                row['AUXILIARES'],             # AUXILIARES
+                                row['DATA_HORA'],              # HORA INICIO
+                                agora_dt.strftime("%H:%M:%S"), # HORA FIM
+                                tempo_str                      # DURACAO
+                            ]
+                            
+                            # Linha para "matar" a doca no log ativo
+                            linha_log_fecha = [agora_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
+                            
+                            with st.spinner("Finalizando doca e calculando indicadores..."):
+                                if gravar_conclusao_doca(dados_conclusao, linha_log_fecha):
+                                    st.success(f"Doca {row['DOCA']} finalizada em {tempo_str}!")
+                                    st.cache_data.clear()
+                                    st.rerun()
         else:
-            st.info("O Log ainda está vazio. Faça o primeiro apontamento!")
+            st.info("O Log ainda está vazio.")
 
    # ==========================================================
     # LÓGICA DE GRAVAÇÃO E POP-UP (MÓDULO DE DOCAS)
