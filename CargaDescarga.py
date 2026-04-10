@@ -451,7 +451,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         st.markdown(f"""
                         <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
-                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>CATEGORIA:</b> {info['CATEGORIA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
                             <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0086FF; font-weight:bold;">{info['STATUS']}</span>
                         </div>
                         """, unsafe_allow_html=True)
@@ -527,7 +527,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
 
                     info = {
-                        'LINHA': row.get('LINHA', '-'), 'SKU': row.get('SKU', '-'), 
+                        'CATEGORIA': row.get('CATEGORIA', '-'), 'SKU': row.get('SKU', '-'), 
                         'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 
                         'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')
                     }
@@ -589,7 +589,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         </div>
                         
                         <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
-                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>Linha:</b> {info['CATEGORIA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
                             <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span>
                         </div>
                         
