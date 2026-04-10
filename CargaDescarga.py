@@ -11,41 +11,148 @@ import datetime
 from datetime import date
 
 # ==========================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CSS
+# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU SOFT UI)
 # ==========================================================
 st.set_page_config(page_title="Magalu | Gestão Logística", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #F4F6F9; }
-    [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
-    * { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    p, div, span { color: #334155; }
-    .magalu-page-title { color: #0086FF; font-size: 22px; font-weight: 800; margin-bottom: 5px; line-height: 1.2;}
-    .magalu-page-subtitle { color: #64748B; font-size: 13px; margin-bottom: 20px; }
+    /* Importando a Fonte Inter (Design Moderno Nível Apple/Stripe) */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* Reset global para a fonte nova */
+    * { font-family: 'Inter', sans-serif !important; }
+
+    /* Fundo Soft Off-White (Menos cansaço visual que o branco puro) */
+    .stApp { background-color: #F8FAFC; }
+
+    /* Sidebar Limpa */
+    [data-testid="stSidebar"] { 
+        background-color: #FFFFFF; 
+        border-right: 1px solid #F1F5F9; 
+        box-shadow: 2px 0 15px rgba(0,0,0,0.02); 
+    }
+
+    /* Títulos Principais */
+    .magalu-page-title { 
+        color: #0086FF; 
+        font-size: 28px; 
+        font-weight: 800; 
+        letter-spacing: -0.5px; 
+        margin-bottom: 4px; 
+        line-height: 1.2;
+    }
+    .magalu-page-subtitle { color: #64748B; font-size: 14px; font-weight: 400; margin-bottom: 24px; }
+
+    /* Ribbon (Fita Azul) com Degradê Oficial Magalu */
     .magalu-ribbon {
-        background-color: #0086FF; color: #FFFFFF; padding: 6px 16px; font-size: 14px; font-weight: 600;
-        display: inline-block; border-radius: 0px 4px 4px 0px; margin-bottom: 10px; margin-top: 15px;
-        position: relative; left: -1rem; box-shadow: 0 2px 4px rgba(0,134,255,0.2);
+        background: linear-gradient(90deg, #0086FF 0%, #005BFF 100%); 
+        color: #FFFFFF; 
+        padding: 8px 20px; 
+        font-size: 13px; 
+        font-weight: 600;
+        display: inline-block; 
+        border-radius: 0px 8px 8px 0px; 
+        margin-bottom: 15px; 
+        margin-top: 10px;
+        position: relative; 
+        left: -1rem; 
+        box-shadow: 0 4px 10px rgba(0,134,255,0.25);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
     }
+
+    /* Cards Brancos com Sombra Soft (O Pulo do Gato do Design!) */
     .magalu-card {
-        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); margin-bottom: 15px;
+        background-color: #FFFFFF; 
+        border: 1px solid #F1F5F9; 
+        border-radius: 16px; 
+        padding: 22px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); 
+        margin-bottom: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .magalu-card:hover { 
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05); 
+        transform: translateY(-2px);
+    }
+
+    /* Botões Secundários */
     .stButton>button {
-        background-color: #0086FF; color: white; border: none; border-radius: 8px;
-        font-weight: 700; font-size: 16px; padding: 0.8rem 1rem; height: auto;
+        background-color: #FFFFFF; 
+        color: #334155; 
+        border: 1px solid #E2E8F0; 
+        border-radius: 10px;
+        font-weight: 600; 
+        font-size: 15px; 
+        padding: 0.6rem 1.2rem; 
+        height: auto;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
     }
-    .stButton>button:hover { background-color: #0073E6; color: white; }
+    .stButton>button:hover { 
+        background-color: #F8FAFC; 
+        border-color: #CBD5E1; 
+        color: #0F172A;
+    }
+
+    /* Botão Verde de Finalizar (Com Gradient Moderno) */
     button[kind="primary"] {
-        background-color: #00C853 !important; border: none !important; color: white !important;
-        min-height: 32px !important; font-size: 14px !important; border-radius: 6px !important;
+        background: linear-gradient(135deg, #00C853 0%, #00A042 100%) !important; 
+        border: none !important; 
+        color: white !important;
+        min-height: 36px !important; 
+        font-size: 14px !important; 
+        font-weight: 600 !important;
+        border-radius: 8px !important; 
+        box-shadow: 0 4px 10px rgba(0,200,83,0.3) !important;
+        transition: all 0.2s ease !important;
     }
-    button[kind="primary"]:hover { background-color: #00B248 !important; }
-    input, .stSelectbox div[data-baseweb="select"] { border-radius: 6px !important; min-height: 45px !important;}
-    .kpi-card { background-color: #FFFFFF; border-radius: 8px; padding: 12px; border-left: 4px solid #0086FF; margin-bottom: 10px;}
-    .kpi-title { color: #6B7280; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-    .kpi-value { color: #111827; font-size: 20px; font-weight: 800; }
+    button[kind="primary"]:hover { 
+        box-shadow: 0 6px 15px rgba(0,200,83,0.4) !important; 
+        transform: translateY(-1px) !important; 
+    }
+
+    /* Caixas de Texto (Inputs e Selects) mais arredondadas e limpas */
+    input, .stSelectbox div[data-baseweb="select"] { 
+        border-radius: 10px !important; 
+        min-height: 48px !important; 
+        border: 1px solid #E2E8F0 !important;
+        background-color: #F8FAFC !important;
+        color: #1E293B !important;
+        transition: border-color 0.2s ease;
+    }
+    input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
+        border-color: #0086FF !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 0 0 1px #0086FF !important;
+    }
+
+    /* KPI Cards (Dashboard Financeiro) */
+    .kpi-card { 
+        background-color: #FFFFFF; 
+        border-radius: 16px; 
+        padding: 18px 12px; 
+        border: 1px solid #F1F5F9; 
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-title { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;}
+    .kpi-value { color: #0F172A; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+
+    /* Ajuste fino nas Abas (Tabs) do Streamlit */
+    button[data-baseweb="tab"] { background-color: transparent !important; }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        border-bottom-color: #0086FF !important;
+        color: #0086FF !important;
+        font-weight: 700 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
