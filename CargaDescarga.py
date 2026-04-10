@@ -327,28 +327,25 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
     st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real.</div>', unsafe_allow_html=True)
     
-    aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
+    # Carregamento de dados global para as 3 abas
+    df_log = carregar_log_produtividade()
+    df_aux = carregar_aux()
+    
+    agendas_logadas = []
+    col_doca, col_conf = None, None
+    
+    if not df_aux.empty:
+        df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+        colunas_limpas = [str(c).upper().strip() for c in df_aux.columns]
+        col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
+        col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
 
-    # --- ABA 1: VISÃO DAS DOCAS ---
-    # --- ABA 1: VISÃO DAS DOCAS ---
+    # Criação das TRÊS abas solicitadas
+    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "👀 Visão das Docas (pendente)", "✍️ Apontar / Movimentar"])
+
+    # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
-        df_log = carregar_log_produtividade()
-        df_aux = carregar_aux()
-        
-        agendas_logadas = []
-        
-        if not df_aux.empty:
-            df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
-            # Mapeamento robusto para achar as colunas Doca e Conferente na base aux
-            colunas_limpas = [str(c).upper().strip() for c in df_aux.columns]
-            col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
-            col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
-        
-        # === SEÇÃO 1: DOCAS ATIVAS (EM OPERAÇÃO) ===
-        st.markdown('<div class="magalu-ribbon">▶ Docas em Operação (Ativas)</div>', unsafe_allow_html=True)
-        
         if not df_log.empty:
-            # Guarda todas as agendas que já receberam equipe hoje
             agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
             
             df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
@@ -419,15 +416,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         else:
             st.info("O Log de Operações ainda está vazio.")
 
-        # === SEÇÃO 2: FILA DE ESPERA (PENDENTES) ===
-        st.markdown('<div class="magalu-ribbon" style="background-color: #F59E0B; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">⏳ Fila de Espera (Pendentes)</div>', unsafe_allow_html=True)
-        
+    # --- ABA 2: PENDENTES (Fila de Espera) ---
+    with aba2:
         if not df_aux.empty:
-            # Cruza os dados: O que está na 'aux' mas NÃO ESTÁ no log?
             df_pendentes = df_aux[~df_aux['AGENDA WMS'].isin(agendas_logadas)].copy()
             df_pendentes = df_pendentes[df_pendentes['AGENDA WMS'] != '']
             
-            # Limpa agendas que já foram devolvidas ou o fornecedor faltou
             status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK']
             if 'STATUS' in df_pendentes.columns:
                 df_pendentes = df_pendentes[~df_pendentes['STATUS'].astype(str).str.upper().isin(status_ignorados)]
@@ -455,7 +449,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')
                     }
 
-                    # Cria o Card com identidade Laranja/Vermelha para a fila de espera
                     with st.container(border=True):
                         st.markdown(f"""
                         <div style="display: flex; justify-content: space-between;">
@@ -473,15 +466,16 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             <b>Equipe:</b> <span style="font-weight:900;">PENDENTE</span>
                         </div>
                         """, unsafe_allow_html=True)
+        else:
+            st.info("A base auxiliar de Agendas não foi localizada ou está vazia.")
 
-    # --- ABA 2: APONTAR / MOVIMENTAR ---
-    with aba2:
+    # --- ABA 3: APONTAR / MOVIMENTAR ---
+    with aba3:
         try:
             df_equipe = carregar_equipe()
             lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
             lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
             
-            df_log = carregar_log_produtividade()
             mapa_pessoas = {}
             info_docas = {}
             
@@ -502,10 +496,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
             
-            df_aux = carregar_aux()
             lista_agendas = []
             if not df_aux.empty:
-                df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
                 lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
             
             opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
