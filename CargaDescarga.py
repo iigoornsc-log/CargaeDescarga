@@ -529,32 +529,62 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     for p in eq_atual:
                         mapa_pessoas[p] = doca_atual
 
-            # Formulário de Interface
+            # --- FORMULÁRIO DE INTERFACE ---
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
             
-            # 1. Pede a Agenda primeiro para poder puxar os dados
-            agenda_sel = st.text_input("Nº da Agenda (Aperte Enter para buscar)", placeholder="Ex: 51183")
+            # Carrega as agendas disponíveis na base
+            df_aux = carregar_aux()
+            lista_agendas = []
+            if not df_aux.empty:
+                df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+                lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
+            
+            # Lista suspensa pesquisável (O usuário pode clicar e digitar para filtrar)
+            opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
+            agenda_combo = st.selectbox(
+                "Nº da Agenda (Selecione ou digite para buscar na lista)", 
+                options=opcoes_agenda,
+                index=0
+            )
+            
+            # Lógica para permitir digitação livre caso a agenda não exista na base
+            if agenda_combo == "➕ DIGITAR OUTRA AGENDA...":
+                agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
+            else:
+                agenda_sel = agenda_combo
             
             doca_padrao = ""
             conf_padrao = ""
-            df_aux = carregar_aux()
             
-            # Se digitou a agenda e ela existe na base 'aux', tenta puxar doca e conferente
-            if agenda_sel and not df_aux.empty:
-                df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+            # --- INTELIGÊNCIA: Auto-preenchimento Robusto ---
+            if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
                 match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
                 if not match.empty:
                     st.success("✅ Agenda localizada na base!")
-                    if 'DOCA' in match.columns: doca_padrao = str(match.iloc[0]['DOCA'])
-                    if 'CONFERENTE' in match.columns: conf_padrao = str(match.iloc[0]['CONFERENTE'])
+                    
+                    # Limpa os nomes das colunas da planilha para a busca inteligente
+                    colunas_limpas = [str(c).upper().strip() for c in match.columns]
+                    
+                    # Caça a coluna de DOCA (mesmo que tenha espaço escondido)
+                    for col_real, col_upper in zip(match.columns, colunas_limpas):
+                        if 'DOCA' in col_upper:
+                            val = str(match.iloc[0][col_real])
+                            if val.lower() != 'nan' and val.strip() != '': doca_padrao = val.strip()
+                            break
+                            
+                    # Caça a coluna de CONFERENTE ou LÍDER
+                    for col_real, col_upper in zip(match.columns, colunas_limpas):
+                        if 'CONFERENTE' in col_upper or 'LIDER' in col_upper or 'LÍDER' in col_upper:
+                            val = str(match.iloc[0][col_real])
+                            if val.lower() != 'nan' and val.strip() != '': conf_padrao = val.strip()
+                            break
             
             col1, col2 = st.columns(2)
             with col1:
-                # Se achou a doca, já vem preenchida
+                # Usa a variável `value=doca_padrao`. Se o Python achou, já vem preenchido!
                 doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
             with col2:
-                # Se achou o conferente, já vem preenchido
                 conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
                 
             st.markdown('<br>', unsafe_allow_html=True)
