@@ -330,14 +330,27 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
 
     # --- ABA 1: VISÃO DAS DOCAS ---
+    # --- ABA 1: VISÃO DAS DOCAS ---
     with aba1:
         df_log = carregar_log_produtividade()
         df_aux = carregar_aux()
         
+        agendas_logadas = []
+        
         if not df_aux.empty:
             df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+            # Mapeamento robusto para achar as colunas Doca e Conferente na base aux
+            colunas_limpas = [str(c).upper().strip() for c in df_aux.columns]
+            col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
+            col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
+        
+        # === SEÇÃO 1: DOCAS ATIVAS (EM OPERAÇÃO) ===
+        st.markdown('<div class="magalu-ribbon">▶ Docas em Operação (Ativas)</div>', unsafe_allow_html=True)
         
         if not df_log.empty:
+            # Guarda todas as agendas que já receberam equipe hoje
+            agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
+            
             df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
             ultimos_horarios = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
             df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_horarios]
@@ -404,7 +417,62 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                         carregar_log_produtividade.clear()
                                         st.rerun()
         else:
-            st.info("O Log ainda está vazio.")
+            st.info("O Log de Operações ainda está vazio.")
+
+        # === SEÇÃO 2: FILA DE ESPERA (PENDENTES) ===
+        st.markdown('<div class="magalu-ribbon" style="background-color: #F59E0B; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">⏳ Fila de Espera (Pendentes)</div>', unsafe_allow_html=True)
+        
+        if not df_aux.empty:
+            # Cruza os dados: O que está na 'aux' mas NÃO ESTÁ no log?
+            df_pendentes = df_aux[~df_aux['AGENDA WMS'].isin(agendas_logadas)].copy()
+            df_pendentes = df_pendentes[df_pendentes['AGENDA WMS'] != '']
+            
+            # Limpa agendas que já foram devolvidas ou o fornecedor faltou
+            status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK']
+            if 'STATUS' in df_pendentes.columns:
+                df_pendentes = df_pendentes[~df_pendentes['STATUS'].astype(str).str.upper().isin(status_ignorados)]
+            
+            if df_pendentes.empty:
+                st.info("Nenhuma agenda aguardando equipe. Pátio zerado! 🎉")
+            else:
+                for index, row in df_pendentes.iterrows():
+                    agenda_str = str(row['AGENDA WMS'])
+                    
+                    doca_str = str(row[col_doca]).strip() if col_doca and pd.notna(row[col_doca]) else "A Definir"
+                    if doca_str.lower() in ['nan', 'none', '']: doca_str = "A Definir"
+                    
+                    conf_str = str(row[col_conf]).strip() if col_conf and pd.notna(row[col_conf]) else "A Definir"
+                    if conf_str.lower() in ['nan', 'none', '']: conf_str = "A Definir"
+                    
+                    pagto_str = "✅ Sim" if str(row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                    valor_desc = row.get('R$ DESCARGA', '-')
+                    if str(valor_desc).replace('.','',1).isdigit():
+                        valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
+
+                    info = {
+                        'LINHA': row.get('LINHA', '-'), 'SKU': row.get('SKU', '-'), 
+                        'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 
+                        'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')
+                    }
+
+                    # Cria o Card com identidade Laranja/Vermelha para a fila de espera
+                    with st.container(border=True):
+                        st.markdown(f"""
+                        <div style="display: flex; justify-content: space-between;">
+                            <h4 style='margin:0; color:#475569;'>Doca {doca_str}</h4>
+                            <span style='font-size:11px; color:#F59E0B; font-weight:bold;'>⏳ Aguardando Alocação</span>
+                        </div>
+                        <div style='font-size: 13px; margin: 8px 0px 4px 0px;'><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</div>
+                        
+                        <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
+                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span>
+                        </div>
+                        
+                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 6px; border-radius: 4px; border: 1px solid #FECACA;'>
+                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE</span>
+                        </div>
+                        """, unsafe_allow_html=True)
 
     # --- ABA 2: APONTAR / MOVIMENTAR ---
     with aba2:
