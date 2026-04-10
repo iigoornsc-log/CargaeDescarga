@@ -11,148 +11,157 @@ import datetime
 from datetime import date
 
 # ==========================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU SOFT UI)
+# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU AAAA+)
 # ==========================================================
 st.set_page_config(page_title="Magalu | Gestão Logística", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
-    /* Importando a Fonte Inter (Design Moderno Nível Apple/Stripe) */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-    /* Reset global para a fonte nova */
+    /* 1. FONTE PREMIUM (Apple/Stripe Style) */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     * { font-family: 'Inter', sans-serif !important; }
 
-    /* Fundo Soft Off-White (Menos cansaço visual que o branco puro) */
-    .stApp { background-color: #F8FAFC; }
-
-    /* Sidebar Limpa */
-    [data-testid="stSidebar"] { 
-        background-color: #FFFFFF; 
-        border-right: 1px solid #F1F5F9; 
-        box-shadow: 2px 0 15px rgba(0,0,0,0.02); 
+    /* 2. ANIMAÇÃO RGB LUIZALABS (Desnecessário, mas absurdamente foda) */
+    @keyframes magaluGlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
 
-    /* Títulos Principais */
+    /* Linha Tech Animada no Topo da Tela */
+    .stApp::before {
+        content: ""; position: fixed; top: 0; left: 0; right: 0; height: 5px;
+        background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF, #FF007F);
+        background-size: 300% 300%;
+        animation: magaluGlow 6s linear infinite;
+        z-index: 999999;
+    }
+
+    /* Fundo da Aplicação (Soft com micro-gradiente) */
+    .stApp {
+        background-color: #F0F4F8;
+        background-image: radial-gradient(circle at 100% 0%, #E2EDF8 0%, transparent 40%);
+    }
+
+    /* 3. TÍTULOS COM DEGRADÊ METÁLICO */
     .magalu-page-title { 
-        color: #0086FF; 
-        font-size: 28px; 
-        font-weight: 800; 
-        letter-spacing: -0.5px; 
-        margin-bottom: 4px; 
-        line-height: 1.2;
+        background: linear-gradient(135deg, #0086FF 0%, #001A57 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 2px;
     }
-    .magalu-page-subtitle { color: #64748B; font-size: 14px; font-weight: 400; margin-bottom: 24px; }
+    .magalu-page-subtitle { color: #64748B; font-size: 15px; font-weight: 500; margin-bottom: 25px; }
 
-    /* Ribbon (Fita Azul) com Degradê Oficial Magalu */
-    .magalu-ribbon {
-        background: linear-gradient(90deg, #0086FF 0%, #005BFF 100%); 
-        color: #FFFFFF; 
-        padding: 8px 20px; 
-        font-size: 13px; 
-        font-weight: 600;
-        display: inline-block; 
-        border-radius: 0px 8px 8px 0px; 
-        margin-bottom: 15px; 
-        margin-top: 10px;
-        position: relative; 
-        left: -1rem; 
-        box-shadow: 0 4px 10px rgba(0,134,255,0.25);
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
+    /* 4. ABAS (TABS) CORPORATIVAS - Adeus texto flutuante! */
+    [data-baseweb="tab-list"] {
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        padding: 6px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        gap: 8px;
+        margin-bottom: 25px;
     }
-
-    /* Cards Brancos com Sombra Soft (O Pulo do Gato do Design!) */
-    .magalu-card {
-        background-color: #FFFFFF; 
-        border: 1px solid #F1F5F9; 
-        border-radius: 16px; 
-        padding: 22px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); 
-        margin-bottom: 20px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .magalu-card:hover { 
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05); 
-        transform: translateY(-2px);
-    }
-
-    /* Botões Secundários */
-    .stButton>button {
-        background-color: #FFFFFF; 
-        color: #334155; 
-        border: 1px solid #E2E8F0; 
-        border-radius: 10px;
-        font-weight: 600; 
-        font-size: 15px; 
-        padding: 0.6rem 1.2rem; 
-        height: auto;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        transition: all 0.2s ease;
-    }
-    .stButton>button:hover { 
-        background-color: #F8FAFC; 
-        border-color: #CBD5E1; 
-        color: #0F172A;
-    }
-
-    /* Botão Verde de Finalizar (Com Gradient Moderno) */
-    button[kind="primary"] {
-        background: linear-gradient(135deg, #00C853 0%, #00A042 100%) !important; 
-        border: none !important; 
-        color: white !important;
-        min-height: 36px !important; 
-        font-size: 14px !important; 
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        color: #64748B !important;
         font-weight: 600 !important;
-        border-radius: 8px !important; 
-        box-shadow: 0 4px 10px rgba(0,200,83,0.3) !important;
-        transition: all 0.2s ease !important;
+        border: none !important;
+        transition: all 0.3s ease !important;
     }
-    button[kind="primary"]:hover { 
-        box-shadow: 0 6px 15px rgba(0,200,83,0.4) !important; 
-        transform: translateY(-1px) !important; 
+    button[data-baseweb="tab"]:hover {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+    }
+    /* Aba Ativa (Azul Magalu com Glow) */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #0086FF !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 15px rgba(0,134,255,0.35) !important;
+    }
+    /* Ocultar aquela linha feia padrão do Streamlit embaixo da aba */
+    [data-baseweb="tab-border"] { display: none; }
+
+    /* 5. RIBBONS ANIMADOS */
+    .magalu-ribbon {
+        background: linear-gradient(90deg, #0086FF, #005BFF, #FF007F, #0086FF);
+        background-size: 300% 300%;
+        animation: magaluGlow 8s ease infinite;
+        color: #FFFFFF; padding: 8px 24px; font-size: 13px; font-weight: 700;
+        border-radius: 0px 8px 8px 0px; margin-bottom: 15px; margin-top: 10px;
+        position: relative; left: -1rem; box-shadow: 0 4px 15px rgba(0,134,255,0.3);
+        text-transform: uppercase; letter-spacing: 1px;
     }
 
-    /* Caixas de Texto (Inputs e Selects) mais arredondadas e limpas */
+    /* 6. CARDS (Docas, Formulários) - EFEITO GLASSMORPHISM */
+    .magalu-card, div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255,255,255,0.6) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03) !important;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        padding: 20px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 134, 255, 0.08) !important;
+    }
+
+    /* 7. CAIXAS DE INPUT E DROPDOWNS */
     input, .stSelectbox div[data-baseweb="select"] { 
-        border-radius: 10px !important; 
-        min-height: 48px !important; 
+        border-radius: 12px !important; 
+        min-height: 50px !important; 
         border: 1px solid #E2E8F0 !important;
         background-color: #F8FAFC !important;
         color: #1E293B !important;
-        transition: border-color 0.2s ease;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
     }
     input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
         border-color: #0086FF !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 0 0 1px #0086FF !important;
+        box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
     }
 
-    /* KPI Cards (Dashboard Financeiro) */
+    /* 8. BOTÕES PRINCIPAIS E SECUNDÁRIOS */
+    .stButton>button {
+        background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; 
+        border-radius: 12px; font-weight: 700; font-size: 15px; padding: 0.8rem 1.2rem; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease;
+    }
+    .stButton>button:hover { 
+        border-color: #0086FF; color: #0086FF; transform: translateY(-1px);
+    }
+    
+    /* Botão Verde "Finalizar" com Efeito Glow/Pulse */
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #00C853 0%, #009624 100%) !important;
+        border: none !important; color: white !important; font-weight: 800 !important;
+        border-radius: 10px !important; box-shadow: 0 6px 20px rgba(0,200,83,0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+    button[kind="primary"]:hover {
+        box-shadow: 0 8px 25px rgba(0,200,83,0.5) !important; transform: translateY(-2px) !important;
+    }
+
+    /* 9. SCROLLBAR DE LUXO (O que separa os meninos dos homens no Front-end) */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* 10. KPI CARDS FINANCEIROS */
     .kpi-card { 
-        background-color: #FFFFFF; 
-        border-radius: 16px; 
-        padding: 18px 12px; 
-        border: 1px solid #F1F5F9; 
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-        margin-bottom: 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s ease;
+        background: #FFFFFF; border-radius: 16px; padding: 20px 15px; 
+        border: 1px solid #F1F5F9; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        margin-bottom: 12px; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; transition: all 0.3s ease;
     }
-    .kpi-card:hover { transform: translateY(-2px); }
-    .kpi-title { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;}
-    .kpi-value { color: #0F172A; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-
-    /* Ajuste fino nas Abas (Tabs) do Streamlit */
-    button[data-baseweb="tab"] { background-color: transparent !important; }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        border-bottom-color: #0086FF !important;
-        color: #0086FF !important;
-        font-weight: 700 !important;
-    }
+    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 134, 255, 0.08); }
+    .kpi-title { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;}
+    .kpi-value { color: #0F172A; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
     </style>
 """, unsafe_allow_html=True)
 
