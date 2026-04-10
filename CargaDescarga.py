@@ -502,7 +502,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
     st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real.</div>', unsafe_allow_html=True)
     
-    # Carregamento de dados global para as 3 abas
+    # --- CARREGAMENTO GLOBAL DE DADOS PARA AS 3 ABAS ---
     df_log = carregar_log_produtividade()
     df_aux = carregar_aux()
     
@@ -515,6 +515,60 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
         col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
 
+    # --- MAPEAMENTO GLOBAL DE EQUIPES (Para a Aba 2 e 3 saberem quem está livre) ---
+    lista_auxiliares = []
+    mapa_pessoas = {}
+    info_docas = {}
+    try:
+        df_equipe = carregar_equipe()
+        lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
+        lista_auxiliares = [str(nome).strip() for nome in lista_auxiliares if str(nome).strip() != '']
+    except: pass
+
+    if not df_log.empty:
+        df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+        ultimos_h = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
+        df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_h]
+        df_ativos_agrupado = df_ativos_bruto.groupby(['DOCA', 'AGENDA', 'CONFERENTE'])['AUXILIARES'].apply(lambda x: ', '.join(x.dropna())).reset_index()
+        df_ativos_agrupado = df_ativos_agrupado[df_ativos_agrupado['AUXILIARES'] != 'ENCERRADO']
+        
+        for _, row in df_ativos_agrupado.iterrows():
+            doca_atual = str(row['DOCA']).strip()
+            eq_atual = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+            info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
+            for p in eq_atual: mapa_pessoas[p] = doca_atual
+
+    # --- NOVO POP-UP MAGALU: START NA CARGA DIRETO DA FILA ---
+    @st.dialog("🚀 START na Carga (Alocar Equipe)")
+    def popup_start_carga(doca_sel, agenda_sel, conferente_sel):
+        st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'>Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
+        
+        equipe_sel = st.multiselect("Selecione os colaboradores para iniciar:", options=lista_auxiliares)
+        
+        conflitos = {}
+        for pessoa in equipe_sel:
+            if pessoa in mapa_pessoas:
+                if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
+        
+        if conflitos:
+            st.warning("⚠️ Os colaboradores abaixo já estão ocupados e serão transferidos:")
+            for p, d in conflitos.items():
+                st.markdown(f"- **{p}** (Sairá da Doca {d})")
+                
+        st.markdown('<br>', unsafe_allow_html=True)
+        if st.button("🚀 CONFIRMAR START", type="primary", use_container_width=True):
+            if not doca_sel or doca_sel == "A Definir":
+                st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
+            elif not equipe_sel:
+                st.error("Selecione a equipe!")
+            else:
+                with st.spinner("Iniciando operação..."):
+                    sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False)
+                    if sucesso:
+                        st.success("Carga iniciada! Movendo para o painel de processo...")
+                        carregar_log_produtividade.clear()
+                        st.rerun()
+
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
 
@@ -523,11 +577,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         if not df_log.empty:
             agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
             
-            df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
-            ultimos_horarios = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
-            df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_horarios]
-            df_ativos = df_ativos_bruto.groupby(['DOCA', 'AGENDA', 'CONFERENTE', 'DATA_HORA', 'DATA_HORA_DT'])['AUXILIARES'].apply(lambda x: ', '.join(x.dropna())).reset_index()
-            
+            df_ativos = df_ativos_bruto.copy()
+            df_ativos = df_ativos.groupby(['DOCA', 'AGENDA', 'CONFERENTE', 'DATA_HORA', 'DATA_HORA_DT'])['AUXILIARES'].apply(lambda x: ', '.join(x.dropna())).reset_index()
             df_ativos = df_ativos[df_ativos['AUXILIARES'] != 'ENCERRADO']
             df_ativos = df_ativos.sort_values('DATA_HORA_DT', ascending=False)
 
@@ -539,7 +590,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
                     info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
-                    meta_minutos = 60 # Padrão
+                    meta_minutos = 60
                     
                     if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
                         aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
@@ -548,7 +599,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         if str(valor_desc).replace('.','',1).isdigit():
                             valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                             
-                        # Tratando possível erro de nome da coluna Linha/Categoria
                         linha_val = aux_row.get('LINHA', aux_row.get('CATEGORIA', '-'))
                         info = {'LINHA': linha_val, 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
                         
@@ -558,7 +608,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
                         except: pass
 
-                    # CÁLCULO DO CRONÔMETRO DE SLA (Tempo de Execução)
                     inicio_dt = row['DATA_HORA_DT']
                     if pd.isna(inicio_dt): inicio_dt = agora_dt
                     
@@ -606,7 +655,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                                clique_dt = datetime.datetime.now()
+                                clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
@@ -672,7 +721,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')
                     }
                     
-                    # CÁLCULO DE TEMPO LIMITE PARA INICIAR (Drop-Dead Time)
                     meta_minutos = 60
                     limite_str = ""
                     hora_max_str = "-"
@@ -691,10 +739,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             
                             h_lim, m_lim = map(int, limite_str.split(':'))
                             limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
-                            
                             hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
                             hora_max_str = hora_max_inicio.strftime("%H:%M")
-                            
                             diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
                             
                             if diff_min >= 0:
@@ -710,8 +756,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 cor_timer_pend = "#DC2626"
                                 bg_timer_pend = "#FEF2F2"
                                 txt_timer_pend = f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
-                    except Exception as e:
-                        pass
+                    except Exception as e: pass
 
                     with st.container(border=True):
                         st.markdown(f"""
@@ -735,41 +780,27 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
                             <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span>
                         </div>
+                        """, unsafe_allow_html=True)
                         
-                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 6px; border-radius: 4px; border: 1px solid #FECACA;'>
-                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE DISPONILIZAÇÃO EQUIPE</span>
+                        # --- BOTÃO DE START DIRETO NA FILA PENDENTE ---
+                        c_eq_pend, c_btn_pend = st.columns([7, 3])
+                        c_eq_pend.markdown(f"""
+                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
+                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
                         </div>
                         """, unsafe_allow_html=True)
+                        
+                        with c_btn_pend:
+                            if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True):
+                                popup_start_carga(doca_str, agenda_str, conf_str)
         else:
             st.info("A base auxiliar de Agendas não foi localizada ou está vazia.")
 
-    # --- ABA 3: APONTAR / MOVIMENTAR ---
+    # --- ABA 3: APONTAR / MOVIMENTAR (FORMULÁRIO MANUAL) ---
     with aba3:
         try:
-            df_equipe = carregar_equipe()
-            lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
-            lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
-            
-            mapa_pessoas = {}
-            info_docas = {}
-            
-            if not df_log.empty:
-                df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
-                ultimos_h = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
-                df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_h]
-                df_ativos_agrupado = df_ativos_bruto.groupby(['DOCA', 'AGENDA', 'CONFERENTE'])['AUXILIARES'].apply(lambda x: ', '.join(x.dropna())).reset_index()
-                
-                df_ativos_agrupado = df_ativos_agrupado[df_ativos_agrupado['AUXILIARES'] != 'ENCERRADO']
-                
-                for _, row in df_ativos_agrupado.iterrows():
-                    doca_atual = str(row['DOCA']).strip()
-                    eq_atual = [x.strip() for x in str(row['AUXILIARES']).split(',')]
-                    info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
-                    for p in eq_atual: mapa_pessoas[p] = doca_atual
-
-            # Aqui está o segredo: usando o container nativo do Streamlit!
             with st.container(border=True):
-                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">📍 Nova Alocação / Atualizar Doca</h4>', unsafe_allow_html=True)
+                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">📍 Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
                 
                 lista_agendas = []
                 if not df_aux.empty:
@@ -826,7 +857,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                     st.balloons()
                                     carregar_log_produtividade.clear()
                                     st.rerun()
-
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
 
