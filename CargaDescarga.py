@@ -93,6 +93,17 @@ def gravar_absenteismo(dados_para_gravar):
         st.error("Erro: Aba 'LOG_ABSENTEISMO' não encontrada.")
         return False
 
+def gravar_produtividade(dados_para_gravar):
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
+        ws_log.append_rows([dados_para_gravar]) # Grava 1 linha (Evento)
+        return True
+    except:
+        st.error("Erro: Crie a aba 'LOG_PRODUTIVIDADE' na planilha de equipe.")
+        return False
+
 # --- 4. TRATAMENTO DE DADOS FINANCEIROS ---
 def formatar_moeda_br(valor):
     if pd.isna(valor) or valor == 0: return "R$ 0,00"
@@ -171,7 +182,7 @@ def tratar_dados(df_h):
 st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos do App</div>', unsafe_allow_html=True)
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["📋 Absenteísmo (Doca)", "📊 Financeiro (Diretoria)"]
+    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📊 Financeiro (Diretoria)"]
 )
 st.sidebar.markdown("---")
 
@@ -302,3 +313,54 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 
     except Exception as e:
         st.error(f"Erro no módulo: {e}")
+
+# ==========================================
+# PÁGINA 3: GESTÃO DE DOCAS E PRODUTIVIDADE
+# ==========================================
+elif pagina_selecionada == "🚛 Gestão de Docas":
+    st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Aloque a equipe e registre as descargas.</div>', unsafe_allow_html=True)
+    
+    try:
+        df_equipe = carregar_equipe()
+        # Filtra apenas quem é de fato auxiliar para a lista não ficar gigante
+        lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
+        lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
+        
+        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+        st.markdown('<b style="color: #0086FF;">📍 Novo Apontamento</b>', unsafe_allow_html=True)
+        
+        # Formulário Mobile Friendly
+        col1, col2 = st.columns(2)
+        with col1:
+            doca_sel = st.text_input("Número da Doca", placeholder="Ex: 68")
+        with col2:
+            agenda_sel = st.text_input("Nº da Agenda / NF", placeholder="Ex: 2002159")
+            
+        conferente_sel = st.text_input("Nome do Conferente", placeholder="Ex: Felipe")
+        
+        st.markdown('<br>', unsafe_allow_html=True)
+        st.caption("Selecione os auxiliares alocados nesta doca:")
+        equipe_sel = st.multiselect("Equipe (Auxiliares)", options=lista_auxiliares)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.button("Gravar Apontamento na Doca", use_container_width=True):
+            if not doca_sel or not agenda_sel or not equipe_sel:
+                st.warning("Preencha a Doca, Agenda e selecione pelo menos 1 auxiliar.")
+            else:
+                # Captura o momento exato em que o botão foi clicado
+                agora_str = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                auxiliares_str = ", ".join(equipe_sel) # Transforma a lista em um texto só separado por vírgula
+                
+                dados = [agora_str, doca_sel, agenda_sel, conferente_sel, auxiliares_str]
+                
+                with st.spinner("Registrando movimentação..."):
+                    sucesso = gravar_produtividade(dados)
+                    if sucesso:
+                        st.success(f"✅ Equipe alocada na Doca {doca_sel} com sucesso!")
+                        # Dá um balão no celular para confirmar
+                        st.balloons()
+                        
+    except Exception as e:
+        st.error(f"Erro no módulo de Docas: {e}")
