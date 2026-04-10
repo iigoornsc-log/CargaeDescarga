@@ -123,7 +123,7 @@ def gravar_conclusao_doca(linhas_conclusao, linha_encerramento_log):
         return False
 
 def processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar):
-    agora_dt = datetime.datetime.now()
+    agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
     agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
     linhas_para_gravar = []
     
