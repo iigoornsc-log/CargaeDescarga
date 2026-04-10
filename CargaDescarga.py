@@ -370,7 +370,68 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         else:
             st.info("O Log ainda está vazio. Faça o primeiro apontamento!")
 
-    # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
+   # ==========================================================
+    # LÓGICA DE GRAVAÇÃO E POP-UP (MÓDULO DE DOCAS)
+    # ==========================================================
+    def processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar):
+        agora_dt = datetime.datetime.now()
+        agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
+        
+        linhas_para_gravar = []
+        
+        # Define os textos base
+        if encerrar:
+            auxiliares_str = "ENCERRADO"
+            agenda_final = agenda_sel if agenda_sel else "-"
+            conferente_final = conferente_sel if conferente_sel else "-"
+        else:
+            auxiliares_str = ", ".join(equipe_sel)
+            agenda_final = agenda_sel
+            conferente_final = conferente_sel
+
+        # 1º EVENTO: Registra a nova Doca (ou o encerramento dela)
+        linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, auxiliares_str])
+        
+        # 2º EVENTO: Se houver transferência, tira o cara da doca antiga automaticamente
+        if conflitos and not encerrar:
+            docas_afetadas = set(conflitos.values())
+            # Soma 1 segundo na data/hora para a atualização não atropelar o banco
+            agora_dt = agora_dt + datetime.timedelta(seconds=1)
+            agora_str_2 = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
+            
+            for d_antiga in docas_afetadas:
+                eq_antiga = info_docas[d_antiga]['equipe'].copy()
+                # Tira apenas as pessoas que foram movidas
+                for p_movida in [p for p, d in conflitos.items() if d == d_antiga]:
+                    if p_movida in eq_antiga:
+                        eq_antiga.remove(p_movida)
+                
+                nova_eq_str = ", ".join(eq_antiga) if eq_antiga else "ENCERRADO"
+                linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], nova_eq_str])
+
+        return gravar_produtividade(linhas_para_gravar)
+
+    # Função que desenha o Pop-up na tela
+    @st.dialog("⚠️ Confirmação de Transferência")
+    def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas):
+        st.write("O sistema detectou que alguns colaboradores já estão alocados em outras docas ativas:")
+        
+        for p, d in conflitos.items():
+            st.markdown(f"- **{p}** (Sairá da Doca **{d}**)")
+            
+        st.write(f"Deseja confirmar a transferência para a **Doca {doca_sel}**?")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        c1, c2 = st.columns(2)
+        if c1.button("✅ Sim, Transferir", use_container_width=True):
+            with st.spinner("Atualizando docas..."):
+                if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
+                    st.cache_data.clear()
+                    st.rerun() # Fecha o pop-up e recarrega a tela automaticamente
+                    
+        if c2.button("❌ Cancelar", use_container_width=True):
+            st.rerun() # Apenas fecha o pop-up
+
     # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
     with aba2:
         try:
@@ -378,7 +439,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
             lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
             
-            # --- INTELIGÊNCIA: MAPEAMENTO DO STATUS ATUAL DAS DOCAS ---
+            # Mapeamento do Status Atual
             df_log = carregar_log_produtividade()
             mapa_pessoas = {}
             info_docas = {}
@@ -388,7 +449,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 df_ativos = df_log.sort_values('DATA_HORA_DT', ascending=False).drop_duplicates(subset=['DOCA'], keep='first')
                 df_ativos = df_ativos[df_ativos['AUXILIARES'].notna() & (df_ativos['AUXILIARES'] != '') & (df_ativos['AUXILIARES'] != 'ENCERRADO')]
                 
-                # Descobre onde cada pessoa está no pátio neste momento
                 for _, row in df_ativos.iterrows():
                     doca_atual = str(row['DOCA']).strip()
                     eq_atual = [x.strip() for x in str(row['AUXILIARES']).split(',')]
@@ -396,7 +456,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     for p in eq_atual:
                         mapa_pessoas[p] = doca_atual
 
-            # --- FORMULÁRIO ---
+            # Formulário de Interface
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
             
@@ -411,84 +471,39 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             
             equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
             
-            # --- A MÁGICA DA TRANSFERÊNCIA (VALIDAÇÃO DE CONFLITO) ---
+            # Análise de Conflitos Oculta
             conflitos = {}
             for pessoa in equipe_sel:
                 if pessoa in mapa_pessoas:
                     doca_antiga = mapa_pessoas[pessoa]
-                    # Se o cara tá selecionado aqui, mas consta em outra doca, é um conflito!
                     if doca_antiga != str(doca_sel).strip():
                         conflitos[pessoa] = doca_antiga
-
-            confirma_transf = True
-            if conflitos:
-                st.markdown('<div style="background-color: #FFF4F4; border-left: 4px solid #FF3366; padding: 10px; margin-bottom: 10px; border-radius: 4px;">', unsafe_allow_html=True)
-                st.markdown('<b style="color: #FF3366;">⚠️ Atenção: Transferência Detectada</b>', unsafe_allow_html=True)
-                for p, d in conflitos.items():
-                    st.markdown(f"<span style='font-size:13px;'>- <b>{p}</b> está na Doca <b>{d}</b> e será movido(a).</span>", unsafe_allow_html=True)
-                confirma_transf = st.checkbox("Confirmo a transferência destes colaboradores")
-                st.markdown('</div>', unsafe_allow_html=True)
             
             st.markdown('---')
             encerrar = st.checkbox("🛑 Encerrar esta Doca (Liberar Equipe)")
-
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- BOTÃO DE GRAVAÇÃO (FRONT PARA O BACK) ---
+            # Ação do Botão
             if st.button("Gravar / Atualizar Doca", use_container_width=True):
                 if not doca_sel:
                     st.warning("Preencha o número da Doca para continuar.")
-                elif not confirma_transf:
-                    st.error("Confirme a transferência dos colaboradores na caixinha acima antes de gravar.")
+                elif not equipe_sel and not encerrar:
+                    st.warning("Selecione a equipe atual ou marque 'Encerrar esta Doca'.")
                 else:
-                    if encerrar:
-                        auxiliares_str = "ENCERRADO"
-                        agenda_final = agenda_sel if agenda_sel else "-"
-                        conferente_final = conferente_sel if conferente_sel else "-"
-                    else:
-                        if not equipe_sel:
-                            st.warning("Selecione a equipe atual ou marque 'Encerrar esta Doca'.")
-                            st.stop()
-                        auxiliares_str = ", ".join(equipe_sel)
-                        agenda_final = agenda_sel
-                        conferente_final = conferente_sel
-
-                    agora_dt = datetime.datetime.now()
-                    agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
-                    
-                    linhas_para_gravar = []
-                    
-                    # 1. EVENTO PRINCIPAL: O lançamento na nova doca
-                    linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, auxiliares_str])
-                    
-                    # 2. EVENTO SECUNDÁRIO: Atualização das docas que "perderam" funcionários
+                    # Se tiver conflito (e não for um encerramento), abre o Pop-up Mágico!
                     if conflitos and not encerrar:
-                        docas_afetadas = set(conflitos.values())
-                        # Adiciona 1 segundo na data/hora para garantir que a atualização fique por cima no banco de dados
-                        agora_dt = agora_dt + datetime.timedelta(seconds=1)
-                        agora_str_2 = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
-                        
-                        for d_antiga in docas_afetadas:
-                            eq_antiga = info_docas[d_antiga]['equipe'].copy()
-                            # Tira a pessoa que foi movida
-                            for p_movida in [p for p, d in conflitos.items() if d == d_antiga]:
-                                if p_movida in eq_antiga:
-                                    eq_antiga.remove(p_movida)
-                            
-                            nova_eq_str = ", ".join(eq_antiga) if eq_antiga else "ENCERRADO"
-                            linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], nova_eq_str])
+                        exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
+                    else:
+                        # Se estiver tudo limpo, grava direto sem incomodar o usuário
+                        with st.spinner("Registrando movimentação..."):
+                            sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar)
+                            if sucesso:
+                                if encerrar:
+                                    st.success(f"✅ Doca {doca_sel} encerrada!")
+                                else:
+                                    st.success(f"✅ Doca {doca_sel} atualizada!")
+                                    st.balloons()
+                                st.cache_data.clear()
 
-                    # Manda o bloco de atualizações para o Google Sheets
-                    with st.spinner("Registrando movimentação..."):
-                        sucesso = gravar_produtividade(linhas_para_gravar)
-                        if sucesso:
-                            if encerrar:
-                                st.success(f"✅ Doca {doca_sel} encerrada!")
-                            else:
-                                st.success(f"✅ Doca {doca_sel} atualizada!")
-                                st.balloons()
-                            
-                            st.cache_data.clear() # Limpa para atualizar a visão da Aba 1
-                            
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
