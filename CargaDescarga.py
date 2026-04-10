@@ -533,13 +533,30 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
             
+            # 1. Pede a Agenda primeiro para poder puxar os dados
+            agenda_sel = st.text_input("Nº da Agenda (Aperte Enter para buscar)", placeholder="Ex: 51183")
+            
+            doca_padrao = ""
+            conf_padrao = ""
+            df_aux = carregar_aux()
+            
+            # Se digitou a agenda e ela existe na base 'aux', tenta puxar doca e conferente
+            if agenda_sel and not df_aux.empty:
+                df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+                match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
+                if not match.empty:
+                    st.success("✅ Agenda localizada na base!")
+                    if 'DOCA' in match.columns: doca_padrao = str(match.iloc[0]['DOCA'])
+                    if 'CONFERENTE' in match.columns: conf_padrao = str(match.iloc[0]['CONFERENTE'])
+            
             col1, col2 = st.columns(2)
             with col1:
-                doca_sel = st.text_input("Número da Doca", placeholder="Ex: 68")
+                # Se achou a doca, já vem preenchida
+                doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
             with col2:
-                agenda_sel = st.text_input("Nº da Agenda", placeholder="Ex: 2002159")
+                # Se achou o conferente, já vem preenchido
+                conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
                 
-            conferente_sel = st.text_input("Nome do Conferente", placeholder="Ex: Felipe")
             st.markdown('<br>', unsafe_allow_html=True)
             
             equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
