@@ -393,7 +393,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
-                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
+                    info = {'CATEGORIA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
                     meta_minutos = 60 # Meta padrão caso a base falhe
                     
                     if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
@@ -403,7 +403,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         if str(valor_desc).replace('.','',1).isdigit():
                             valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                             
-                        info = {'LINHA': aux_row.get('LINHA', '-'), 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
+                        info = {'CATEGORIA': aux_row.get('CATEGORIA', '-'), 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
                         
                         # --- CAPTURA DA META ---
                         try:
