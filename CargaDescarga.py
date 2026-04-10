@@ -182,6 +182,35 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     if c2.button("❌ Cancelar", use_container_width=True):
         st.rerun()
 
+@st.dialog("📝 Justificativa de Atraso")
+def exibir_popup_justificativa(dados_multiplos, linha_log_fecha):
+    st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
+    
+    opcoes_atraso = [
+        "Problema Sistêmico (WMS/TMS)",
+        "Divergência de Nota Fiscal",
+        "Aguardando Conferente/Líder",
+        "Falta de Auxiliares na Doca",
+        "Caminhão com avaria/difícil descarga",
+        "Troca de turno/refeição",
+        "Outro (Descrever abaixo)"
+    ]
+    
+    motivo = st.selectbox("Selecione o motivo principal:", opcoes_atraso)
+    detalhe = st.text_area("Detalhes adicionais (opcional):", placeholder="Ex: O caminhão chegou com as caixas tombadas...")
+    
+    if st.button("Confirmar Finalização", use_container_width=True):
+        justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
+        
+        # Adiciona a justificativa em todas as linhas (uma para cada auxiliar)
+        for linha in dados_multiplos:
+            linha.append(justificativa_final)
+            
+        with st.spinner("Gravando justificativa e finalizando..."):
+            if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
+                st.cache_data.clear()
+                st.rerun()
+
 # ==========================================================
 # 4. TRATAMENTO FINANCEIRO
 # ==========================================================
@@ -434,14 +463,16 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
                         
                         with c_btn:
+                            with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                                # Re-calcula no momento do clique exato
+                                # 1. Cálculos de tempo
                                 clique_dt = datetime.datetime.now()
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
+                                # 2. Prepara os dados básicos
                                 auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
                                 linhas_conclusao_multiplas = []
                                 
@@ -454,11 +485,20 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
                                 
-                                with st.spinner("Finalizando..."):
-                                    if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
-                                        st.success(f"Doca finalizada em {tempo_str}!")
-                                        carregar_log_produtividade.clear()
-                                        st.rerun()
+                                # 3. DECISÃO: Estourou a meta? (Usando a meta que calculamos antes no card)
+                                if restante_min < 0:
+                                    # Abre o Pop-up de Justificativa
+                                    exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
+                                else:
+                                    # Finaliza direto (adicionando "No Prazo" na coluna de justificativa)
+                                    for linha in linhas_conclusao_multiplas:
+                                        linha.append("No Prazo")
+                                        
+                                    with st.spinner("Finalizando..."):
+                                        if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
+                                            st.success(f"Doca finalizada com sucesso!")
+                                            carregar_log_produtividade.clear()
+                                            st.rerun()
         else:
             st.info("O Log de Operações ainda está vazio.")
 
