@@ -109,21 +109,35 @@ st.markdown("""
         box-shadow: 0 12px 40px rgba(0, 134, 255, 0.08) !important;
     }
 
-    /* 7. CAIXAS DE INPUT E DROPDOWNS */
-    input, .stSelectbox div[data-baseweb="select"] { 
+    /* 7. CAIXAS DE INPUT E DROPDOWNS (CORRIGIDO) */
+    div[data-baseweb="input"] > div, 
+    div[data-baseweb="select"] > div { 
         border-radius: 12px !important; 
-        min-height: 50px !important; 
+        min-height: 50px; /* Sem forçar altura máxima */
         border: 1px solid #E2E8F0 !important;
         background-color: #F8FAFC !important;
         color: #1E293B !important;
         font-weight: 500 !important;
         transition: all 0.3s ease !important;
     }
-    input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
+    div[data-baseweb="input"] > div:focus-within, 
+    div[data-baseweb="select"] > div:focus-within {
         border-color: #0086FF !important;
         background-color: #FFFFFF !important;
         box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
     }
+
+    /* 7.1 CHIPS DO MULTISELECT (Tags da Equipe Azul Magalu) */
+    span[data-baseweb="tag"] {
+        background-color: #E6F2FF !important;
+        color: #0086FF !important;
+        border-radius: 8px !important;
+        border: 1px solid #BAE6FD !important;
+        font-weight: 700 !important;
+        padding: 6px 12px !important;
+        margin: 4px 4px 4px 0px !important;
+    }
+    span[data-baseweb="tag"] svg { fill: #0086FF !important; } /* Cor do X de fechar */
 
     /* 8. BOTÕES PRINCIPAIS E SECUNDÁRIOS */
     .stButton>button {
@@ -737,64 +751,65 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
                     for p in eq_atual: mapa_pessoas[p] = doca_atual
 
-            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-            st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
-            
-            lista_agendas = []
-            if not df_aux.empty:
-                lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
-            
-            opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
-            agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar)", options=opcoes_agenda, index=0)
-            
-            if agenda_combo == "➕ DIGITAR OUTRA AGENDA...":
-                agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
-            else: agenda_sel = agenda_combo
-            
-            doca_padrao, conf_padrao = "", ""
-            if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
-                match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
-                if not match.empty:
-                    col_l = [str(c).upper().strip() for c in match.columns]
-                    for cr, cu in zip(match.columns, col_l):
-                        if 'DOCA' in cu:
-                            v = str(match.iloc[0][cr])
-                            if v.lower() != 'nan' and v.strip() != '': doca_padrao = v.strip()
-                            break
-                    for cr, cu in zip(match.columns, col_l):
-                        if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu:
-                            v = str(match.iloc[0][cr])
-                            if v.lower() != 'nan' and v.strip() != '': conf_padrao = v.strip()
-                            break
-            
-            col1, col2 = st.columns(2)
-            with col1: doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
-            with col2: conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
+            # Aqui está o segredo: usando o container nativo do Streamlit!
+            with st.container(border=True):
+                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">📍 Nova Alocação / Atualizar Doca</h4>', unsafe_allow_html=True)
                 
-            st.markdown('<br>', unsafe_allow_html=True)
-            equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
-            
-            conflitos = {}
-            for pessoa in equipe_sel:
-                if pessoa in mapa_pessoas:
-                    if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+                lista_agendas = []
+                if not df_aux.empty:
+                    lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
+                
+                opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
+                agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar)", options=opcoes_agenda, index=0)
+                
+                if agenda_combo == "➕ DIGITAR OUTRA AGENDA...":
+                    agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
+                else: agenda_sel = agenda_combo
+                
+                doca_padrao, conf_padrao = "", ""
+                if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
+                    match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
+                    if not match.empty:
+                        col_l = [str(c).upper().strip() for c in match.columns]
+                        for cr, cu in zip(match.columns, col_l):
+                            if 'DOCA' in cu:
+                                v = str(match.iloc[0][cr])
+                                if v.lower() != 'nan' and v.strip() != '': doca_padrao = v.strip()
+                                break
+                        for cr, cu in zip(match.columns, col_l):
+                            if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu:
+                                v = str(match.iloc[0][cr])
+                                if v.lower() != 'nan' and v.strip() != '': conf_padrao = v.strip()
+                                break
+                
+                col1, col2 = st.columns(2)
+                with col1: doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
+                with col2: conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
+                    
+                st.markdown('<br>', unsafe_allow_html=True)
+                equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
+                
+                conflitos = {}
+                for pessoa in equipe_sel:
+                    if pessoa in mapa_pessoas:
+                        if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
+                
+                st.markdown('<br>', unsafe_allow_html=True)
 
-            if st.button("Gravar / Atualizar Doca", use_container_width=True):
-                if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
-                elif not equipe_sel: st.warning("Selecione a equipe atual.")
-                else:
-                    if conflitos:
-                        exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
+                if st.button("Gravar / Atualizar Doca", use_container_width=True):
+                    if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
+                    elif not equipe_sel: st.warning("Selecione a equipe atual.")
                     else:
-                        with st.spinner("Registrando movimentação..."):
-                            sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False)
-                            if sucesso:
-                                st.success(f"✅ Doca {doca_sel} atualizada!")
-                                st.balloons()
-                                carregar_log_produtividade.clear()
-                                st.rerun()
+                        if conflitos:
+                            exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
+                        else:
+                            with st.spinner("Registrando movimentação..."):
+                                sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False)
+                                if sucesso:
+                                    st.success(f"✅ Doca {doca_sel} atualizada!")
+                                    st.balloons()
+                                    carregar_log_produtividade.clear()
+                                    st.rerun()
 
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
