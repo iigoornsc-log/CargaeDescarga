@@ -103,12 +103,13 @@ def gravar_absenteismo(dados_para_gravar):
         st.error("Erro: Aba 'LOG_ABSENTEISMO' não encontrada.")
         return False
 
-def gravar_produtividade(dados_para_gravar):
+def gravar_produtividade(lista_de_linhas):
     client = conectar_google()
     sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
     try:
         ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
-        ws_log.append_rows([dados_para_gravar]) # Grava 1 linha (Evento)
+        # Agora ele recebe várias linhas de uma vez (Eventos simultâneos)
+        ws_log.append_rows(lista_de_linhas)
         return True
     except:
         st.error("Erro: Crie a aba 'LOG_PRODUTIVIDADE' na planilha de equipe.")
@@ -370,15 +371,34 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             st.info("O Log ainda está vazio. Faça o primeiro apontamento!")
 
     # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
+    # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
     with aba2:
         try:
             df_equipe = carregar_equipe()
             lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
             lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
             
+            # --- INTELIGÊNCIA: MAPEAMENTO DO STATUS ATUAL DAS DOCAS ---
+            df_log = carregar_log_produtividade()
+            mapa_pessoas = {}
+            info_docas = {}
+            
+            if not df_log.empty:
+                df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+                df_ativos = df_log.sort_values('DATA_HORA_DT', ascending=False).drop_duplicates(subset=['DOCA'], keep='first')
+                df_ativos = df_ativos[df_ativos['AUXILIARES'].notna() & (df_ativos['AUXILIARES'] != '') & (df_ativos['AUXILIARES'] != 'ENCERRADO')]
+                
+                # Descobre onde cada pessoa está no pátio neste momento
+                for _, row in df_ativos.iterrows():
+                    doca_atual = str(row['DOCA']).strip()
+                    eq_atual = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+                    info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
+                    for p in eq_atual:
+                        mapa_pessoas[p] = doca_atual
+
+            # --- FORMULÁRIO ---
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
-            st.caption("Para tirar alguém, basta lançar a mesma doca novamente sem o nome da pessoa.")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -387,22 +407,40 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 agenda_sel = st.text_input("Nº da Agenda", placeholder="Ex: 2002159")
                 
             conferente_sel = st.text_input("Nome do Conferente", placeholder="Ex: Felipe")
-            
             st.markdown('<br>', unsafe_allow_html=True)
+            
             equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
             
+            # --- A MÁGICA DA TRANSFERÊNCIA (VALIDAÇÃO DE CONFLITO) ---
+            conflitos = {}
+            for pessoa in equipe_sel:
+                if pessoa in mapa_pessoas:
+                    doca_antiga = mapa_pessoas[pessoa]
+                    # Se o cara tá selecionado aqui, mas consta em outra doca, é um conflito!
+                    if doca_antiga != str(doca_sel).strip():
+                        conflitos[pessoa] = doca_antiga
+
+            confirma_transf = True
+            if conflitos:
+                st.markdown('<div style="background-color: #FFF4F4; border-left: 4px solid #FF3366; padding: 10px; margin-bottom: 10px; border-radius: 4px;">', unsafe_allow_html=True)
+                st.markdown('<b style="color: #FF3366;">⚠️ Atenção: Transferência Detectada</b>', unsafe_allow_html=True)
+                for p, d in conflitos.items():
+                    st.markdown(f"<span style='font-size:13px;'>- <b>{p}</b> está na Doca <b>{d}</b> e será movido(a).</span>", unsafe_allow_html=True)
+                confirma_transf = st.checkbox("Confirmo a transferência destes colaboradores")
+                st.markdown('</div>', unsafe_allow_html=True)
+            
             st.markdown('---')
-            # Checkbox mágico para encerrar a descarga e sumir com a doca da tela
             encerrar = st.checkbox("🛑 Encerrar esta Doca (Liberar Equipe)")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
+            # --- BOTÃO DE GRAVAÇÃO (FRONT PARA O BACK) ---
             if st.button("Gravar / Atualizar Doca", use_container_width=True):
                 if not doca_sel:
                     st.warning("Preencha o número da Doca para continuar.")
+                elif not confirma_transf:
+                    st.error("Confirme a transferência dos colaboradores na caixinha acima antes de gravar.")
                 else:
-                    agora_str = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                    
                     if encerrar:
                         auxiliares_str = "ENCERRADO"
                         agenda_final = agenda_sel if agenda_sel else "-"
@@ -415,19 +453,42 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         agenda_final = agenda_sel
                         conferente_final = conferente_sel
 
-                    dados = [agora_str, doca_sel, agenda_final, conferente_final, auxiliares_str]
+                    agora_dt = datetime.datetime.now()
+                    agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
                     
+                    linhas_para_gravar = []
+                    
+                    # 1. EVENTO PRINCIPAL: O lançamento na nova doca
+                    linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, auxiliares_str])
+                    
+                    # 2. EVENTO SECUNDÁRIO: Atualização das docas que "perderam" funcionários
+                    if conflitos and not encerrar:
+                        docas_afetadas = set(conflitos.values())
+                        # Adiciona 1 segundo na data/hora para garantir que a atualização fique por cima no banco de dados
+                        agora_dt = agora_dt + datetime.timedelta(seconds=1)
+                        agora_str_2 = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
+                        
+                        for d_antiga in docas_afetadas:
+                            eq_antiga = info_docas[d_antiga]['equipe'].copy()
+                            # Tira a pessoa que foi movida
+                            for p_movida in [p for p, d in conflitos.items() if d == d_antiga]:
+                                if p_movida in eq_antiga:
+                                    eq_antiga.remove(p_movida)
+                            
+                            nova_eq_str = ", ".join(eq_antiga) if eq_antiga else "ENCERRADO"
+                            linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], nova_eq_str])
+
+                    # Manda o bloco de atualizações para o Google Sheets
                     with st.spinner("Registrando movimentação..."):
-                        sucesso = gravar_produtividade(dados)
+                        sucesso = gravar_produtividade(linhas_para_gravar)
                         if sucesso:
                             if encerrar:
-                                st.success(f"✅ Doca {doca_sel} encerrada e equipe liberada!")
+                                st.success(f"✅ Doca {doca_sel} encerrada!")
                             else:
-                                st.success(f"✅ Equipe da Doca {doca_sel} atualizada!")
+                                st.success(f"✅ Doca {doca_sel} atualizada!")
                                 st.balloons()
                             
-                            # Limpa o cache para a Aba 1 ver a mudança INSTANTANEAMENTE
-                            st.cache_data.clear()
+                            st.cache_data.clear() # Limpa para atualizar a visão da Aba 1
                             
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
