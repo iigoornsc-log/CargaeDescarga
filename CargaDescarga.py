@@ -35,7 +35,7 @@ st.markdown("""
     .magalu-page-title { color: #0086FF; font-size: 24px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 10px;}
     .magalu-page-subtitle { color: #64748B; font-size: 14px; margin-bottom: 25px; }
     
-    /* Etiqueta Azul (Ribbon) idêntica à imagem */
+    /* Etiqueta Azul (Ribbon) */
     .magalu-ribbon {
         background-color: #0086FF;
         color: #FFFFFF;
@@ -47,7 +47,7 @@ st.markdown("""
         margin-bottom: 15px;
         margin-top: 20px;
         position: relative;
-        left: -1rem; /* Puxa para a borda esquerda nativa do Streamlit */
+        left: -1rem; 
         box-shadow: 0 2px 4px rgba(0,134,255,0.2);
     }
     
@@ -81,13 +81,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. CONEXÃO GOOGLE SHEETS ---
+# --- 3. CONEXÃO GOOGLE SHEETS (HÍBRIDA: CLOUD / LOCAL) ---
 def conectar_google():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
+        # Tenta conectar via Streamlit Cloud (Segurança)
         cred_dict = json.loads(st.secrets["google_json"])
         creds = Credentials.from_service_account_info(cred_dict, scopes=scopes)
     except:
+        # Se falhar (rodando no PC), usa o seu arquivo local
         creds = Credentials.from_service_account_file(r'C:\Users\IIGOORNSC\Documents\CargaDescarga\credential_key.json', scopes=scopes)
     return gspread.authorize(creds)
 
@@ -228,11 +230,11 @@ if pagina_selecionada == "📋 Lista de Chamada (Absenteísmo)":
         st.markdown('<div class="magalu-ribbon">Lista de Auxiliares Para Registro</div>', unsafe_allow_html=True)
         opcoes_ocorrencia = ["PRESENTE", "FALTA", "DSR", "BH", "LICENÇA", "ATESTADO"]
 
-        # Tabela (Data Editor)
+        # Tabela (Data Editor) - CORREÇÃO AQUI (SelectboxColumn)
         df_editado = st.data_editor(
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
-                "OCORRÊNCIA": st.column_config.SelectColumn("Status da Integração (Motivo)", options=opcoes_ocorrencia, required=True),
+                "OCORRÊNCIA": st.column_config.SelectboxColumn("Status da Integração (Motivo)", options=opcoes_ocorrencia, required=True),
                 "ID": st.column_config.TextColumn("ID da Comanda (Matrícula)", disabled=True),
                 "NOME": st.column_config.TextColumn("Colaborador", disabled=True),
                 "CARGO": st.column_config.TextColumn("Função", disabled=True),
