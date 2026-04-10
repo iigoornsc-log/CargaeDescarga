@@ -425,7 +425,7 @@ def tratar_dados(df_h):
 st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos Operacional CD2900</div>', unsafe_allow_html=True)
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📊 Financeiro (Diretoria)"]
+    ["🚛 Gestão de Docas", "📋 Absenteísmo (Doca)", "📊 Financeiro (Diretoria)"]
 )
 st.sidebar.markdown("---")
 
