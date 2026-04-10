@@ -353,7 +353,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
 
     # --- ABA 1: VISÃO EM TEMPO REAL ---
-    # --- ABA 1: VISÃO EM TEMPO REAL ---
     with aba1:
         df_log = carregar_log_produtividade()
         
@@ -366,54 +365,48 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
                 for index, row in df_ativos.iterrows():
-                    # Container visual para a Doca
-                    with st.container():
-                        st.markdown(f'''
-                        <div class="magalu-card" style="border-left: 4px solid #0086FF; padding: 10px 15px; margin-bottom: 5px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <b style="font-size: 18px;">Doca {row['DOCA']}</b>
-                                <span style="font-size: 11px; color: #64748B;">⌚ Início: {row['DATA_HORA']}</span>
-                            </div>
-                            <div style="font-size: 13px; margin-top: 5px;"><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>
-                            <div style="font-size: 12px; color: #0086FF; margin-top: 5px;">Equipe: {row['AUXILIARES']}</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
+                    # st.container(border=True) desenha o card nativo do Streamlit!
+                    with st.container(border=True):
                         
-                        # Botão de Encerrar logo abaixo do card
-                        if st.button(f"🏁 Finalizar Doca {row['DOCA']}", key=f"btn_fin_{row['DOCA']}_{index}", use_container_width=True):
-                            agora_dt = datetime.datetime.now()
-                            inicio_dt = row['DATA_HORA_DT']
-                            
-                            # Cálculo de Duração
-                            duracao = agora_dt - inicio_dt
-                            total_minutos = int(duracao.total_seconds() / 60)
-                            horas = total_minutos // 60
-                            mins = total_minutos % 60
-                            tempo_str = f"{horas:02d}:{mins:02d}"
-                            
-                            auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
-                            
-                            # Montagem da linha de Histórico Definitivo
-                            dados_conclusao = [
-                                agora_dt.strftime("%d/%m/%Y"), # DATA
-                                str(row['DOCA']),              # DOCA
-                                str(row['AGENDA']),            # AGENDA
-                                str(row['CONFERENTE']),        # CONFERENTE
-                                len(auxiliares_lista),         # QTD_AUX
-                                row['AUXILIARES'],             # AUXILIARES
-                                row['DATA_HORA'],              # HORA INICIO
-                                agora_dt.strftime("%H:%M:%S"), # HORA FIM
-                                tempo_str                      # DURACAO
-                            ]
-                            
-                            # Linha para "matar" a doca no log ativo
-                            linha_log_fecha = [agora_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
-                            
-                            with st.spinner("Finalizando doca e calculando indicadores..."):
-                                if gravar_conclusao_doca(dados_conclusao, linha_log_fecha):
-                                    st.success(f"Doca {row['DOCA']} finalizada em {tempo_str}!")
-                                    st.cache_data.clear()
-                                    st.rerun()
+                        # LINHA 1 DO CARD: Doca e Hora
+                        c_title, c_time = st.columns([7, 3])
+                        c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
+                        c_time.markdown(f"<div style='text-align:right; font-size:11px; color:#64748B; margin-top:5px;'>⌚ Início: {row['DATA_HORA']}</div>", unsafe_allow_html=True)
+                        
+                        # LINHA 2 DO CARD: Agenda e Líder
+                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
+                        
+                        # LINHA 3 DO CARD: Equipe (Esquerda) e Botão Verde (Direita)
+                        c_eq, c_btn = st.columns([7, 3])
+                        c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
+                        
+                        with c_btn:
+                            # O type="primary" faz o botão puxar o CSS verde que criamos no Passo 1
+                            if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                                agora_dt = datetime.datetime.now()
+                                inicio_dt = row['DATA_HORA_DT']
+                                
+                                # Cálculo de Duração
+                                duracao = agora_dt - inicio_dt
+                                total_minutos = int(duracao.total_seconds() / 60)
+                                horas = total_minutos // 60
+                                mins = total_minutos % 60
+                                tempo_str = f"{horas:02d}:{mins:02d}"
+                                
+                                auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+                                
+                                dados_conclusao = [
+                                    agora_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
+                                    str(row['CONFERENTE']), len(auxiliares_lista), row['AUXILIARES'], 
+                                    row['DATA_HORA'], agora_dt.strftime("%H:%M:%S"), tempo_str
+                                ]
+                                linha_log_fecha = [agora_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
+                                
+                                with st.spinner("Finalizando..."):
+                                    if gravar_conclusao_doca(dados_conclusao, linha_log_fecha):
+                                        st.success(f"Doca finalizada em {tempo_str}!")
+                                        st.cache_data.clear()
+                                        st.rerun()
         else:
             st.info("O Log ainda está vazio.")
 
