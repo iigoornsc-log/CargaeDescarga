@@ -369,8 +369,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
         col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
 
-    # Criação das TRÊS abas solicitadas
-    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
+    # Criação das TRÊS abas
+    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
@@ -388,99 +388,84 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if df_ativos.empty:
                 st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
             else:
-                # Pega a hora atual exata do servidor
                 agora_dt = datetime.datetime.now()
                 
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
-                    info = {'CATEGORIA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
-                    # --- CÁLCULO DE TEMPO LIMITE PARA INICIAR (DROP-DEAD TIME) ---
+                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
                     meta_minutos = 60 # Padrão
-                    limite_str = ""
-                    hora_max_str = "-"
-                    txt_timer_pend = "⏳ Aguardando..."
-                    cor_timer_pend = "#F59E0B" # Laranja
-                    bg_timer_pend = "#FEF3C7"
                     
-                    try:
-                        col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
-                        if col_meta and pd.notna(row[col_meta]):
-                            meta_minutos = int(float(str(row[col_meta]).replace(',', '.')))
+                    if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
+                        aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
+                        pagto_str = "✅ Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                        valor_desc = aux_row.get('R$ DESCARGA', '-')
+                        if str(valor_desc).replace('.','',1).isdigit():
+                            valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                             
-                        col_limite = next((c for c in df_aux.columns if 'LIMITE' in str(c).upper()), None)
-                        if col_limite and pd.notna(row[col_limite]) and str(row[col_limite]).strip() != '':
-                            limite_str = str(row[col_limite]).strip()
-                            
-                            # Transforma o limite (ex: "17:30") em hora real
-                            h_lim, m_lim = map(int, limite_str.split(':'))
-                            limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
-                            
-                            # A LÓGICA DE OURO: Hora Máxima para Iniciar a carga
-                            hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
-                            hora_max_str = hora_max_inicio.strftime("%H:%M")
-                            
-                            # Diferença entre a Hora Máxima de Início e o Relógio AGORA
-                            diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
-                            
-                            if diff_min >= 0:
-                                h = int(diff_min // 60)
-                                m = int(diff_min % 60)
-                                cor_timer_pend = "#00C853" # Verde
-                                bg_timer_pend = "#E6F9EC"
-                                txt_timer_pend = f"🟢 Sobra {h:02d}h{m:02d}m p/ Iniciar"
-                            else:
-                                atraso = abs(diff_min)
-                                h = int(atraso // 60)
-                                m = int(atraso % 60)
-                                cor_timer_pend = "#DC2626" # Vermelho
-                                bg_timer_pend = "#FEF2F2"
-                                txt_timer_pend = f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
-                    except Exception as e:
-                        pass
+                        # Tratando possível erro de nome da coluna Linha/Categoria
+                        linha_val = aux_row.get('LINHA', aux_row.get('CATEGORIA', '-'))
+                        info = {'LINHA': linha_val, 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
+                        
+                        try:
+                            col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
+                            if col_meta and pd.notna(aux_row[col_meta]):
+                                meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
+                        except: pass
 
-                    # --- DESENHO DO CARD NA FILA PENDENTE ---
+                    # CÁLCULO DO CRONÔMETRO DE SLA (Tempo de Execução)
+                    inicio_dt = row['DATA_HORA_DT']
+                    if pd.isna(inicio_dt): inicio_dt = agora_dt
+                    
+                    decorrido_min = (agora_dt - inicio_dt).total_seconds() / 60
+                    restante_min = meta_minutos - decorrido_min
+                    
+                    if restante_min >= 0:
+                        h = int(restante_min // 60)
+                        m = int(restante_min % 60)
+                        cor_timer = "#00C853"
+                        bg_timer = "#E6F9EC"
+                        txt_timer = f"⏳ Resta {h:02d}h{m:02d}m"
+                    else:
+                        atraso = abs(restante_min)
+                        h = int(atraso // 60)
+                        m = int(atraso % 60)
+                        cor_timer = "#DC2626"
+                        bg_timer = "#FEF2F2"
+                        txt_timer = f"🚨 Atraso -{h:02d}h{m:02d}m"
+
                     with st.container(border=True):
-                        st.markdown(f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h4 style='margin:0; color:#475569;'>Doca {doca_str}</h4>
-                            <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>
-                                {txt_timer_pend}
+                        c_title, c_time = st.columns([5, 5])
+                        c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
+                        
+                        c_time.markdown(f"""
+                        <div style='text-align:right;'>
+                            <div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div>
+                            <div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>
+                                {txt_timer} <span style="font-size:10px; font-weight:normal;">(Meta: {meta_minutos}m)</span>
                             </div>
                         </div>
-                        <div style='font-size: 13px; margin: 8px 0px 4px 0px; display: flex; justify-content: space-between;'>
-                            <span><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</span>
-                        </div>
+                        """, unsafe_allow_html=True)
                         
-                        <div style='font-size: 12px; display: flex; gap: 15px; margin-bottom: 8px;'>
-                            <span style='color:#64748B;'>Meta Operação: <b>{meta_minutos}m</b></span>
-                            <span style='color:#0086FF;'>Iniciar até: <b>{hora_max_str}</b></span>
-                            <span style='color:#DC2626;'>Fim Máximo: <b>{limite_str if limite_str else '-'}</b></span>
-                        </div>
+                        st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
+                        st.markdown(f"""
                         <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
                             <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
-                            <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span>
-                        </div>
-                        
-                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 6px; border-radius: 4px; border: 1px solid #FECACA;'>
-                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
+                            <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0086FF; font-weight:bold;">{info['STATUS']}</span>
                         </div>
                         """, unsafe_allow_html=True)
                         
                         c_eq, c_btn = st.columns([7, 3])
                         c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
                         
-                        # --- AQUI ESTAVA O ERRO DE INDENTAÇÃO. AGORA ESTÁ CORRIGIDO! ---
                         with c_btn:
                             if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                                # 1. Cálculos de tempo
                                 clique_dt = datetime.datetime.now()
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
-                                # 2. Prepara os dados básicos
                                 auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
                                 linhas_conclusao_multiplas = []
                                 
@@ -493,13 +478,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
                                 
-                                # 3. DECISÃO: Estourou a meta?
                                 if restante_min < 0:
                                     exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
                                 else:
-                                    for linha in linhas_conclusao_multiplas:
-                                        linha.append("No Prazo")
-                                        
+                                    for linha in linhas_conclusao_multiplas: linha.append("No Prazo")
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
                                             st.success(f"Doca finalizada com sucesso!")
@@ -537,17 +519,19 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     if str(valor_desc).replace('.','',1).isdigit():
                         valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
 
+                    linha_val = row.get('LINHA', row.get('CATEGORIA', '-'))
                     info = {
-                        'CATEGORIA': row.get('CATEGORIA', '-'), 'SKU': row.get('SKU', '-'), 
+                        'LINHA': linha_val, 'SKU': row.get('SKU', '-'), 
                         'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 
                         'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')
                     }
                     
-                    # --- CÁLCULO DE TEMPO LIMITE PARA INICIAR (DROP-DEAD TIME) ---
-                    meta_minutos = 60 # Padrão
+                    # CÁLCULO DE TEMPO LIMITE PARA INICIAR (Drop-Dead Time)
+                    meta_minutos = 60
                     limite_str = ""
+                    hora_max_str = "-"
                     txt_timer_pend = "⏳ Aguardando..."
-                    cor_timer_pend = "#F59E0B" # Laranja
+                    cor_timer_pend = "#F59E0B"
                     bg_timer_pend = "#FEF3C7"
                     
                     try:
@@ -559,33 +543,30 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         if col_limite and pd.notna(row[col_limite]) and str(row[col_limite]).strip() != '':
                             limite_str = str(row[col_limite]).strip()
                             
-                            # Transforma o limite (ex: "17:00") em hora real
                             h_lim, m_lim = map(int, limite_str.split(':'))
                             limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
                             
-                            # Subtrai a meta para achar a "Hora Máxima de Início"
                             hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
+                            hora_max_str = hora_max_inicio.strftime("%H:%M")
                             
-                            # Diferença entre a Hora Máxima e o Agora
                             diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
                             
                             if diff_min >= 0:
                                 h = int(diff_min // 60)
                                 m = int(diff_min % 60)
-                                cor_timer_pend = "#00C853" # Verde
+                                cor_timer_pend = "#00C853"
                                 bg_timer_pend = "#E6F9EC"
-                                txt_timer_pend = f"🟢 Iniciar em até {h:02d}h{m:02d}m"
+                                txt_timer_pend = f"🟢 Sobra {h:02d}h{m:02d}m p/ Iniciar"
                             else:
                                 atraso = abs(diff_min)
                                 h = int(atraso // 60)
                                 m = int(atraso % 60)
-                                cor_timer_pend = "#DC2626" # Vermelho
+                                cor_timer_pend = "#DC2626"
                                 bg_timer_pend = "#FEF2F2"
-                                txt_timer_pend = f"🚨 Atrasado {h:02d}h{m:02d}m p/ iniciar"
+                                txt_timer_pend = f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
                     except Exception as e:
-                        pass # Se a hora estiver digitada errada na planilha, mantém o "Aguardando..."
+                        pass
 
-                    # --- DESENHO DO CARD NA FILA PENDENTE ---
                     with st.container(border=True):
                         st.markdown(f"""
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -596,16 +577,21 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         </div>
                         <div style='font-size: 13px; margin: 8px 0px 4px 0px; display: flex; justify-content: space-between;'>
                             <span><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</span>
-                            <span style='font-size: 11px; color:#64748B;'>Fim Máximo: <b>{limite_str if limite_str else '-'}</b></span>
+                        </div>
+                        
+                        <div style='font-size: 12px; display: flex; gap: 15px; margin-bottom: 8px;'>
+                            <span style='color:#64748B;'>Meta Operação: <b>{meta_minutos}m</b></span>
+                            <span style='color:#0086FF;'>Iniciar até: <b>{hora_max_str}</b></span>
+                            <span style='color:#DC2626;'>Fim Máximo: <b>{limite_str if limite_str else '-'}</b></span>
                         </div>
                         
                         <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
-                            <b>Linha:</b> {info['CATEGORIA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
                             <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span>
                         </div>
                         
                         <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 6px; border-radius: 4px; border: 1px solid #FECACA;'>
-                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE</span>
+                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
                         </div>
                         """, unsafe_allow_html=True)
         else:
