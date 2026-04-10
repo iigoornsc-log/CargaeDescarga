@@ -279,7 +279,7 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
                     sucesso = gravar_absenteismo(lista_final)
                     if sucesso:
                         st.success(f"✅ {len(lista_final)} registros salvos!")
-                        st.cache_data.clear()
+                        carregar_equipe.clear()
             else:
                 st.warning("Nenhuma falta marcada.")
 
@@ -438,7 +438,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 with st.spinner("Finalizando..."):
                                     if gravar_conclusao_doca(dados_conclusao, linha_log_fecha):
                                         st.success(f"Doca finalizada em {tempo_str}!")
-                                        st.cache_data.clear()
+                                        carregar_log_produtividade.clear()
                                         st.rerun()
         else:
             st.info("O Log ainda está vazio.")
@@ -499,7 +499,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         if c1.button("✅ Sim, Transferir", use_container_width=True):
             with st.spinner("Atualizando docas..."):
                 if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
-                    st.cache_data.clear()
+                    carregar_log_produtividade.clear() # Limpa só o Log!
                     st.rerun() # Fecha o pop-up e recarrega a tela automaticamente
                     
         if c2.button("❌ Cancelar", use_container_width=True):
@@ -613,7 +613,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 else:
                                     st.success(f"✅ Doca {doca_sel} atualizada!")
                                     st.balloons()
-                                st.cache_data.clear()
+                                carregar_log_produtividade.clear()
                                 st.rerun() # Atualiza a tela pra já jogar os dados na aba 1
 
         except Exception as e:
