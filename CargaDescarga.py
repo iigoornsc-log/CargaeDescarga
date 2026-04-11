@@ -1196,29 +1196,33 @@ elif pagina_selecionada == "📈 Produtividade (SLA & Equipe)":
                 colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
                 df_fin = df_fin.rename(columns=colunas_upper)
                 
-                # Encontrar as colunas dinamicamente
+                # --- BUSCA INTELIGENTE DE COLUNAS COM REDE DE SEGURANÇA (FALLBACK) ---
                 col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
                 col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
-                col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
+                col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c or 'DURAÇÃO' in c or 'DURACAO' in c), None)
                 col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
                 col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
                 col_aux = next((c for c in df_fin.columns if 'AUXILIAR' in c or 'PESSOA' in c or 'NOME' in c), None)
 
+                # A MÁGICA: Se a coluna não existir na planilha, cria uma "virtual" para não quebrar a tela!
+                if not col_cat:
+                    col_cat = 'CATEGORIA'
+                    df_fin[col_cat] = "SEM CATEGORIA"
+                if not col_just:
+                    col_just = 'JUSTIFICATIVA'
+                    df_fin[col_just] = "NO PRAZO"
+                if not col_aux:
+                    col_aux = 'AUXILIAR'
+                    df_fin[col_aux] = "DESCONHECIDO"
+                if not col_tempo:
+                    col_tempo = 'TEMPO'
+                    df_fin[col_tempo] = "00:00"
+                if not col_agenda:
+                    col_agenda = 'AGENDA'
+                    df_fin[col_agenda] = "S/N"
+
                 # Função para converter "02:30" em 150 minutos para fazer conta matemática
                 def tempo_para_minutos(t_str):
-                    try:
-                        h, m = map(int, str(t_str).split(':'))
-                        return h * 60 + m
-                    except: return 0
-                
-                # Função para converter 150 minutos de volta para "02h30m" bonito
-                def minutos_para_texto(mins):
-                    if pd.isna(mins) or mins == 0: return "00h00m"
-                    h = int(mins // 60)
-                    m = int(mins % 60)
-                    return f"{h:02d}h{m:02d}m"
-
-                df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
                 
                 # --- Filtro de Data ---
                 if col_data:
