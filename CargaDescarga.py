@@ -1213,7 +1213,7 @@ elif pagina_selecionada == "📈 Produtividade (SLA & Equipe)":
                 col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
                 col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
                 col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
-                col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c or 'AUXILIARES' in c), None)
+                col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c), None)
 
                 # Função para converter "02:30" em 150 minutos para fazer conta matemática
                 def tempo_para_minutos(t_str):
