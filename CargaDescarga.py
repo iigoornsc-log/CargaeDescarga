@@ -443,12 +443,32 @@ def tratar_dados(df_h):
 # ==========================================================
 # 5. ROTEADOR DE MÓDULOS (SIDEBAR)
 # ==========================================================
-st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0;">Módulos Operacional CD2900</div>', unsafe_allow_html=True)
+
+# Imagem com a linha RGB animada embaixo (Estilo Moldura Tech)
+# Dica: Se quiser trocar a foto para uma imagem do CD 2900, basta trocar o link do "src" abaixo!
+st.sidebar.markdown("""
+    <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
+        <img src="https://logodownload.org/wp-content/uploads/2014/10/magalu-logo-0.png" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
+        <div style="height: 3px; width: 100%; border-radius: 2px; background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF); background-size: 300% 300%; animation: magaluGlow 6s linear infinite;"></div>
+    </div>
+""", unsafe_allow_html=True)
+
+# O Menu de Navegação Limpo e Direto
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["🚛 Gestão de Docas", "📋 Absenteísmo (Doca)","📅 Registro de Alinhamento","📊 Financeiro (Diretoria)"]
+    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📊 Financeiro (Diretoria)"]
 )
+
 st.sidebar.markdown("---")
+
+# Botão Anti-Pânico (Forçar Atualização do Banco de Dados)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+if st.sidebar.button("🔄 Sincronizar Agora", type="secondary", use_container_width=True):
+    with st.spinner("📡 Puxando dados em tempo real da base..."):
+        # Limpa toda a memória cache do sistema
+        st.cache_data.clear()
+        # Recarrega a página instantaneamente
+        st.rerun()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
