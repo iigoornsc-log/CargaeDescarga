@@ -1034,13 +1034,32 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
             meses_unicos = rec['MES_ORDENACAO'].nunique()
             tkt_mes = total_r / meses_unicos if meses_unicos > 0 else 0
 
-            # --- 5 KPIs no Topo (Design Original) ---
+            # --- 5 KPIs no Topo (Design Premium Corporativo) ---
             col1, col2, col3, col4, col5 = st.columns(5)
-            with col1: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #00C853; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">💰 Arrecadação</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(total_r)}</div></div>', unsafe_allow_html=True)
-            with col2: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #FF3366; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📉 Perda Ausentes</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(total_p)}</div></div>', unsafe_allow_html=True)
-            with col3: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">🚛 Ticket / Carga</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_carga)}</div></div>', unsafe_allow_html=True)
-            with col4: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📅 Ticket / Dia</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_dia)}</div></div>', unsafe_allow_html=True)
-            with col5: st.markdown(f'<div class="magalu-card" style="border-bottom: 4px solid #0086FF; text-align:center; padding: 15px 5px;"><div style="font-size:11px; color:#64748B; font-weight:bold; text-transform:uppercase;">📆 Ticket / Mês</div><div style="font-size:22px; font-weight:800; color:#111827;">{formatar_moeda_br(tkt_mes)}</div></div>', unsafe_allow_html=True)
+            
+            # Função limpa para gerar os cards padronizados sem poluição visual
+            def render_kpi(titulo, valor, subtitulo, cor_hex):
+                return f"""
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative; overflow: hidden; margin-bottom: 20px;">
+                    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background-color: {cor_hex};"></div>
+                    <div style="padding-left: 10px;">
+                        <div style="font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">{titulo}</div>
+                        <div style="font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2;">{valor}</div>
+                        <div style="font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 4px;">{subtitulo}</div>
+                    </div>
+                </div>
+                """
+
+            with col1: 
+                st.markdown(render_kpi("Arrecadação", formatar_moeda_br(total_r), "Faturamento Bruto", "#00C853"), unsafe_allow_html=True)
+            with col2: 
+                st.markdown(render_kpi("Perdas (Ausentes)", formatar_moeda_br(total_p), "Custo de Oportunidade", "#EF4444"), unsafe_allow_html=True)
+            with col3: 
+                st.markdown(render_kpi("Ticket / Carga", formatar_moeda_br(tkt_carga), "Média por Veículo", "#0086FF"), unsafe_allow_html=True)
+            with col4: 
+                st.markdown(render_kpi("Ticket / Dia", formatar_moeda_br(tkt_dia), "Média Diária", "#8B5CF6"), unsafe_allow_html=True)
+            with col5: 
+                st.markdown(render_kpi("Ticket / Mês", formatar_moeda_br(tkt_mes), "Projeção Mensal", "#6366F1"), unsafe_allow_html=True)
 
             # --- Tabelas Lado a Lado ---
             col_t1, col_t2 = st.columns(2)
