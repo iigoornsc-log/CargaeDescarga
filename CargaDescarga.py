@@ -470,7 +470,7 @@ st.sidebar.markdown("""
 # O Menu de Navegação Limpo e Direto
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📅 Registro de Alinhamento","📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
+    ["📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento","📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
 )
 
 st.sidebar.markdown("---")
