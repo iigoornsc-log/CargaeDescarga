@@ -512,7 +512,7 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
                 "OCORRÊNCIA": st.column_config.SelectboxColumn("Status", options=opcoes_ocorrencia, required=True, width="medium"),
-                "ID": st.column_config.TextColumn("Matrícula", disabled=True, width="small"),
+                "ID": st.column_config.NumberColumn("Matrícula", disabled=True, width="small"),
                 "NOME": st.column_config.TextColumn("Nome", disabled=True, width="large"),
                 "CARGO": None,
                 "TURNO": None,
