@@ -240,6 +240,18 @@ def carregar_matriz():
     except:
         return pd.DataFrame()
 
+@st.cache_data(ttl=60)
+def carregar_docas_finalizadas():
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        # ATENÇÃO: Confirme se o nome da sua aba de finalizados é esse mesmo!
+        ws = sh.worksheet("DOCAS_FINALIZADAS") 
+        df = pd.DataFrame(ws.get_all_records())
+        return df
+    except Exception as e:
+        return pd.DataFrame()
+
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
@@ -456,7 +468,7 @@ st.sidebar.markdown("""
 # O Menu de Navegação Limpo e Direto
 pagina_selecionada = st.sidebar.radio(
     "",
-    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📊 Financeiro (Diretoria)"]
+    ["📋 Absenteísmo (Doca)", "🚛 Gestão de Docas", "📅 Registro de Alinhamento","📈 Produtividade (SLA & Equipe)", "📊 Financeiro (Diretoria)"]
 )
 
 st.sidebar.markdown("---")
@@ -1165,4 +1177,169 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
                             
     except Exception as e:
         st.error(f"Erro no módulo de Alinhamento: {e}")
+
+# ==========================================================
+# MÓDULO 4: PRODUTIVIDADE, SLA E RAIO-X DA EQUIPE
+# ==========================================================
+elif pagina_selecionada == "📈 Produtividade (SLA & Equipe)":
+    st.markdown('<div class="magalu-page-title">Produtividade & Nível de Serviço</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Acompanhamento de SLA, tempo de ciclo e performance individual.</div>', unsafe_allow_html=True)
+
+    try:
+        with st.spinner("Calculando métricas de performance..."):
+            df_fin = carregar_docas_finalizadas()
+            
+            if df_fin.empty:
+                st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
+            else:
+                # Padronizar nomes de colunas para evitar erros de digitação na planilha
+                colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
+                df_fin = df_fin.rename(columns=colunas_upper)
+                
+                # Encontrar as colunas dinamicamente
+                col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
+                col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
+                col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
+                col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
+                col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
+                col_aux = next((c for c in df_fin.columns if 'AUXILIAR' in c or 'PESSOA' in c or 'NOME' in c), None)
+
+                # Função para converter "02:30" em 150 minutos para fazer conta matemática
+                def tempo_para_minutos(t_str):
+                    try:
+                        h, m = map(int, str(t_str).split(':'))
+                        return h * 60 + m
+                    except: return 0
+                
+                # Função para converter 150 minutos de volta para "02h30m" bonito
+                def minutos_para_texto(mins):
+                    if pd.isna(mins) or mins == 0: return "00h00m"
+                    h = int(mins // 60)
+                    m = int(mins % 60)
+                    return f"{h:02d}h{m:02d}m"
+
+                df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
+                
+                # --- Filtro de Data ---
+                if col_data:
+                    df_fin[col_data] = pd.to_datetime(df_fin[col_data], format="%d/%m/%Y", errors='coerce')
+                    min_date, max_date = df_fin[col_data].min().date(), df_fin[col_data].max().date()
+                    col_f1, col_f2 = st.columns([1, 3])
+                    with col_f1:
+                        datas_sel = st.date_input("Filtrar Período", [min_date, max_date])
+                        if len(datas_sel) == 2:
+                            df_fin = df_fin[(df_fin[col_data].dt.date >= datas_sel[0]) & (df_fin[col_data].dt.date <= datas_sel[1])]
+
+                # Remove linhas duplicadas de Agenda (para não contar o tempo da mesma agenda 5x se tiver 5 ajudantes)
+                df_agendas_unicas = df_fin.drop_duplicates(subset=[col_agenda])
+
+                # --- CÁLCULOS DOS KPIS ---
+                total_cargas = len(df_agendas_unicas)
+                tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
+                
+                # Cálculo de SLA (Nível de Serviço)
+                qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)])
+                sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
+                cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
+
+                # Criação das Abas Internas (Visão Macro x Visão Equipe)
+                aba_macro, aba_equipe = st.tabs(["📊 Visão Macro & SLA", "🧑‍🔧 Raio-X da Equipe"])
+
+                with aba_macro:
+                    # --- CARDS DE KPI ---
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
+                    with c2:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA (Nível de Serviço)</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B;">{qtd_no_prazo} cargas no prazo</div></div>', unsafe_allow_html=True)
+                    with c3:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Tempo Médio Geral</div><div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div></div>', unsafe_allow_html=True)
+
+                    # --- GRÁFICOS ---
+                    col_g1, col_g2 = st.columns(2)
+                    
+                    with col_g1:
+                        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'>⏱️ Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
+                        df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
+                        df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
+                        
+                        fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
+                        fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, margin=dict(l=0, r=0, t=0, b=0), height=350)
+                        fig1.update_traces(textposition='outside', textfont=dict(weight='bold'))
+                        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+                    with col_g2:
+                        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'>🚨 Motivos de Atraso (Ofensores)</h4>", unsafe_allow_html=True)
+                        df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
+                        if not df_atrasos.empty:
+                            df_motivos = df_atrasos[col_just].value_counts().reset_index()
+                            df_motivos.columns = ['Motivo', 'Qtd']
+                            fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
+                            fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+                            st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+                        else:
+                            st.info("Nenhum atraso registrado no período! Operação perfeita! 🎉")
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+                with aba_equipe:
+                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'>🏆 Performance Individual por Categoria</h4>", unsafe_allow_html=True)
+                    
+                    categorias_lista = df_fin[col_cat].dropna().unique().tolist()
+                    cat_sel = st.selectbox("Selecione a Categoria para comparar a equipe:", ["Todas as Categorias"] + categorias_lista)
+
+                    df_operadores = df_fin.copy()
+                    if cat_sel != "Todas as Categorias":
+                        df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
+
+                    if not df_operadores.empty:
+                        # Agrupando por Auxiliar para ver Produtividade
+                        df_rank = df_operadores.groupby(col_aux).agg(
+                            Cargas_Participadas=(col_agenda, 'nunique'),
+                            Tempo_Medio_Minutos=('MINUTOS', 'mean')
+                        ).reset_index().sort_values('Tempo_Medio_Minutos') # Do mais rápido pro mais lento
+                        
+                        df_rank = df_rank[df_rank['Cargas_Participadas'] > 0]
+                        df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
+                        
+                        media_geral_cat = df_rank['Tempo_Medio_Minutos'].mean()
+                        
+                        c_rank1, c_rank2 = st.columns([6, 4])
+                        
+                        with c_rank1:
+                            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                            st.markdown(f"<h5 style='color:#334155;'>Ranking de Velocidade - {cat_sel}</h5>", unsafe_allow_html=True)
+                            
+                            # Gráfico de barras comparando quem é o mais rápido
+                            fig_rank = px.bar(df_rank, x='Tempo_Medio_Minutos', y=col_aux, orientation='h', text='Tempo_Medio', 
+                                            color='Tempo_Medio_Minutos', color_continuous_scale='blues_r')
+                            
+                            # Linha de Média Geral para o cara saber se tá acima ou abaixo da média da empresa
+                            fig_rank.add_vline(x=media_geral_cat, line_width=2, line_dash="dash", line_color="red", annotation_text="Média da Categoria")
+                            
+                            fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis_title="Minutos (Menos é Melhor)", yaxis_title=None, coloraxis_showscale=False, height=450)
+                            fig_rank.update_traces(textposition='inside', textfont=dict(color='white', weight='bold'))
+                            st.plotly_chart(fig_rank, use_container_width=True, config={'displayModeBar': False})
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            
+                        with c_rank2:
+                            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                            st.markdown(f"<h5 style='color:#334155;'>Matriz de Participação</h5>", unsafe_allow_html=True)
+                            st.dataframe(
+                                df_rank[[col_aux, 'Cargas_Participadas', 'Tempo_Medio']],
+                                column_config={
+                                    col_aux: "Operador",
+                                    "Cargas_Participadas": st.column_config.NumberColumn("Qtd Cargas", format="%d"),
+                                    "Tempo_Medio": "Tempo Médio"
+                                },
+                                hide_index=True, use_container_width=True, height=450
+                            )
+                            st.markdown('</div>', unsafe_allow_html=True)
+                    else:
+                        st.info("Sem dados suficientes para esta categoria.")
+
+    except Exception as e:
+        st.error(f"Erro no módulo de Produtividade: {e}")
    
