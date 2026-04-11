@@ -514,13 +514,21 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
 
         # 2. O Editor com a correção no Column Config
         df_editado = st.data_editor(
+            # 1. Fazemos uma CÓPIA segura para o Pandas não ignorar nossas alterações
+        df_filtrado = df_filtrado.copy()
+
+        # 2. Limpeza Extrema (Mata NaN, tira espaços, e remove o '.0' se existir)
+        df_filtrado['ID'] = df_filtrado['ID'].fillna('')
+        df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.strip()
+        df_filtrado['ID'] = df_filtrado['ID'].replace(['nan', 'None', '<NA>'], '')
+        df_filtrado['ID'] = df_filtrado['ID'].str.replace(r'\.0$', '', regex=True)
+
+        # 3. O Editor de Dados Protegido
+        df_editado = st.data_editor(
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
                 "OCORRÊNCIA": st.column_config.SelectboxColumn("Status", options=opcoes_ocorrencia, required=True, width="medium"),
-                
-                # O PULO DO GATO: Trocamos NumberColumn por TextColumn!
                 "ID": st.column_config.TextColumn("Matrícula", disabled=True, width="small"),
-                
                 "NOME": st.column_config.TextColumn("Nome", disabled=True, width="large"),
                 "CARGO": None,
                 "TURNO": None,
