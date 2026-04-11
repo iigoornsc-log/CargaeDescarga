@@ -509,10 +509,18 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
         st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
         
         df_editado = st.data_editor(
+            # 1. Garante que o ID seja lido como Texto puro (removendo qualquer .0 que o Pandas possa inventar)
+        df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.replace('\.0$', '', regex=True)
+
+        # 2. O Editor com a correção no Column Config
+        df_editado = st.data_editor(
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
                 "OCORRÊNCIA": st.column_config.SelectboxColumn("Status", options=opcoes_ocorrencia, required=True, width="medium"),
-                "ID": st.column_config.NumberColumn("Matrícula", disabled=True, width="small"),
+                
+                # O PULO DO GATO: Trocamos NumberColumn por TextColumn!
+                "ID": st.column_config.TextColumn("Matrícula", disabled=True, width="small"),
+                
                 "NOME": st.column_config.TextColumn("Nome", disabled=True, width="large"),
                 "CARGO": None,
                 "TURNO": None,
