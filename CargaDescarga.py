@@ -629,12 +629,15 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     # --- NOVO POP-UP MAGALU: GERENCIAR OPERADOR (TRANSFERIR/RETIRAR) ---
     @st.dialog("🔄 Gerenciar Operador da Doca")
     def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
-        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem}</b></div>", unsafe_allow_html=True)
+        # AQUI ESTÁ A CORREÇÃO SÊNIOR: Força a Doca a ser uma String Limpa!
+        doca_origem_str = str(doca_origem).strip()
+        
+        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
         
         operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
-        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Equipe ", "➡️ Transferir para outra equipe Ativa"])
+        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Operação (Ficará Livre no Pátio)", "➡️ Transferir para outra Doca ativa"])
         
-        docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != str(doca_origem).strip()]
+        docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
         doca_destino = None
         
         if "Transferir" in acao:
@@ -651,27 +654,28 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
             linhas_para_gravar = []
             
-            # 1. Tira o cara da doca de origem e recria a linha só com quem sobrou
+            # 1. Tira o cara da doca de origem e recria a linha só com quem sobrou (Usando a String limpa)
             nova_equipe_origem = [p for p in equipe_atual if p != operador_sel]
-            agenda_orig = info_docas_global[doca_origem]['agenda']
-            conf_orig = info_docas_global[doca_origem]['conferente']
+            agenda_orig = info_docas_global[doca_origem_str]['agenda']
+            conf_orig = info_docas_global[doca_origem_str]['conferente']
             
             if not nova_equipe_origem:
-                linhas_para_gravar.append([agora_str, str(doca_origem), agenda_orig, conf_orig, "ENCERRADO"])
+                linhas_para_gravar.append([agora_str, doca_origem_str, agenda_orig, conf_orig, "ENCERRADO"])
             else:
                 for p in nova_equipe_origem:
-                    linhas_para_gravar.append([agora_str, str(doca_origem), agenda_orig, conf_orig, p])
+                    linhas_para_gravar.append([agora_str, doca_origem_str, agenda_orig, conf_orig, p])
                     
             # 2. Se for transferência, adiciona o cara na equipe da doca de destino
             if "Transferir" in acao and doca_destino:
-                nova_equipe_dest = info_docas_global[doca_destino]['equipe'] + [operador_sel]
-                agenda_dest = info_docas_global[doca_destino]['agenda']
-                conf_dest = info_docas_global[doca_destino]['conferente']
+                doca_dest_str = str(doca_destino).strip()
+                nova_equipe_dest = info_docas_global[doca_dest_str]['equipe'] + [operador_sel]
+                agenda_dest = info_docas_global[doca_dest_str]['agenda']
+                conf_dest = info_docas_global[doca_dest_str]['conferente']
                 
                 for p in nova_equipe_dest:
-                    linhas_para_gravar.append([agora_str, str(doca_destino), agenda_dest, conf_dest, p])
+                    linhas_para_gravar.append([agora_str, doca_dest_str, agenda_dest, conf_dest, p])
                     
-            # Grava no Google Sheets mantendo o rastro de auditoria perfeito!
+            # Grava no Google Sheets
             with st.spinner("Atualizando registros no sistema..."):
                 client = conectar_google()
                 sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
