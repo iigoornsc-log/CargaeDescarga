@@ -632,7 +632,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem}</b></div>", unsafe_allow_html=True)
         
         operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
-        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Operação (Ficará Livre no Pátio)", "➡️ Transferir para outra Doca ativa"])
+        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Equipe ", "➡️ Transferir para outra equipe Ativa"])
         
         docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != str(doca_origem).strip()]
         doca_destino = None
