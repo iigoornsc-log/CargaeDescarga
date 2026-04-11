@@ -508,7 +508,7 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
 
         st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
         
-        df_editado = st.data_editor(
+        df_editado = st.data_editor
             # 1. Garante que o ID seja lido como Texto puro (removendo qualquer .0 que o Pandas possa inventar)
         df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.replace('\.0$', '', regex=True)
 
