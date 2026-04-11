@@ -513,7 +513,7 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
         df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.replace('\.0$', '', regex=True)
 
         # 2. O Editor com a correção no Column Config
-        df_editado = st.data_editor(
+        df_editado = st.data_editor
             # 1. Fazemos uma CÓPIA segura para o Pandas não ignorar nossas alterações
         df_filtrado = df_filtrado.copy()
 
