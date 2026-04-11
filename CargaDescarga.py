@@ -339,8 +339,9 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     if c2.button("❌ Cancelar", use_container_width=True):
         st.rerun()
 
+# --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
 @st.dialog("📝 Justificativa de Atraso")
-def exibir_popup_justificativa(dados_multiplos, linha_log_fecha):
+def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga):
     st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
     
     opcoes_atraso = [
@@ -359,9 +360,10 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha):
     if st.button("Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
-        # Adiciona a justificativa em todas as linhas (uma para cada auxiliar)
+        # O PULO DO GATO: Adiciona a Justificativa e depois a CATEGORIA em todas as linhas
         for linha in dados_multiplos:
             linha.append(justificativa_final)
+            linha.append(categoria_carga)
             
         with st.spinner("Gravando justificativa e finalizando..."):
             if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
@@ -828,16 +830,25 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
+                                
+                                # Pegando a categoria/linha dinamicamente!
+                                cat_final = str(info['LINHA']).upper()
+                                
                                 linhas_conclusao_multiplas = []
                                 for pessoa in auxiliares_lista:
                                     linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
                                 
-                                # AQUI TAMBÉM GRAVAMOS A CATEGORIA NO FECHAMENTO PARA GARANTIR!
-                                linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", str(info['LINHA']).upper()]
+                                # AQUI TAMBÉM GRAVAMOS A CATEGORIA NO LOG DE PRODUTIVIDADE
+                                linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
                                 
-                                if restante_min < 0: exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
+                                if restante_min < 0: 
+                                    # Manda a categoria para o pop-up de atraso
+                                    exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final)
                                 else:
-                                    for linha in linhas_conclusao_multiplas: linha.append("No Prazo")
+                                    for linha in linhas_conclusao_multiplas: 
+                                        linha.append("No Prazo")
+                                        linha.append(cat_final) # <--- Adiciona a categoria logo após o "No Prazo"
+                                        
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
                                             st.success(f"Doca finalizada com sucesso!")
