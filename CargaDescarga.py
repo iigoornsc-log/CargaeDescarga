@@ -596,7 +596,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     def popup_start_carga(doca_sel, agenda_sel, conferente_sel):
         st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'>Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
         
-        # O SEGREDO DO DROPDOWN: Ele puxa o texto de maestria da matriz!
         equipe_sel = st.multiselect(
             "Selecione os colaboradores para iniciar:", 
             options=lista_auxiliares,
@@ -626,6 +625,64 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         st.success("Carga iniciada! Movendo para o painel de processo...")
                         carregar_log_produtividade.clear()
                         st.rerun()
+
+    # --- NOVO POP-UP MAGALU: GERENCIAR OPERADOR (TRANSFERIR/RETIRAR) ---
+    @st.dialog("🔄 Gerenciar Operador da Doca")
+    def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
+        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem}</b></div>", unsafe_allow_html=True)
+        
+        operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
+        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Operação (Ficará Livre no Pátio)", "➡️ Transferir para outra Doca ativa"])
+        
+        docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != str(doca_origem).strip()]
+        doca_destino = None
+        
+        if "Transferir" in acao:
+            if not docas_ativas:
+                st.warning("Não há outras docas em processo no momento para transferir.")
+            else:
+                opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
+                doca_dest_formatada = st.selectbox("Transferir para qual Doca?", opcoes_formatadas)
+                doca_destino = doca_dest_formatada.split(" ")[1] # Extrai apenas o número da doca
+                
+        st.markdown('<br>', unsafe_allow_html=True)
+        if st.button("🔄 Confirmar Alteração", type="primary", use_container_width=True):
+            agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+            agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
+            linhas_para_gravar = []
+            
+            # 1. Tira o cara da doca de origem e recria a linha só com quem sobrou
+            nova_equipe_origem = [p for p in equipe_atual if p != operador_sel]
+            agenda_orig = info_docas_global[doca_origem]['agenda']
+            conf_orig = info_docas_global[doca_origem]['conferente']
+            
+            if not nova_equipe_origem:
+                linhas_para_gravar.append([agora_str, str(doca_origem), agenda_orig, conf_orig, "ENCERRADO"])
+            else:
+                for p in nova_equipe_origem:
+                    linhas_para_gravar.append([agora_str, str(doca_origem), agenda_orig, conf_orig, p])
+                    
+            # 2. Se for transferência, adiciona o cara na equipe da doca de destino
+            if "Transferir" in acao and doca_destino:
+                nova_equipe_dest = info_docas_global[doca_destino]['equipe'] + [operador_sel]
+                agenda_dest = info_docas_global[doca_destino]['agenda']
+                conf_dest = info_docas_global[doca_destino]['conferente']
+                
+                for p in nova_equipe_dest:
+                    linhas_para_gravar.append([agora_str, str(doca_destino), agenda_dest, conf_dest, p])
+                    
+            # Grava no Google Sheets mantendo o rastro de auditoria perfeito!
+            with st.spinner("Atualizando registros no sistema..."):
+                client = conectar_google()
+                sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+                try:
+                    ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
+                    ws_log.append_rows(linhas_para_gravar)
+                    st.success("Equipe atualizada com sucesso!")
+                    carregar_log_produtividade.clear()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao gravar: {e}")
 
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
@@ -678,8 +735,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         h, m = int(atraso // 60), int(atraso % 60)
                         cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"🚨 Atraso -{h:02d}h{m:02d}m"
 
-                    # RENDERIZA AS PÍLULAS DA EQUIPE
                     html_equipe_cards = renderizar_equipe_html(row['AUXILIARES'])
+                    auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
 
                     with st.container(border=True):
                         c_title, c_time = st.columns([5, 5])
@@ -710,31 +767,38 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        if st.button("✅ Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                            clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                            duracao_final = clique_dt - row['DATA_HORA_DT']
-                            total_minutos_final = int(duracao_final.total_seconds() / 60)
-                            horas, mins = total_minutos_final // 60, total_minutos_final % 60
-                            tempo_str = f"{horas:02d}:{mins:02d}"
-                            
-                            auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
-                            linhas_conclusao_multiplas = []
-                            for pessoa in auxiliares_lista:
-                                linhas_conclusao_multiplas.append([
-                                    clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
-                                    str(row['CONFERENTE']), len(auxiliares_lista), pessoa, 
-                                    row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str
-                                ])
-                            linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
-                            
-                            if restante_min < 0: exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
-                            else:
-                                for linha in linhas_conclusao_multiplas: linha.append("No Prazo")
-                                with st.spinner("Finalizando..."):
-                                    if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
-                                        st.success(f"Doca finalizada com sucesso!")
-                                        carregar_log_produtividade.clear()
-                                        st.rerun()
+                        c_eq, c_btn = st.columns([7, 3])
+                        
+                        with c_btn:
+                            if st.button("✅ Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                                clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                                duracao_final = clique_dt - row['DATA_HORA_DT']
+                                total_minutos_final = int(duracao_final.total_seconds() / 60)
+                                horas, mins = total_minutos_final // 60, total_minutos_final % 60
+                                tempo_str = f"{horas:02d}:{mins:02d}"
+                                
+                                linhas_conclusao_multiplas = []
+                                for pessoa in auxiliares_lista:
+                                    linhas_conclusao_multiplas.append([
+                                        clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
+                                        str(row['CONFERENTE']), len(auxiliares_lista), pessoa, 
+                                        row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str
+                                    ])
+                                linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
+                                
+                                if restante_min < 0: exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha)
+                                else:
+                                    for linha in linhas_conclusao_multiplas: linha.append("No Prazo")
+                                    with st.spinner("Finalizando..."):
+                                        if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
+                                            st.success(f"Doca finalizada com sucesso!")
+                                            carregar_log_produtividade.clear()
+                                            st.rerun()
+                                            
+                            # O BOTÃO NOVO ENTRA AQUI! Fica perfeito visualmente.
+                            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
+                            if st.button("🔄 Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                                popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
         else:
             st.info("O Log de Operações ainda está vazio.")
 
