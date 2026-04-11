@@ -487,15 +487,15 @@ if st.sidebar.button("🔄 Sincronizar Agora", type="secondary", use_container_w
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-if pagina_selecionada == "📋 Absenteísmo (Doca)":
-    st.markdown('<div class="magalu-page-title">Lançamento de Ocorrências</div>', unsafe_allow_html=True)
+if pagina_selecionada == "📋 Registro Absenteísmo":
+    st.markdown('<div class="magalu-page-title">Lançamento de Ausências</div>', unsafe_allow_html=True)
     st.markdown('<div class="magalu-page-subtitle">Pátio / Docas</div>', unsafe_allow_html=True)
     
     try:
         df_equipe = carregar_equipe()
         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
         data_chamada = st.date_input("Data", date.today())
-        busca = st.text_input("🔍 Buscar Colaborador", placeholder="Matrícula ou Nome...")
+        busca = st.text_input("🔍 Buscar Colaborador", placeholder="ID ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if busca:
@@ -784,7 +784,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 except Exception as e: st.error(f"Erro ao gravar: {e}")
 
     # Criação das TRÊS abas
-    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
+    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
@@ -795,7 +795,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_ativos = df_ativos[df_ativos['AUXILIARES'] != 'ENCERRADO']
             df_ativos = df_ativos.sort_values('DATA_HORA_DT', ascending=False)
 
-            if df_ativos.empty: st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
+            if df_ativos.empty: st.info("Nenhuma doca ativa no momento. Pátio limpo!")
             else:
                 agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                 for index, row in df_ativos.iterrows():
@@ -884,7 +884,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_pendentes = df_pendentes[df_pendentes['AGENDA WMS'] != '']
             status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK']
             if 'STATUS' in df_pendentes.columns: df_pendentes = df_pendentes[~df_pendentes['STATUS'].astype(str).str.upper().isin(status_ignorados)]
-            if df_pendentes.empty: st.info("Nenhuma agenda aguardando equipe. Pátio zerado! 🎉")
+            if df_pendentes.empty: st.info("Nenhuma agenda aguardando equipe. Pátio zerado!")
             else:
                 agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                 for index, row in df_pendentes.iterrows():
@@ -1206,9 +1206,9 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, SLA E RAIO-X DA EQUIPE
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
-elif pagina_selecionada == "📈 Produtividade (SLA & Equipe)":
+elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
     st.markdown('<div class="magalu-page-title">Produtividade & Nível de Serviço</div>', unsafe_allow_html=True)
     st.markdown('<div class="magalu-page-subtitle">Acompanhamento de SLA, tempo de ciclo e performance individual.</div>', unsafe_allow_html=True)
 
@@ -1270,7 +1270,7 @@ elif pagina_selecionada == "📈 Produtividade (SLA & Equipe)":
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
                 # Criação das Abas Internas (Visão Macro x Visão Equipe)
-                aba_macro, aba_equipe = st.tabs(["📊 Visão Macro & SLA", "🧑‍🔧 Raio-X da Equipe"])
+                aba_macro, aba_equipe = st.tabs(["📊 Visão Macro & NS", "🧑‍🔧 Desempenho Indivídual"])
 
                 with aba_macro:
                     # --- CARDS DE KPI ---
