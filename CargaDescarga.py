@@ -448,7 +448,7 @@ def tratar_dados(df_h):
 # Dica: Se quiser trocar a foto para uma imagem do CD 2900, basta trocar o link do "src" abaixo!
 st.sidebar.markdown("""
     <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
-        <img src="https://media.discordapp.net/attachments/877222773720772631/1492325001599123526/Gemini_Generated_Image_brjliybrjliybrjl.png?ex=69daeb76&is=69d999f6&hm=de4b533751ffccc58027bd9be726bcc606fae6c5a200a7447c9ed4e4f7d8fa4a&=&format=webp&quality=lossless&width=648&height=648" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
+        <img src="https://media.discordapp.net/attachments/877222773720772631/1492325779709886614/Gemini_Generated_Image_l8hrv6l8hrv6l8hr.png?ex=69daec2f&is=69d99aaf&hm=14344a9afe02d3dc4364e0c513da472c3ec44ee6c5e9baa8b8a32b3468927fbd&=&format=webp&quality=lossless&width=448&height=544" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
         <div style="height: 3px; width: 100%; border-radius: 2px; background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF); background-size: 300% 300%; animation: magaluGlow 6s linear infinite;"></div>
     </div>
 """, unsafe_allow_html=True)
