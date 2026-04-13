@@ -910,21 +910,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         # Puxa qual é o tipo de operação para mudar o visual
                         tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO')) if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values else '⬇️ RECEBIMENTO'
                         
-                        # Cria o miolo do card dinâmico (Corrigido as variáveis PEÇAS e SKU aqui)
+                        # Cria o miolo do card dinâmico EM LINHA ÚNICA para evitar o bug do Markdown!
                         if "EXPEDIÇÃO" in tipo_op:
-                            html_detalhes = f"""
-                            <div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'>
-                                <b>Planos:</b> <span style="color:#0369A1; font-weight:bold;">{info['LINHA']}</span><br>
-                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
-                            </div>
-                            """
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
-                            html_detalhes = f"""
-                            <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
-                                <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
-                                <div style="margin-top: 4px;"><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0086FF; font-weight:bold;">{info['STATUS']}</span></div>
-                            </div>
-                            """
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0086FF; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
@@ -1018,47 +1008,39 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     with st.container(border=True):
                         tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                         
+                        # Cria o miolo do card dinâmico EM LINHA ÚNICA na Aba 2 também!
                         if "EXPEDIÇÃO" in tipo_op:
-                            html_detalhes = f"""
-                            <div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'>
-                                <b>Planos:</b> <span style="color:#0369A1; font-weight:bold;">{info['LINHA']}</span><br>
-                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
-                            </div>
-                            """
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
-                            html_detalhes = f"""
-                            <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
-                                <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
-                                <div style="margin-top: 4px;"><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#F59E0B; font-weight:bold;">{info['STATUS']}</span></div>
-                            </div>
-                            """
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#F59E0B; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
+                        # st.markdown encostado na esquerda para não quebrar o HTML
                         st.markdown(f"""
-                        <div style='display: flex; justify-content: space-between; align-items: center;'>
-                            <h4 style='margin:0; color:#475569;'>Doca {doca_str}</h4>
-                            <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>
-                                {txt_timer_pend}
-                            </div>
-                        </div>
-                        <div style='font-size: 13px; margin: 8px 0px 4px 0px; display: flex; justify-content: space-between;'>
-                            <span><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</span>
-                        </div>
-                        <div style='font-size: 12px; display: flex; gap: 15px; margin-bottom: 8px;'>
-                            <span style='color:#64748B;'>Meta Operação: <b>{meta_minutos}m</b></span>
-                            <span style='color:#0086FF;'>Iniciar até: <b>{hora_max_str}</b></span>
-                            <span style='color:#DC2626;'>Fim Máximo: <b>{limite_str if limite_str else '-'}</b></span>
-                        </div>
-                        {html_detalhes}
-                        """, unsafe_allow_html=True)
+<div style='display: flex; justify-content: space-between; align-items: center;'>
+    <h4 style='margin:0; color:#475569;'>Doca {doca_str}</h4>
+    <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>
+        {txt_timer_pend}
+    </div>
+</div>
+<div style='font-size: 13px; margin: 8px 0px 4px 0px; display: flex; justify-content: space-between;'>
+    <span><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</span>
+</div>
+<div style='font-size: 12px; display: flex; gap: 15px; margin-bottom: 8px;'>
+    <span style='color:#64748B;'>Meta Operação: <b>{meta_minutos}m</b></span>
+    <span style='color:#0086FF;'>Iniciar até: <b>{hora_max_str}</b></span>
+    <span style='color:#DC2626;'>Fim Máximo: <b>{limite_str if limite_str else '-'}</b></span>
+</div>
+{html_detalhes}
+""", unsafe_allow_html=True)
                         
-                        # --- Correção Crítica Aqui Embaixo ---
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
                         
+                        # st.markdown encostado na esquerda também!
                         c_eq_pend.markdown(f"""
-                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
-                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
-                        </div>
-                        """, unsafe_allow_html=True)
+<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
+    <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
+</div>
+""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
                             if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
