@@ -13,7 +13,7 @@ from datetime import date
 # ==========================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU AAAA+)
 # ==========================================================
-st.set_page_config(page_title="Magalu | Gestão Logística", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Magalu | Gestão Logística", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -181,6 +181,168 @@ st.markdown("""
     .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 134, 255, 0.08); }
     .kpi-title { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;}
     .kpi-value { color: #0F172A; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+
+    /* 11. SIDEBAR E DASHBOARD PREMIUM */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #082a63 0%, #00153d 100%) !important;
+        border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    section[data-testid="stSidebar"] * {
+        color: #EAF2FF;
+    }
+    section[data-testid="stSidebar"] .stRadio > div {
+        gap: 8px;
+    }
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        transition: all 0.25s ease;
+    }
+    section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(85,170,255,0.55);
+    }
+    .magalu-shell {
+        background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(247,250,255,0.98) 100%);
+        border: 1px solid rgba(255,255,255,0.7);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+        padding: 28px;
+        margin-bottom: 22px;
+    }
+    .magalu-hero {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%);
+        border-radius: 28px;
+        padding: 34px 34px 26px 34px;
+        color: #FFFFFF;
+        box-shadow: 0 24px 70px rgba(0, 74, 173, 0.25);
+        margin-bottom: 24px;
+    }
+    .magalu-hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -80px -90px auto;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(0,255,255,0.22) 0%, rgba(0,255,255,0) 68%);
+    }
+    .magalu-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
+        pointer-events: none;
+    }
+    .magalu-hero-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        backdrop-filter: blur(8px);
+    }
+    .magalu-hero-title {
+        font-size: 40px;
+        font-weight: 900;
+        line-height: 1.02;
+        letter-spacing: -1.2px;
+        margin-bottom: 10px;
+        position: relative;
+        z-index: 2;
+    }
+    .magalu-hero-subtitle {
+        color: rgba(255,255,255,0.82);
+        font-size: 16px;
+        max-width: 860px;
+        position: relative;
+        z-index: 2;
+    }
+    .magalu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin: 22px 0;
+    }
+    .magalu-feature-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+        border: 1px solid #E5EEF9;
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 12px 35px rgba(15,23,42,0.06);
+        min-height: 150px;
+    }
+    .magalu-feature-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size: 24px;
+        margin-bottom: 14px;
+        background: linear-gradient(135deg, #E9F3FF 0%, #DDEBFF 100%);
+        color: #0A4FB3;
+    }
+    .magalu-feature-title {
+        color: #0F172A;
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+    .magalu-feature-text {
+        color: #64748B;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .magalu-info-strip {
+        background: linear-gradient(90deg, #0A57C9 0%, #0094FF 55%, #FF6B3D 100%);
+        border-radius: 18px;
+        padding: 16px 20px;
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        box-shadow: 0 14px 40px rgba(0,134,255,0.18);
+        margin-top: 10px;
+    }
+    .magalu-mini-card {
+        background: rgba(255,255,255,0.94);
+        border: 1px solid #E6EDF7;
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(15,23,42,0.05);
+        height: 100%;
+    }
+    .magalu-mini-label {
+        color: #64748B;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: .06em;
+        margin-bottom: 6px;
+    }
+    .magalu-mini-value {
+        color: #0F172A;
+        font-size: 28px;
+        font-weight: 900;
+        letter-spacing: -0.8px;
+        margin-bottom: 4px;
+    }
+    .magalu-mini-desc {
+        color: #64748B;
+        font-size: 13px;
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -464,42 +626,122 @@ def tratar_dados(df_h):
     return df_main, df_full
 
 
+
+
+def render_hero(titulo, subtitulo, badge="Plataforma Operacional"):
+    st.markdown(f"""
+        <div class="magalu-hero">
+            <div class="magalu-hero-badge">{badge}</div>
+            <div class="magalu-hero-title">{titulo}</div>
+            <div class="magalu-hero-subtitle">{subtitulo}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+def render_home_dashboard():
+    render_hero(
+        "Sistema de Gestão Logística",
+        "Painel central para absenteísmo, gestão de docas, alinhamentos, produtividade e visão financeira com identidade mais executiva.",
+        "Magalu • Controle em tempo real"
+    )
+
+    st.markdown("""
+        <div class="magalu-shell">
+            <div class="magalu-grid">
+                <div class="magalu-feature-card">
+                    <div class="magalu-feature-icon">📋</div>
+                    <div class="magalu-feature-title">Registro de Absenteísmo</div>
+                    <div class="magalu-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe com visual mais limpo.</div>
+                </div>
+                <div class="magalu-feature-card">
+                    <div class="magalu-feature-icon">🚛</div>
+                    <div class="magalu-feature-title">Gestão de Docas</div>
+                    <div class="magalu-feature-text">Visão operacional em cards, leitura rápida de prioridades e navegação orientada para ação.</div>
+                </div>
+                <div class="magalu-feature-card">
+                    <div class="magalu-feature-icon">🗓️</div>
+                    <div class="magalu-feature-title">Registro de Alinhamento</div>
+                    <div class="magalu-feature-text">Programe folgas e movimentos da equipe em uma experiência mais organizada e intuitiva.</div>
+                </div>
+                <div class="magalu-feature-card">
+                    <div class="magalu-feature-icon">📈</div>
+                    <div class="magalu-feature-title">Produtividade</div>
+                    <div class="magalu-feature-text">KPIs mais corporativos para tempo médio, SLA e leitura de performance por agenda e colaborador.</div>
+                </div>
+                <div class="magalu-feature-card">
+                    <div class="magalu-feature-icon">💰</div>
+                    <div class="magalu-feature-title">Financeiro</div>
+                    <div class="magalu-feature-text">Indicadores com linguagem visual de diretoria para faturamento, perdas e ticket médio.</div>
+                </div>
+            </div>
+            <div class="magalu-info-strip">Eficiência e produtividade em tempo real</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""
+            <div class="magalu-mini-card">
+                <div class="magalu-mini-label">Visual novo</div>
+                <div class="magalu-mini-value">Dashboard</div>
+                <div class="magalu-mini-desc">Hero section, cards premium e sidebar mais elegante.</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+            <div class="magalu-mini-card">
+                <div class="magalu-mini-label">Impacto</div>
+                <div class="magalu-mini-value">Mais UX</div>
+                <div class="magalu-mini-desc">Leitura rápida, sensação de produto interno de alto nível.</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown("""
+            <div class="magalu-mini-card">
+                <div class="magalu-mini-label">Lógica preservada</div>
+                <div class="magalu-mini-value">100%</div>
+                <div class="magalu-mini-desc">Mudança concentrada no front, mantendo sua operação atual.</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+
 # ==========================================================
 # 5. ROTEADOR DE MÓDULOS (SIDEBAR)
 # ==========================================================
 
-# Imagem com a linha RGB animada embaixo (Estilo Moldura Tech)
-# Dica: Se quiser trocar a foto para uma imagem do CD 2900, basta trocar o link do "src" abaixo!
 st.sidebar.markdown("""
-    <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTA9WX58lGfkMaB1e7J7Wrm4QDgjJKVeR_ZKA&s" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
-        <div style="height: 10px; width: 100%; border-radius: 2px; background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF); background-size: 300% 300%; animation: magaluGlow 6s linear infinite;"></div>
+    <div style="padding: 10px 8px 4px 8px; margin-bottom: 14px;">
+        <div style="background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); border:1px solid rgba(255,255,255,0.10); border-radius: 22px; padding: 18px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);">
+            <div style="font-size: 13px; font-weight: 800; letter-spacing:.08em; text-transform: uppercase; color:#9CC8FF; margin-bottom:8px;">Magalu</div>
+            <div style="font-size: 26px; font-weight: 900; line-height:1.0; color:#FFFFFF; margin-bottom:8px;">Gestão Logística</div>
+            <div style="font-size: 13px; color:rgba(255,255,255,0.72);">Operação, equipe e performance em uma única visão.</div>
+            <div style="height: 8px; margin-top:14px; border-radius: 999px; background: linear-gradient(90deg, #0086FF, #00D2FF, #FF8A3D, #FF4D6D); background-size:300% 300%; animation: magaluGlow 7s linear infinite;"></div>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-# O Menu de Navegação Limpo e Direto
 pagina_selecionada = st.sidebar.radio(
-    "",
-    ["📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento","📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
+    "Navegação",
+    ["🏠 Visão Geral", "📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
 )
 
-st.sidebar.markdown("---")
-
-# Botão Anti-Pânico (Forçar Atualização do Banco de Dados)
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 if st.sidebar.button("🔄 Sincronizar Agora", type="secondary", use_container_width=True):
     with st.spinner("📡 Puxando dados em tempo real da base..."):
-        # Limpa toda a memória cache do sistema
         st.cache_data.clear()
-        # Recarrega a página instantaneamente
         st.rerun()
+
+# ==========================================================
+# HOME
+# ==========================================================
+if pagina_selecionada == "🏠 Visão Geral":
+    render_home_dashboard()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-if pagina_selecionada == "📋 Registro Absenteísmo":
-    st.markdown('<div class="magalu-page-title">Lançamento de Ausências</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Pátio / Docas</div>', unsafe_allow_html=True)
+elif pagina_selecionada == "📋 Registro Absenteísmo":
+    render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
@@ -569,8 +811,7 @@ if pagina_selecionada == "📋 Registro Absenteísmo":
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
 elif pagina_selecionada == "🚛 Gestão de Docas":
-    st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Controle Unificado: Recebimento & Expedição Consolidada.</div>', unsafe_allow_html=True)
+    render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.', 'Cockpit operacional')
     
     df_log = carregar_log_produtividade()
     df_matriz = carregar_matriz()
@@ -1252,8 +1493,7 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
         mask_data_main = (df['DATA AGENDADA'].dt.date >= data_ini) & (df['DATA AGENDADA'].dt.date <= data_fim)
         df_f = df[mask_data_main].copy()
 
-        st.markdown('<div class="magalu-page-title">Visão Oficial de Faturamento</div>', unsafe_allow_html=True)
-        st.markdown(f"<div class='magalu-page-subtitle'>Período: <b>{data_ini.strftime('%d/%m/%Y')}</b> até <b>{data_fim.strftime('%d/%m/%Y')}</b></div>", unsafe_allow_html=True)
+        render_hero('Visão Oficial de Faturamento', f'Período analisado: {data_ini.strftime("%d/%m/%Y")} até {data_fim.strftime("%d/%m/%Y")}. Leitura executiva de receita, perdas e ticket médio.', 'Financeiro • Diretoria')
 
         if not df_f.empty:
             rec = df_f[df_f['STATUS'] == 'OK']
@@ -1409,8 +1649,7 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 # MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
 # ==========================================================
 elif pagina_selecionada == "📅 Registro de Alinhamento":
-    st.markdown('<div class="magalu-page-title">Registro de Alinhamento</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Programe folgas, DSRs, banco de horas e férias da equipe.</div>', unsafe_allow_html=True)
+    render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
 
     try:
         # Puxa a mesma lista de funcionários que já usamos
@@ -1464,8 +1703,7 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
 elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
-    st.markdown('<div class="magalu-page-title">Produtividade & Nível de Serviço</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Acompanhamento de SLA, tempo de ciclo e performance individual.</div>', unsafe_allow_html=True)
+    render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
 
     try:
         with st.spinner("Calculando métricas de performance..."):
