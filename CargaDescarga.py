@@ -355,12 +355,12 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
     
     opcoes_atraso = [
-        "Problema Sistêmico (WMS/TMS)",
-        "Divergência de Nota Fiscal",
-        "Aguardando Conferente/Líder",
-        "Falta de Auxiliares na Doca",
-        "Caminhão com avaria/difícil descarga",
-        "Troca de turno/refeição",
+        "Veiculo Demorou subir para doca",
+        "Falta de suprimentos na doca",
+        "Carga mal acomodada",
+        "Produto Misturado",
+        "Equipe Disponível menor do que a necessária",
+        "Troca de turno/refeição/rito",
         "Outro (Descrever abaixo)"
     ]
     
@@ -570,66 +570,72 @@ if pagina_selecionada == "📋 Registro Absenteísmo":
 # ==========================================================
 elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real (Recebimento e Expedição).</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Controle Unificado: Recebimento & Expedição Consolidada.</div>', unsafe_allow_html=True)
     
-    # --- CARREGAMENTO GLOBAL DE DADOS ---
     df_log = carregar_log_produtividade()
     df_matriz = carregar_matriz()
-    
     df_aux_rec = carregar_aux()
     df_aux_exp = carregar_auxexp()
     
-    # 1. Tratamento e Padronização da Expedição (ETL)
+    # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
     if not df_aux_exp.empty:
-        def extrair_hora(valor):
-            try: return str(valor).strip().split(' ')[-1]
-            except: return str(valor)
-            
-        # Renomeação conforme sua regra de negócio
+        # Padronização de nomes
         df_aux_exp = df_aux_exp.rename(columns={
             'ID Carga': 'AGENDA WMS',
             'Plano de Transporte': 'CATEGORIA',
-            'M³ Total': 'PEÇAS',
+            'M³ Total': 'VOLUME_M3',
+            'Ped Venda': 'PEDIDOS',
             'Limit Carreg': 'LIMITE_RAW',
-            'Doca': 'DOCA'
+            'Doca': 'DOCA_ORIGINAL'
         })
-        
-        # Ajuste de Colunas e Status (Mudei para LIBERADO para aparecer na fila)
-        df_aux_exp['AGENDA WMS'] = df_aux_exp['AGENDA WMS'].astype(str).str.strip()
-        df_aux_exp['LINHA'] = df_aux_exp['CATEGORIA']
-        df_aux_exp['SKU'] = "Volume (M³)" 
-        df_aux_exp['PAGAMENTO'] = "N/A"
-        df_aux_exp['R$ DESCARGA'] = "-"
-        df_aux_exp['STATUS'] = "LIBERADO" # <--- Aqui estava o erro!
-        df_aux_exp['CONFERENTE'] = "Expedição"
-        
-        if 'LIMITE_RAW' in df_aux_exp.columns:
-            df_aux_exp['LIMITE'] = df_aux_exp['LIMITE_RAW'].apply(extrair_hora)
-            
-        df_aux_exp['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
 
-    # 2. Tratamento do Recebimento
+        # Lógica de Consolidação: 1401, 1402 -> 14
+        def consolidar_doca(d):
+            d_str = str(d).strip()
+            return d_str[:2] if len(d_str) >= 4 else d_str
+        
+        df_aux_exp['DOCA'] = df_aux_exp['DOCA_ORIGINAL'].apply(consolidar_doca)
+        
+        # Agrupando por Doca Consolidada
+        df_exp_grouped = df_aux_exp.groupby('DOCA').agg({
+            'AGENDA WMS': lambda x: ' | '.join(x.astype(str)),
+            'CATEGORIA': lambda x: ' | '.join(x.astype(str)),
+            'VOLUME_M3': 'sum',
+            'PEDIDOS': 'sum',
+            'LIMITE_RAW': 'min' # Pega o horário mais apertado
+        }).reset_index()
+
+        # Criando colunas compatíveis para o sistema
+        df_exp_grouped['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
+        df_exp_grouped['STATUS'] = "LIBERADO"
+        df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] # No card vira "Plano"
+        df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] # No card vira "M³"
+        df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']    # No card vira "Pedidos"
+        df_exp_grouped['PAGAMENTO'] = "N/A"
+        df_exp_grouped['R$ DESCARGA'] = "-"
+        df_exp_grouped['CONFERENTE'] = "Expedição"
+        
+        def extrair_hora(valor):
+            try: return str(valor).strip().split(' ')[-1]
+            except: return str(valor)
+        
+        df_exp_grouped['LIMITE'] = df_exp_grouped['LIMITE_RAW'].apply(extrair_hora)
+        df_aux_exp_final = df_exp_grouped
+    else:
+        df_aux_exp_final = pd.DataFrame()
+
+    # --- 2. PROCESSAMENTO DO RECEBIMENTO ---
     if not df_aux_rec.empty:
         df_aux_rec['AGENDA WMS'] = df_aux_rec['AGENDA WMS'].astype(str).str.strip()
         df_aux_rec['TIPO_OPERACAO'] = "⬇️ RECEBIMENTO"
-
-    # 3. Fusão das Bases
-    frames = []
-    if not df_aux_rec.empty: frames.append(df_aux_rec)
-    if not df_aux_exp.empty: frames.append(df_aux_exp)
-    
-    if frames:
-        df_aux = pd.concat(frames, ignore_index=True)
-        # Limpeza final para garantir que IDs vazios não entrem
-        df_aux = df_aux[df_aux['AGENDA WMS'] != ''].copy()
+        df_aux_rec_final = df_aux_rec
     else:
-        df_aux = pd.DataFrame()
-        
-    agendas_logadas = []
-    col_doca, col_conf = None, None
-    
+        df_aux_rec_final = pd.DataFrame()
+
+    # --- 3. FUSÃO E IDENTIFICAÇÃO ---
+    df_aux = pd.concat([df_aux_rec_final, df_aux_exp_final], ignore_index=True)
     if not df_aux.empty:
-        # Pega as agendas que já estão em processo no LOG
+        df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str)
         if not df_log.empty:
             agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
 
