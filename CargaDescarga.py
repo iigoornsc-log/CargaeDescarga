@@ -859,9 +859,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     st.rerun()
                 except Exception as e: st.error(f"Erro ao gravar: {e}")
 
-    # Criação das TRÊS abas
-    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
-
     # --- FILTROS GLOBAIS DE OPERAÇÃO ---
     st.markdown("<br>", unsafe_allow_html=True)
     with st.container(border=True):
