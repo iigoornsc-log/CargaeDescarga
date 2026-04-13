@@ -825,7 +825,7 @@ elif pagina_selecionada == "📋 Registro Absenteísmo":
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
 elif pagina_selecionada == "🚛 Gestão de Docas":
-    render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.', 'Cockpit operacional')
+    render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
     
     df_log = carregar_log_produtividade()
     df_matriz = carregar_matriz()
