@@ -1054,14 +1054,23 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     col_limite = next((c for c in df_aux.columns if 'LIMITE' in str(c).upper()), None)
                     if col_limite and pd.notna(row[col_limite]) and str(row[col_limite]).strip() != '':
                         limite_str = str(row[col_limite]).strip()
-                        h_lim, m_lim = map(int, limite_str.split(':'))
+                        partes = limite_str.split(':')
+                        h_lim, m_lim = int(partes[0]), int(partes[1][:2])
                         limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
+                        
+                        # --- CORREÇÃO DA VIRADA DE DIA (MADRUGADA) ---
+                        # Se o limite é de madrugada (ex: 01h) e agora já passou de meio dia, o limite é AMANHÃ!
+                        if h_lim < 12 and agora_dt.hour >= 12:
+                            limite_dt += datetime.timedelta(days=1)
+                        # Se agora é madrugada (ex: 01h) e o limite era noite (ex: 23h), o limite era ONTEM!
+                        elif h_lim >= 18 and agora_dt.hour < 12:
+                            limite_dt -= datetime.timedelta(days=1)
+                            
                         hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
                         return (hora_max_inicio - agora_dt).total_seconds() / 60
                 except: pass
                 return 99999 # Joga pro fim da fila se não tiver meta
 
-            # Calcula e Ordena
             df_pendentes['URGENCIA'] = df_pendentes.apply(calc_urgencia_pendente, axis=1)
             df_pendentes = df_pendentes.sort_values('URGENCIA', ascending=True)
 
@@ -1073,7 +1082,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     agenda_str = str(row['AGENDA WMS'])
                     doca_str = str(row[col_doca]).strip() if col_doca and pd.notna(row[col_doca]) else "A Definir"
                     
-                    # APLICA OS FILTROS DA TELA
                     if filtro_op != "Todas" and filtro_op not in tipo_op: continue
                     if filtro_doca and filtro_doca not in str(doca_str) and filtro_doca not in agenda_str: continue
                     
@@ -1096,8 +1104,16 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         col_limite = next((c for c in df_aux.columns if 'LIMITE' in str(c).upper()), None)
                         if col_limite and pd.notna(row[col_limite]) and str(row[col_limite]).strip() != '':
                             limite_str = str(row[col_limite]).strip()
-                            h_lim, m_lim = map(int, limite_str.split(':'))
+                            partes = limite_str.split(':')
+                            h_lim, m_lim = int(partes[0]), int(partes[1][:2])
                             limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
+                            
+                            # --- CORREÇÃO DA VIRADA DE DIA (Repetido pro visual) ---
+                            if h_lim < 12 and agora_dt.hour >= 12:
+                                limite_dt += datetime.timedelta(days=1)
+                            elif h_lim >= 18 and agora_dt.hour < 12:
+                                limite_dt -= datetime.timedelta(days=1)
+                                
                             hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
                             hora_max_str = hora_max_inicio.strftime("%H:%M")
                             diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
