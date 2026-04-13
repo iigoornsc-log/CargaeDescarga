@@ -252,6 +252,16 @@ def carregar_docas_finalizadas():
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data(ttl=60)
+def carregar_auxexp():
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+    try:
+        ws = sh.worksheet("auxexp")
+        return pd.DataFrame(ws.get_all_records())
+    except Exception as e:
+        return pd.DataFrame()
+
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
@@ -560,12 +570,59 @@ if pagina_selecionada == "📋 Registro Absenteísmo":
 # ==========================================================
 elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
-    st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real (Recebimento e Expedição).</div>', unsafe_allow_html=True)
     
+    # --- CARREGAMENTO GLOBAL DE DADOS ---
     df_log = carregar_log_produtividade()
-    df_aux = carregar_aux()
     df_matriz = carregar_matriz()
     
+    # 1. Carrega as duas bases separadas
+    df_aux_rec = carregar_aux()
+    df_aux_exp = carregar_auxexp()
+    
+    # 2. Tratamento e Padronização da Expedição (ETL)
+    if not df_aux_exp.empty:
+        # Função para extrair apenas a hora "09:00" do texto "14/04 09:00"
+        def extrair_hora(valor):
+            try: return str(valor).strip().split(' ')[-1]
+            except: return str(valor)
+            
+        df_aux_exp = df_aux_exp.rename(columns={
+            'ID Carga': 'AGENDA WMS',
+            'Plano de Transporte': 'CATEGORIA',
+            'M³ Total': 'PEÇAS',
+            'Limit Carreg': 'LIMITE_RAW',
+            'Doca': 'DOCA'
+        })
+        
+        # Cria colunas faltantes para não quebrar o layout
+        df_aux_exp['LINHA'] = df_aux_exp['CATEGORIA']
+        df_aux_exp['SKU'] = "Volume (M³)" 
+        df_aux_exp['PAGAMENTO'] = "N/A"
+        df_aux_exp['R$ DESCARGA'] = "-"
+        df_aux_exp['STATUS'] = "OK" 
+        df_aux_exp['CONFERENTE'] = "Expedição" # Padrão caso não tenha líder definido na planilha
+        
+        # Aplica a extração de hora no limite
+        if 'LIMITE_RAW' in df_aux_exp.columns:
+            df_aux_exp['LIMITE'] = df_aux_exp['LIMITE_RAW'].apply(extrair_hora)
+            
+        df_aux_exp['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
+
+    # 3. Tratamento do Recebimento
+    if not df_aux_rec.empty:
+        df_aux_rec['TIPO_OPERACAO'] = "⬇️ RECEBIMENTO"
+
+    # 4. Fusão das Bases (O Pulo do Gato)
+    frames = []
+    if not df_aux_rec.empty: frames.append(df_aux_rec)
+    if not df_aux_exp.empty: frames.append(df_aux_exp)
+    
+    if frames:
+        df_aux = pd.concat(frames, ignore_index=True)
+    else:
+        df_aux = pd.DataFrame()
+        
     agendas_logadas = []
     col_doca, col_conf = None, None
     
