@@ -579,7 +579,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     
     # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
     if not df_aux_exp.empty:
-        # Padronização de nomes
         df_aux_exp = df_aux_exp.rename(columns={
             'ID Carga': 'AGENDA WMS',
             'Plano de Transporte': 'CATEGORIA',
@@ -589,28 +588,37 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             'Doca': 'DOCA_ORIGINAL'
         })
 
-        # Lógica de Consolidação: 1401, 1402 -> 14
         def consolidar_doca(d):
             d_str = str(d).strip()
             return d_str[:2] if len(d_str) >= 4 else d_str
         
         df_aux_exp['DOCA'] = df_aux_exp['DOCA_ORIGINAL'].apply(consolidar_doca)
         
-        # Agrupando por Doca Consolidada
+        # A MÁGICA: Sensor de Saída Dinâmico
+        def checar_se_foi_embora(row):
+            saida = str(row.get('Saida Veículo', '')).strip()
+            lib_mot = str(row.get('Lib Mot', '')).strip()
+            if (saida and saida.lower() != 'nan') or (lib_mot and lib_mot.lower() != 'nan'):
+                return "LIBERADO"
+            return "AGUARDANDO"
+            
+        df_aux_exp['STATUS_CALC'] = df_aux_exp.apply(checar_se_foi_embora, axis=1)
+
+        # Agrupando por Doca
         df_exp_grouped = df_aux_exp.groupby('DOCA').agg({
             'AGENDA WMS': lambda x: ' | '.join(x.astype(str)),
             'CATEGORIA': lambda x: ' | '.join(x.astype(str)),
             'VOLUME_M3': 'sum',
             'PEDIDOS': 'sum',
-            'LIMITE_RAW': 'min' # Pega o horário mais apertado
+            'LIMITE_RAW': 'min',
+            'STATUS_CALC': lambda x: 'AGUARDANDO' if 'AGUARDANDO' in x.values else 'LIBERADO'
         }).reset_index()
 
-        # Criando colunas compatíveis para o sistema
         df_exp_grouped['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
-        df_exp_grouped['STATUS'] = "LIBERADO"
-        df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] # No card vira "Plano"
-        df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] # No card vira "M³"
-        df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']    # No card vira "Pedidos"
+        df_exp_grouped['STATUS'] = df_exp_grouped['STATUS_CALC']
+        df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] 
+        df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] 
+        df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']    
         df_exp_grouped['PAGAMENTO'] = "N/A"
         df_exp_grouped['R$ DESCARGA'] = "-"
         df_exp_grouped['CONFERENTE'] = "Expedição"
@@ -950,7 +958,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         if not df_aux.empty:
             df_pendentes = df_aux[~df_aux['AGENDA WMS'].isin(agendas_logadas)].copy()
             df_pendentes = df_pendentes[df_pendentes['AGENDA WMS'] != '']
-            status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK']
+            status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK','LIBERADO']
             if 'STATUS' in df_pendentes.columns: df_pendentes = df_pendentes[~df_pendentes['STATUS'].astype(str).str.upper().isin(status_ignorados)]
             if df_pendentes.empty: st.info("Nenhuma agenda aguardando equipe. Pátio zerado!")
             else:
