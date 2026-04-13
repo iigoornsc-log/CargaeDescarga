@@ -1052,10 +1052,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
                         
                         # --- CORREÇÃO DA VIRADA DE DIA (MADRUGADA) ---
-                        # Se o limite é de madrugada (ex: 01h) e agora já passou de meio dia, o limite é AMANHÃ!
                         if h_lim < 12 and agora_dt.hour >= 12:
                             limite_dt += datetime.timedelta(days=1)
-                        # Se agora é madrugada (ex: 01h) e o limite era noite (ex: 23h), o limite era ONTEM!
                         elif h_lim >= 18 and agora_dt.hour < 12:
                             limite_dt -= datetime.timedelta(days=1)
                             
@@ -1101,7 +1099,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             h_lim, m_lim = int(partes[0]), int(partes[1][:2])
                             limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
                             
-                            # --- CORREÇÃO DA VIRADA DE DIA (Repetido pro visual) ---
                             if h_lim < 12 and agora_dt.hour >= 12:
                                 limite_dt += datetime.timedelta(days=1)
                             elif h_lim >= 18 and agora_dt.hour < 12:
@@ -1119,9 +1116,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
                     except: pass
                     
-                    with st.container(border=True):
-                        except: pass
-                    
                     # --- INTERCEPTAÇÃO DE ANSIEDADE (CAMINHÃO NÃO CHEGOU) ---
                     tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                     status_chegada = str(row.get('STATUS_CHEGADA_RAW', '')).upper()
@@ -1133,7 +1127,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         bg_timer_pend = "#F1F5F9"  # Fundo Cinza Claro
                     
                     with st.container(border=True):
-                        # ... resto do código do container igual ao seu ...
                         if "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
