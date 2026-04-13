@@ -870,7 +870,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Criação das TRÊS abas
-    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
+    aba1, aba2, aba3 = st.tabs([" Visão das Docas (EM PROCESSO)", " Fila de Docas (PENDENTE)", " Montar Equipes"])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
