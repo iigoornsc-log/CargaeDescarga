@@ -144,15 +144,29 @@ st.markdown("""
     }
     span[data-baseweb="tag"] svg { fill: #0086FF !important; } /* Cor do X de fechar */
 
-    /* 8. BOTÕES PRINCIPAIS E SECUNDÁRIOS */
-    .stButton>button {
-        background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; 
-        border-radius: 12px; font-weight: 700; font-size: 15px; padding: 0.8rem 1.2rem; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease;
-    }
-    .stButton>button:hover { 
-        border-color: #0086FF; color: #0086FF; transform: translateY(-1px);
-    }
+    /* BOTÃO SIDEBAR - ESTILO MAGALU */
+section[data-testid="stSidebar"] .stButton>button {
+    background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 0.8rem 1rem;
+    box-shadow: 0 6px 20px rgba(0,134,255,0.25);
+    transition: all 0.3s ease;
+}
+
+/* HOVER */
+section[data-testid="stSidebar"] .stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,134,255,0.4);
+}
+
+/* CLICK */
+section[data-testid="stSidebar"] .stButton>button:active {
+    transform: scale(0.97);
+}
     
     /* Botão Verde "Finalizar" com Efeito Glow/Pulse */
     button[kind="primary"] {
