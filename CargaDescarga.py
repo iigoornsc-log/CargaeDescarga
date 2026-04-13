@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import re
 import datetime
+import time
 from datetime import date
 
 # ==========================================================
@@ -369,7 +370,7 @@ section[data-testid="stSidebar"] .stButton>button:active {
 """, unsafe_allow_html=True)
 
 # ==========================================================
-# 2. CONEXÃO GOOGLE SHEETS & CACHES
+# 2. CONEXÃO GOOGLE SHEETS & CACHES (BLINDADO CONTRA API ERROR)
 # ==========================================================
 def conectar_google():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -382,69 +383,88 @@ def conectar_google():
 
 @st.cache_data(ttl=600)
 def carregar_dados_financeiros():
-    client = conectar_google()
-    sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
-    ws = sh.worksheet("HISTÓRICO 2025")
-    return pd.DataFrame(ws.get_all_values()[1:], columns=ws.get_all_values()[0])
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            ws = sh.worksheet("HISTÓRICO 2025")
+            return pd.DataFrame(ws.get_all_values()[1:], columns=ws.get_all_values()[0])
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5) # Amortecedor de requisição
 
 @st.cache_data(ttl=60)
 def carregar_equipe():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    ws = sh.worksheet("QUADRO CARGA e DESCARGA")
-    return pd.DataFrame(ws.get_all_records())
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("QUADRO CARGA e DESCARGA")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=10)
 def carregar_log_produtividade():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    try:
-        ws = sh.worksheet("LOG_PRODUTIVIDADE")
-        return pd.DataFrame(ws.get_all_records())
-    except:
-        return pd.DataFrame()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("LOG_PRODUTIVIDADE")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
 def carregar_aux():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    try:
-        ws = sh.worksheet("aux")
-        return pd.DataFrame(ws.get_all_records())
-    except:
-        return pd.DataFrame()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("aux")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
 def carregar_matriz():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    try:
-        ws = sh.worksheet("MATRIZ_COMPETÊNCIA")
-        return pd.DataFrame(ws.get_all_records())
-    except:
-        return pd.DataFrame()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("MATRIZ_COMPETÊNCIA")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
 def carregar_docas_finalizadas():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    try:
-        # ATENÇÃO: Confirme se o nome da sua aba de finalizados é esse mesmo!
-        ws = sh.worksheet("DOCAS_FINALIZADAS") 
-        df = pd.DataFrame(ws.get_all_records())
-        return df
-    except Exception as e:
-        return pd.DataFrame()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("DOCAS_FINALIZADAS") 
+            df = pd.DataFrame(ws.get_all_records())
+            return df
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
 def carregar_auxexp():
-    client = conectar_google()
-    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-    try:
-        ws = sh.worksheet("auxexp")
-        return pd.DataFrame(ws.get_all_records())
-    except Exception as e:
-        return pd.DataFrame()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("auxexp")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
