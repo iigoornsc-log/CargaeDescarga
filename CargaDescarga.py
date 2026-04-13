@@ -862,6 +862,19 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
 
+    # --- FILTROS GLOBAIS DE OPERAÇÃO ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.container(border=True):
+        c_f1, c_f2 = st.columns(2)
+        with c_f1:
+            filtro_op = st.selectbox("🔍 Filtrar por Operação:", ["Todas", "⬇️ RECEBIMENTO", "⬆️ EXPEDIÇÃO"])
+        with c_f2:
+            filtro_doca = st.text_input("📍 Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Criação das TRÊS abas
+    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
+
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
         if not df_log.empty:
@@ -869,17 +882,49 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_ativos = df_ativos_bruto.copy()
             df_ativos = df_ativos.groupby(['DOCA', 'AGENDA', 'CONFERENTE', 'DATA_HORA', 'DATA_HORA_DT'])['AUXILIARES'].apply(lambda x: ', '.join(x.dropna())).reset_index()
             df_ativos = df_ativos[df_ativos['AUXILIARES'] != 'ENCERRADO']
-            df_ativos = df_ativos.sort_values('DATA_HORA_DT', ascending=False)
-
-            if df_ativos.empty: st.info("Nenhuma doca ativa no momento. Pátio limpo!")
-            else:
-                agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                for index, row in df_ativos.iterrows():
+            
+            agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+            
+            # --- ALGORITMO DE ORDENAÇÃO (SLA) ---
+            def calc_urgencia_processo(row):
+                try:
                     agenda_str = str(row['AGENDA']).strip()
-                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
                     meta_minutos = 60
                     if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
                         aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
+                        col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
+                        if col_meta and pd.notna(aux_row[col_meta]): meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
+                    
+                    inicio_dt = row['DATA_HORA_DT']
+                    if pd.isna(inicio_dt): inicio_dt = agora_dt
+                    return meta_minutos - ((agora_dt - inicio_dt).total_seconds() / 60)
+                except: return 99999 # Joga pro final se der erro
+
+            # Calcula a urgência e ORDENA (Os mais negativos = mais atrasados sobem pro topo!)
+            df_ativos['URGENCIA'] = df_ativos.apply(calc_urgencia_processo, axis=1)
+            df_ativos = df_ativos.sort_values('URGENCIA', ascending=True)
+
+            if df_ativos.empty: st.info("Nenhuma doca ativa no momento. Pátio limpo!")
+            else:
+                cards_exibidos_aba1 = 0
+                for index, row in df_ativos.iterrows():
+                    agenda_str = str(row['AGENDA']).strip()
+                    
+                    # PEGA O TIPO DE OPERAÇÃO ANTES PARA APLICAR O FILTRO
+                    aux_row = pd.Series()
+                    if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
+                        aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
+                    tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
+                    
+                    # APLICA OS FILTROS DA TELA
+                    if filtro_op != "Todas" and filtro_op not in tipo_op: continue
+                    if filtro_doca and filtro_doca not in str(row['DOCA']) and filtro_doca not in agenda_str: continue
+                    
+                    cards_exibidos_aba1 += 1
+                    
+                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
+                    meta_minutos = 60
+                    if not aux_row.empty:
                         pagto_str = "✅ Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
                         valor_desc = aux_row.get('R$ DESCARGA', '-')
                         if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
@@ -907,28 +952,22 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
 
                     with st.container(border=True):
-                        tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO')) if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values else '⬇️ RECEBIMENTO'
-                        
-                        # --- O TRUQUE DE MESTRE DA BORDA ---
                         if "EXPEDIÇÃO" in tipo_op:
-                            cor_tema = "#0086FF" # Azul Expedição
+                            cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
                             html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
-                            cor_tema = "#EA580C" # Laranja Recebimento
+                            cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
                             html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
-                        # Injeta a borda invisivelmente
                         st.markdown(css_hack, unsafe_allow_html=True)
-
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:{cor_tema};'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
                         c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
                         st.markdown(html_detalhes, unsafe_allow_html=True)
-                        
                         st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                         
                         c_eq, c_btn = st.columns([7, 3])
@@ -941,7 +980,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
                                 cat_final = str(info['LINHA']).upper()
-                                
                                 linhas_conclusao_multiplas = []
                                 for pessoa in auxiliares_lista:
                                     linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
@@ -954,7 +992,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                     for linha in linhas_conclusao_multiplas: 
                                         linha.append("No Prazo")
                                         linha.append(cat_final)
-                                        
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
                                             st.success(f"Doca finalizada com sucesso!")
@@ -964,6 +1001,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
                             if st.button("🔄 Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
+                                
+                if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
         else:
             st.info("O Log de Operações ainda está vazio.")
 
@@ -974,12 +1013,44 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_pendentes = df_pendentes[df_pendentes['AGENDA WMS'] != '']
             status_ignorados = ['AUSENTE', 'DEVOLVIDA', 'OK','LIBERADO']
             if 'STATUS' in df_pendentes.columns: df_pendentes = df_pendentes[~df_pendentes['STATUS'].astype(str).str.upper().isin(status_ignorados)]
+            
+            agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+            
+            # --- ALGORITMO DE ORDENAÇÃO DE FILA (SLA PENDENTE) ---
+            def calc_urgencia_pendente(row):
+                try:
+                    meta_minutos = 60
+                    col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
+                    if col_meta and pd.notna(row[col_meta]): meta_minutos = int(float(str(row[col_meta]).replace(',', '.')))
+                    
+                    col_limite = next((c for c in df_aux.columns if 'LIMITE' in str(c).upper()), None)
+                    if col_limite and pd.notna(row[col_limite]) and str(row[col_limite]).strip() != '':
+                        limite_str = str(row[col_limite]).strip()
+                        h_lim, m_lim = map(int, limite_str.split(':'))
+                        limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
+                        hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
+                        return (hora_max_inicio - agora_dt).total_seconds() / 60
+                except: pass
+                return 99999 # Joga pro fim da fila se não tiver meta
+
+            # Calcula e Ordena
+            df_pendentes['URGENCIA'] = df_pendentes.apply(calc_urgencia_pendente, axis=1)
+            df_pendentes = df_pendentes.sort_values('URGENCIA', ascending=True)
+
             if df_pendentes.empty: st.info("Nenhuma agenda aguardando equipe. Pátio zerado!")
             else:
-                agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                cards_exibidos_aba2 = 0
                 for index, row in df_pendentes.iterrows():
+                    tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                     agenda_str = str(row['AGENDA WMS'])
                     doca_str = str(row[col_doca]).strip() if col_doca and pd.notna(row[col_doca]) else "A Definir"
+                    
+                    # APLICA OS FILTROS DA TELA
+                    if filtro_op != "Todas" and filtro_op not in tipo_op: continue
+                    if filtro_doca and filtro_doca not in str(doca_str) and filtro_doca not in agenda_str: continue
+                    
+                    cards_exibidos_aba2 += 1
+                    
                     if doca_str.lower() in ['nan', 'none', '']: doca_str = "A Definir"
                     conf_str = str(row[col_conf]).strip() if col_conf and pd.notna(row[col_conf]) else "A Definir"
                     if conf_str.lower() in ['nan', 'none', '']: conf_str = "A Definir"
@@ -1012,9 +1083,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     except: pass
                     
                     with st.container(border=True):
-                        tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
-                        
-                        # --- O TRUQUE DE MESTRE DA BORDA (Aba 2) ---
                         if "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
@@ -1028,9 +1096,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         st.markdown(f"""
 <div style='display: flex; justify-content: space-between; align-items: center;'>
     <h4 style='margin:0; color:{cor_tema};'>Doca {doca_str}</h4>
-    <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>
-        {txt_timer_pend}
-    </div>
+    <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>{txt_timer_pend}</div>
 </div>
 <div style='font-size: 13px; margin: 8px 0px 4px 0px; display: flex; justify-content: space-between;'>
     <span><b>Agenda:</b> {agenda_str} | <b>Líder:</b> {conf_str}</span>
@@ -1044,18 +1110,13 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
 """, unsafe_allow_html=True)
                         
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
-                        
-                        c_eq_pend.markdown(f"""
-<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
-    <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
-</div>
-""", unsafe_allow_html=True)
+                        c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
                             if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
                                 popup_start_carga(doca_str, agenda_str, conf_str)
-        else:
-            st.info("A base auxiliar de Agendas não foi localizada ou está vazia.")
+                                
+                if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
 
     # --- ABA 3: APONTAR / MOVIMENTAR (FORMULÁRIO MANUAL) ---
     with aba3:
