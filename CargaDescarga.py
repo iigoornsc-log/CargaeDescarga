@@ -662,7 +662,7 @@ def render_hero(titulo, subtitulo, badge="Plataforma Operacional"):
 
 def render_home_dashboard():
     render_hero(
-        "Sistema de Gestão Logística",
+        "Sistema Carga e Descarga",
         "Painel central para absenteísmo, gestão de docas, alinhamentos, produtividade e visão financeira com identidade mais executiva.",
         "Magalu • Controle em tempo real"
     )
@@ -673,12 +673,12 @@ def render_home_dashboard():
                 <div class="magalu-feature-card">
                     <div class="magalu-feature-icon">📋</div>
                     <div class="magalu-feature-title">Registro de Absenteísmo</div>
-                    <div class="magalu-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe com visual mais limpo.</div>
+                    <div class="magalu-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
                 </div>
                 <div class="magalu-feature-card">
                     <div class="magalu-feature-icon">🚛</div>
                     <div class="magalu-feature-title">Gestão de Docas</div>
-                    <div class="magalu-feature-text">Visão operacional em cards, leitura rápida de prioridades e navegação orientada para ação.</div>
+                    <div class="magalu-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
                 </div>
                 <div class="magalu-feature-card">
                     <div class="magalu-feature-icon">🗓️</div>
@@ -744,7 +744,7 @@ st.sidebar.markdown("""
 
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
-    ["🏠 Visão Geral", "📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
+    ["📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
