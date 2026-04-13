@@ -627,7 +627,19 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         # Força 120 minutos (2 horas) de meta para toda a Expedição!
         df_exp_grouped['META'] = 120 
         
+        # --- EXTRATOR DE HORA SÊNIOR (Usa o motor do Pandas para evitar erros AM/PM) ---
         def extrair_hora(valor):
+            if pd.isna(valor) or str(valor).strip() == "":
+                return "00:00"
+            try:
+                # O Pandas tenta identificar o formato (13/04 20:00 ou 8:00 PM) automaticamente
+                dt = pd.to_datetime(valor, dayfirst=True, errors='coerce')
+                if not pd.isna(dt):
+                    return dt.strftime("%H:%M") # Retorna sempre no formato 24h (20:00)
+            except:
+                pass
+            
+            # Fallback de segurança caso a conversão direta do Pandas falhe
             import re
             v_str = str(valor).strip().upper()
             match = re.search(r'(\d{1,2}):(\d{2})', v_str)
@@ -637,10 +649,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 if 'PM' in v_str and h < 12: h += 12
                 if 'AM' in v_str and h == 12: h = 0
                 return f"{h:02d}:{m}"
-            return v_str
+            return "00:00"
         
+        # Aplica a extração de hora usando a nova lógica robusta
         df_exp_grouped['LIMITE'] = df_exp_grouped['LIMITE_RAW'].apply(extrair_hora)
-        df_aux_exp_final = df_exp_grouped
 
     # --- 2. PROCESSAMENTO DO RECEBIMENTO ---
     if not df_aux_rec.empty:
