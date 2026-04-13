@@ -472,7 +472,7 @@ def tratar_dados(df_h):
 # Dica: Se quiser trocar a foto para uma imagem do CD 2900, basta trocar o link do "src" abaixo!
 st.sidebar.markdown("""
     <div style="text-align: center; margin-bottom: 25px; margin-top: 10px;">
-        <img src="https://media.discordapp.net/attachments/877222773720772631/1492324332376952882/Gemini_Generated_Image_kemjo1kemjo1kemj.png?ex=69daead6&is=69d99956&hm=229e06b80d7a0109065a5189ebd28575a6a1bb4e6fbbc277189703e8641df52e&=&format=webp&quality=lossless&width=534&height=648" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTA9WX58lGfkMaB1e7J7Wrm4QDgjJKVeR_ZKA&s" style="max-width: 65%; margin-bottom: 18px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05));">
         <div style="height: 10px; width: 100%; border-radius: 2px; background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF); background-size: 300% 300%; animation: magaluGlow 6s linear infinite;"></div>
     </div>
 """, unsafe_allow_html=True)
