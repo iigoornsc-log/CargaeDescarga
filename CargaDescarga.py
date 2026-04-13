@@ -13,7 +13,7 @@ from datetime import date
 # ==========================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU AAAA+)
 # ==========================================================
-st.set_page_config(page_title="Magalu | Gestão Logística", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Magalu | Carga e Descarga", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
