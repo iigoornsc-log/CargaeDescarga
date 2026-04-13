@@ -910,12 +910,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         # Puxa qual é o tipo de operação para mudar o visual
                         tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO')) if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values else '⬇️ RECEBIMENTO'
                         
-                        # Cria o miolo do card dinâmico!
+                        # Cria o miolo do card dinâmico (Corrigido as variáveis PEÇAS e SKU aqui)
                         if "EXPEDIÇÃO" in tipo_op:
                             html_detalhes = f"""
                             <div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'>
                                 <b>Planos:</b> <span style="color:#0369A1; font-weight:bold;">{info['LINHA']}</span><br>
-                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['SKU']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
+                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
                             </div>
                             """
                         else:
@@ -926,16 +926,13 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             </div>
                             """
 
-                        # Desenha o cabeçalho
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
                         c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
-                        # Desenha o miolo que criamos ali em cima
                         st.markdown(html_detalhes, unsafe_allow_html=True)
                         
-                        # Desenha as pílulas da equipe
                         st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                         
                         c_eq, c_btn = st.columns([7, 3])
@@ -947,23 +944,20 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
-                                # Pegando a categoria/linha dinamicamente!
                                 cat_final = str(info['LINHA']).upper()
                                 
                                 linhas_conclusao_multiplas = []
                                 for pessoa in auxiliares_lista:
                                     linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
                                 
-                                # AQUI TAMBÉM GRAVAMOS A CATEGORIA NO LOG DE PRODUTIVIDADE
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
                                 
                                 if restante_min < 0: 
-                                    # Manda a categoria para o pop-up de atraso
                                     exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final)
                                 else:
                                     for linha in linhas_conclusao_multiplas: 
                                         linha.append("No Prazo")
-                                        linha.append(cat_final) # <--- Adiciona a categoria logo após o "No Prazo"
+                                        linha.append(cat_final)
                                         
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
@@ -1020,6 +1014,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 h, m = int(atraso // 60), int(atraso % 60)
                                 cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
                     except: pass
+                    
                     with st.container(border=True):
                         tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                         
@@ -1027,7 +1022,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             html_detalhes = f"""
                             <div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'>
                                 <b>Planos:</b> <span style="color:#0369A1; font-weight:bold;">{info['LINHA']}</span><br>
-                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['SKU']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
+                                <div style="margin-top: 4px;"><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0284C7; font-weight:bold;">{info['STATUS']}</span></div>
                             </div>
                             """
                         else:
@@ -1056,8 +1051,18 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         {html_detalhes}
                         """, unsafe_allow_html=True)
                         
+                        # --- Correção Crítica Aqui Embaixo ---
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
-                            if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): popup_start_carga(doca_str, agenda_str, conf_str)
+                        
+                        c_eq_pend.markdown(f"""
+                        <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
+                            <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        with c_btn_pend:
+                            if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
+                                popup_start_carga(doca_str, agenda_str, conf_str)
         else:
             st.info("A base auxiliar de Agendas não foi localizada ou está vazia.")
 
