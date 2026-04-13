@@ -907,17 +907,23 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
 
                     with st.container(border=True):
-                        # Puxa qual é o tipo de operação para mudar o visual
                         tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO')) if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values else '⬇️ RECEBIMENTO'
                         
-                        # Cria o miolo do card dinâmico EM LINHA ÚNICA para evitar o bug do Markdown!
+                        # --- O TRUQUE DE MESTRE DA BORDA ---
                         if "EXPEDIÇÃO" in tipo_op:
+                            cor_tema = "#0086FF" # Azul Expedição
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
                             html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0086FF; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            cor_tema = "#EA580C" # Laranja Recebimento
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+
+                        # Injeta a borda invisivelmente
+                        st.markdown(css_hack, unsafe_allow_html=True)
 
                         c_title, c_time = st.columns([5, 5])
-                        c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
+                        c_title.markdown(f"<h4 style='margin:0; color:{cor_tema};'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
                         c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
@@ -1008,16 +1014,20 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     with st.container(border=True):
                         tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                         
-                        # Cria o miolo do card dinâmico EM LINHA ÚNICA na Aba 2 também!
+                        # --- O TRUQUE DE MESTRE DA BORDA (Aba 2) ---
                         if "EXPEDIÇÃO" in tipo_op:
+                            cor_tema = "#0086FF"
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
                             html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#F59E0B; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            cor_tema = "#EA580C"
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
-                        # st.markdown encostado na esquerda para não quebrar o HTML
+                        st.markdown(css_hack, unsafe_allow_html=True)
                         st.markdown(f"""
 <div style='display: flex; justify-content: space-between; align-items: center;'>
-    <h4 style='margin:0; color:#475569;'>Doca {doca_str}</h4>
+    <h4 style='margin:0; color:{cor_tema};'>Doca {doca_str}</h4>
     <div style='display:inline-block; font-size:12px; font-weight:800; color:{cor_timer_pend}; background-color:{bg_timer_pend}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer_pend};'>
         {txt_timer_pend}
     </div>
@@ -1035,7 +1045,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
                         
-                        # st.markdown encostado na esquerda também!
                         c_eq_pend.markdown(f"""
 <div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'>
     <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span>
