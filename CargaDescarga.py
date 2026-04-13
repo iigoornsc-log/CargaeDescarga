@@ -579,6 +579,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     
     # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
     if not df_aux_exp.empty:
+        # Garante que a coluna exista para não dar erro
+        if 'Status Chegada' not in df_aux_exp.columns:
+            df_aux_exp['Status Chegada'] = ''
+            
         df_aux_exp = df_aux_exp.rename(columns={
             'ID Carga': 'AGENDA WMS',
             'Plano de Transporte': 'CATEGORIA',
@@ -594,24 +598,18 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         
         df_aux_exp['DOCA'] = df_aux_exp['DOCA_ORIGINAL'].apply(consolidar_doca)
         
-        # --- NOVO SENSOR DE SAÍDA SÊNIOR ---
         def checar_se_foi_embora(row):
             saida = str(row.get('Saida Veículo', '')).strip()
             lib_mot = str(row.get('Lib Mot', '')).strip()
             status_carreg = str(row.get('Status Carreg', '')).strip().upper()
-            
-            # Se bateu saída, liberou motorista OU o Status Carreg = FINALIZADO, a carga evapora!
             if (saida and saida.lower() != 'nan') or (lib_mot and lib_mot.lower() != 'nan') or ('FINALIZADO' in status_carreg):
                 return "LIBERADO"
             return "AGUARDANDO"
             
         df_aux_exp['STATUS_CALC'] = df_aux_exp.apply(checar_se_foi_embora, axis=1)
 
-        # --- A CADEADO DE SEGURANÇA (FILTRO ANTES DO AGRUPAMENTO) ---
-        # Joga no lixo todas as cargas finalizadas. Só sobram as pendentes!
         df_aux_exp = df_aux_exp[df_aux_exp['STATUS_CALC'] != 'LIBERADO'].copy()
 
-        # Só agrupa se sobrar alguma carga ativa depois do filtro
         if not df_aux_exp.empty:
             df_exp_grouped = df_aux_exp.groupby('DOCA').agg({
                 'AGENDA WMS': lambda x: ' | '.join(x.astype(str)),
@@ -619,37 +617,33 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 'VOLUME_M3': 'sum',
                 'PEDIDOS': 'sum',
                 'LIMITE_RAW': 'min',
-                'STATUS_CALC': lambda x: 'AGUARDANDO' if 'AGUARDANDO' in x.values else 'LIBERADO'
+                'STATUS_CALC': lambda x: 'AGUARDANDO' if 'AGUARDANDO' in x.values else 'LIBERADO',
+                # A MÁGICA AQUI: Puxando o status do caminhão!
+                'Status Chegada': lambda x: 'AGUARD CHEGADA' if any('AGUARD' in str(v).upper() for v in x.dropna()) else 'NO PÁTIO'
             }).reset_index()
 
             df_exp_grouped['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
             df_exp_grouped['STATUS'] = df_exp_grouped['STATUS_CALC']
+            df_exp_grouped['STATUS_CHEGADA_RAW'] = df_exp_grouped['Status Chegada'] # Salva para o painel ler depois
             df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] 
             df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] 
             df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']    
             df_exp_grouped['PAGAMENTO'] = "N/A"
             df_exp_grouped['R$ DESCARGA'] = "-"
             df_exp_grouped['CONFERENTE'] = "Expedição"
-            
-            # Meta Padrão (2h)
             df_exp_grouped['META'] = 120 
             
             def extrair_hora(valor):
-                if pd.isna(valor) or str(valor).strip() == "":
-                    return "00:00"
+                if pd.isna(valor) or str(valor).strip() == "": return "00:00"
                 try:
                     dt = pd.to_datetime(valor, dayfirst=True, errors='coerce')
-                    if not pd.isna(dt):
-                        return dt.strftime("%H:%M") 
-                except:
-                    pass
-                
+                    if not pd.isna(dt): return dt.strftime("%H:%M") 
+                except: pass
                 import re
                 v_str = str(valor).strip().upper()
                 match = re.search(r'(\d{1,2}):(\d{2})', v_str)
                 if match:
-                    h = int(match.group(1))
-                    m = match.group(2)
+                    h, m = int(match.group(1)), match.group(2)
                     if 'PM' in v_str and h < 12: h += 12
                     if 'AM' in v_str and h == 12: h = 0
                     return f"{h:02d}:{m}"
@@ -658,7 +652,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_exp_grouped['LIMITE'] = df_exp_grouped['LIMITE_RAW'].apply(extrair_hora)
             df_aux_exp_final = df_exp_grouped
         else:
-            # Se todas as cargas do dia já foram finalizadas, devolve vazio
             df_aux_exp_final = pd.DataFrame()
     else:
         df_aux_exp_final = pd.DataFrame()
@@ -1127,6 +1120,20 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     except: pass
                     
                     with st.container(border=True):
+                        except: pass
+                    
+                    # --- INTERCEPTAÇÃO DE ANSIEDADE (CAMINHÃO NÃO CHEGOU) ---
+                    tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
+                    status_chegada = str(row.get('STATUS_CHEGADA_RAW', '')).upper()
+                    
+                    # Se for expedição e o caminhão não estiver no CD, desliga a cor vermelha de atraso
+                    if "EXPEDIÇÃO" in tipo_op and "AGUARD" in status_chegada:
+                        txt_timer_pend = "🚚 AGUARDANDO VEÍCULO"
+                        cor_timer_pend = "#64748B" # Cinza Sutil
+                        bg_timer_pend = "#F1F5F9"  # Fundo Cinza Claro
+                    
+                    with st.container(border=True):
+                        # ... resto do código do container igual ao seu ...
                         if "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
