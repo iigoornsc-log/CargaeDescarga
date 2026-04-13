@@ -576,17 +576,16 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     df_log = carregar_log_produtividade()
     df_matriz = carregar_matriz()
     
-    # 1. Carrega as duas bases separadas
     df_aux_rec = carregar_aux()
     df_aux_exp = carregar_auxexp()
     
-    # 2. Tratamento e Padronização da Expedição (ETL)
+    # 1. Tratamento e Padronização da Expedição (ETL)
     if not df_aux_exp.empty:
-        # Função para extrair apenas a hora "09:00" do texto "14/04 09:00"
         def extrair_hora(valor):
             try: return str(valor).strip().split(' ')[-1]
             except: return str(valor)
             
+        # Renomeação conforme sua regra de negócio
         df_aux_exp = df_aux_exp.rename(columns={
             'ID Carga': 'AGENDA WMS',
             'Plano de Transporte': 'CATEGORIA',
@@ -595,31 +594,34 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             'Doca': 'DOCA'
         })
         
-        # Cria colunas faltantes para não quebrar o layout
+        # Ajuste de Colunas e Status (Mudei para LIBERADO para aparecer na fila)
+        df_aux_exp['AGENDA WMS'] = df_aux_exp['AGENDA WMS'].astype(str).str.strip()
         df_aux_exp['LINHA'] = df_aux_exp['CATEGORIA']
         df_aux_exp['SKU'] = "Volume (M³)" 
         df_aux_exp['PAGAMENTO'] = "N/A"
         df_aux_exp['R$ DESCARGA'] = "-"
-        df_aux_exp['STATUS'] = "OK" 
-        df_aux_exp['CONFERENTE'] = "Expedição" # Padrão caso não tenha líder definido na planilha
+        df_aux_exp['STATUS'] = "LIBERADO" # <--- Aqui estava o erro!
+        df_aux_exp['CONFERENTE'] = "Expedição"
         
-        # Aplica a extração de hora no limite
         if 'LIMITE_RAW' in df_aux_exp.columns:
             df_aux_exp['LIMITE'] = df_aux_exp['LIMITE_RAW'].apply(extrair_hora)
             
         df_aux_exp['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
 
-    # 3. Tratamento do Recebimento
+    # 2. Tratamento do Recebimento
     if not df_aux_rec.empty:
+        df_aux_rec['AGENDA WMS'] = df_aux_rec['AGENDA WMS'].astype(str).str.strip()
         df_aux_rec['TIPO_OPERACAO'] = "⬇️ RECEBIMENTO"
 
-    # 4. Fusão das Bases (O Pulo do Gato)
+    # 3. Fusão das Bases
     frames = []
     if not df_aux_rec.empty: frames.append(df_aux_rec)
     if not df_aux_exp.empty: frames.append(df_aux_exp)
     
     if frames:
         df_aux = pd.concat(frames, ignore_index=True)
+        # Limpeza final para garantir que IDs vazios não entrem
+        df_aux = df_aux[df_aux['AGENDA WMS'] != ''].copy()
     else:
         df_aux = pd.DataFrame()
         
@@ -627,7 +629,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     col_doca, col_conf = None, None
     
     if not df_aux.empty:
-        df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+        # Pega as agendas que já estão em processo no LOG
+        if not df_log.empty:
+            agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
+
         colunas_limpas = [str(c).upper().strip() for c in df_aux.columns]
         col_doca = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'DOCA' in cu), None)
         col_conf = next((c for c, cu in zip(df_aux.columns, colunas_limpas) if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu), None)
