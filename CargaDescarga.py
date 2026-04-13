@@ -114,23 +114,31 @@ st.markdown("""
         box-shadow: 0 12px 40px rgba(0, 134, 255, 0.08) !important;
     }
 
-    /* 7. CAIXAS DE INPUT E DROPDOWNS (CORRIGIDO) */
-    div[data-baseweb="input"] > div, 
-    div[data-baseweb="select"] > div { 
-        border-radius: 12px !important; 
-        min-height: 50px; /* Sem forçar altura máxima */
-        border: 1px solid #E2E8F0 !important;
-        background-color: #F8FAFC !important;
-        color: #1E293B !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-    }
-    div[data-baseweb="input"] > div:focus-within, 
-    div[data-baseweb="select"] > div:focus-within {
-        border-color: #0086FF !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
-    }
+   /* DATE INPUT SIDEBAR - ESTILO MAGALU */
+section[data-testid="stSidebar"] div[data-baseweb="input"] > div {
+    background: #FFFFFF !important;
+    border-radius: 12px !important;
+    border: 1px solid #E2E8F0 !important;
+    min-height: 48px !important;
+    transition: all 0.3s ease !important;
+}
+
+/* FOCO */
+section[data-testid="stSidebar"] div[data-baseweb="input"] > div:focus-within {
+    border-color: #0086FF !important;
+    box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
+}
+
+/* TEXTO */
+section[data-testid="stSidebar"] input {
+    color: #0F172A !important;
+    font-weight: 600 !important;
+}
+
+/* ÍCONE CALENDÁRIO */
+section[data-testid="stSidebar"] svg {
+    color: #0086FF !important;
+}
 
     /* 7.1 CHIPS DO MULTISELECT (Tags da Equipe Azul Magalu) */
     span[data-baseweb="tag"] {
