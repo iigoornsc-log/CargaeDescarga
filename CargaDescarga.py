@@ -535,7 +535,7 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
 
 # --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
 @st.dialog("📝 Justificativa de Atraso")
-def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga):
+def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga, pecas_val, m3_val):
     st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
     
     opcoes_atraso = [
@@ -554,10 +554,12 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     if st.button("Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
-        # O PULO DO GATO: Adiciona a Justificativa e depois a CATEGORIA em todas as linhas
+        # O PULO DO GATO: Adiciona a Justificativa, Categoria, Peças e M³ no fim da linha
         for linha in dados_multiplos:
             linha.append(justificativa_final)
             linha.append(categoria_carga)
+            linha.append(pecas_val) # <--- Gravando as Peças
+            linha.append(m3_val)    # <--- Gravando os M³
             
         with st.spinner("Gravando justificativa e finalizando..."):
             if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
@@ -1281,7 +1283,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
+                                # Puxando as 3 informações ocultas do card
                                 cat_final = str(info['LINHA']).upper()
+                                pecas_final = info.get('PEÇAS_BRUTO', 0)
+                                m3_final = info.get('M3_BRUTO', 0)
+                                
                                 linhas_conclusao_multiplas = []
                                 for pessoa in auxiliares_lista:
                                     linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
@@ -1289,11 +1295,15 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
                                 
                                 if restante_min < 0: 
-                                    exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final)
+                                    # Manda as peças e M³ lá pro pop-up!
+                                    exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final, pecas_final, m3_final)
                                 else:
                                     for linha in linhas_conclusao_multiplas: 
                                         linha.append("No Prazo")
                                         linha.append(cat_final)
+                                        linha.append(pecas_final) # <--- Gravando as Peças
+                                        linha.append(m3_final)    # <--- Gravando os M³
+                                        
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
                                             st.success(f"Doca finalizada com sucesso!")
