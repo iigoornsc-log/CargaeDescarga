@@ -666,6 +666,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
 
     # --- 3. FUSÃO E IDENTIFICAÇÃO ---
     df_aux = pd.concat([df_aux_rec_final, df_aux_exp_final], ignore_index=True)
+    
+    # A TRAVA DE SEGURANÇA AQUI: Garante que a variável sempre exista, mesmo vazia!
+    agendas_logadas = [] 
+    
     if not df_aux.empty:
         df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str)
         if not df_log.empty:
