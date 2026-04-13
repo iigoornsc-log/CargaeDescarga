@@ -594,7 +594,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         
         df_aux_exp['DOCA'] = df_aux_exp['DOCA_ORIGINAL'].apply(consolidar_doca)
         
-        # A MÁGICA: Sensor de Saída Dinâmico
         def checar_se_foi_embora(row):
             saida = str(row.get('Saida Veículo', '')).strip()
             lib_mot = str(row.get('Lib Mot', '')).strip()
@@ -604,7 +603,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             
         df_aux_exp['STATUS_CALC'] = df_aux_exp.apply(checar_se_foi_embora, axis=1)
 
-        # Agrupando por Doca
         df_exp_grouped = df_aux_exp.groupby('DOCA').agg({
             'AGENDA WMS': lambda x: ' | '.join(x.astype(str)),
             'CATEGORIA': lambda x: ' | '.join(x.astype(str)),
@@ -623,23 +621,20 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         df_exp_grouped['R$ DESCARGA'] = "-"
         df_exp_grouped['CONFERENTE'] = "Expedição"
         
-        # --- A MÁGICA DO TEMPO AQUI ---
-        # Força 120 minutos (2 horas) de meta para toda a Expedição!
+        # Meta padrão de 2 horas (120 minutos)
         df_exp_grouped['META'] = 120 
         
-        # --- EXTRATOR DE HORA SÊNIOR (Usa o motor do Pandas para evitar erros AM/PM) ---
+        # Extrator de Hora Sênior (Pandas + Regex)
         def extrair_hora(valor):
             if pd.isna(valor) or str(valor).strip() == "":
                 return "00:00"
             try:
-                # O Pandas tenta identificar o formato (13/04 20:00 ou 8:00 PM) automaticamente
                 dt = pd.to_datetime(valor, dayfirst=True, errors='coerce')
                 if not pd.isna(dt):
-                    return dt.strftime("%H:%M") # Retorna sempre no formato 24h (20:00)
+                    return dt.strftime("%H:%M") 
             except:
                 pass
             
-            # Fallback de segurança caso a conversão direta do Pandas falhe
             import re
             v_str = str(valor).strip().upper()
             match = re.search(r'(\d{1,2}):(\d{2})', v_str)
@@ -651,8 +646,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 return f"{h:02d}:{m}"
             return "00:00"
         
-        # Aplica a extração de hora usando a nova lógica robusta
         df_exp_grouped['LIMITE'] = df_exp_grouped['LIMITE_RAW'].apply(extrair_hora)
+        df_aux_exp_final = df_exp_grouped
+    else:
+        # A REDE DE SEGURANÇA: Se a planilha de Expedição estiver vazia, cria a variável zerada para não quebrar o concat!
+        df_aux_exp_final = pd.DataFrame()
 
     # --- 2. PROCESSAMENTO DO RECEBIMENTO ---
     if not df_aux_rec.empty:
