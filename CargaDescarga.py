@@ -889,12 +889,15 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_exp_grouped['STATUS'] = df_exp_grouped['STATUS_CALC']
             df_exp_grouped['STATUS_CHEGADA_RAW'] = df_exp_grouped['Status Chegada'] # Salva para o painel ler depois
             df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] 
+            df_exp_grouped['PEÇAS_VAL'] = df_exp_grouped['PEDIDOS'] 
+            df_exp_grouped['M3_VAL'] = df_exp_grouped['VOLUME_M3']
             df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] 
-            df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']    
+            df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']
             df_exp_grouped['PAGAMENTO'] = "N/A"
             df_exp_grouped['R$ DESCARGA'] = "-"
             df_exp_grouped['CONFERENTE'] = "Expedição"
             df_exp_grouped['META'] = 120 
+            
             
             def extrair_hora(valor):
                 if pd.isna(valor) or str(valor).strip() == "": return "00:00"
@@ -923,6 +926,14 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     if not df_aux_rec.empty:
         df_aux_rec['AGENDA WMS'] = df_aux_rec['AGENDA WMS'].astype(str).str.strip()
         df_aux_rec['TIPO_OPERACAO'] = "⬇️ RECEBIMENTO"
+        
+        # Se você criar a coluna 'CUB' na planilha, o pandas lê automático. 
+        # Caso não exista ainda, criamos como 0 para não dar erro.
+        if 'CUB' not in df_aux_rec.columns:
+            df_aux_rec['CUB'] = 0
+            
+        df_aux_rec['PEÇAS_VAL'] = df_aux_rec['PEÇAS'] # Valor real de peças
+        df_aux_rec['M3_VAL'] = df_aux_rec['CUB']     # Valor real de cubagem
         df_aux_rec_final = df_aux_rec
     else:
         df_aux_rec_final = pd.DataFrame()
@@ -1217,7 +1228,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         valor_desc = aux_row.get('R$ DESCARGA', '-')
                         if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                         linha_val = aux_row.get('LINHA', aux_row.get('CATEGORIA', '-'))
-                        info = {'LINHA': linha_val, 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
+                        
+                        # --- COLE ESTA LINHA NOVA AQUI ---
+                        info = {'LINHA': linha_val, 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-'), 'PEÇAS_BRUTO': aux_row.get('PEÇAS_VAL', 0), 'M3_BRUTO': aux_row.get('M3_VAL', 0)}
+                        
                         try:
                             col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
                             if col_meta and pd.notna(aux_row[col_meta]): meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
@@ -1352,7 +1366,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     valor_desc = row.get('R$ DESCARGA', '-')
                     if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                     linha_val = row.get('LINHA', row.get('CATEGORIA', '-'))
-                    info = {'LINHA': linha_val, 'SKU': row.get('SKU', '-'), 'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-')}
+                    
+                    # --- COLE ESTA LINHA NOVA AQUI ---
+                    info = {'LINHA': linha_val, 'SKU': row.get('SKU', '-'), 'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-'), 'PEÇAS_BRUTO': row.get('PEÇAS_VAL', 0), 'M3_BRUTO': row.get('M3_VAL', 0)}
+                    
                     meta_minutos = 60
                     limite_str, hora_max_str = "", "-"
                     txt_timer_pend, cor_timer_pend, bg_timer_pend = "⏳ Aguardando...", "#F59E0B", "#FEF3C7"
