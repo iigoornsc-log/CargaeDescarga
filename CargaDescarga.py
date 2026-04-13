@@ -623,18 +623,18 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
         df_exp_grouped['R$ DESCARGA'] = "-"
         df_exp_grouped['CONFERENTE'] = "Expedição"
         
-        # --- EXTRATOR DE HORA INTELIGENTE (Trata AM/PM e Segundos) ---
+        # --- A MÁGICA DO TEMPO AQUI ---
+        # Força 120 minutos (2 horas) de meta para toda a Expedição!
+        df_exp_grouped['META'] = 120 
+        
         def extrair_hora(valor):
             import re
             v_str = str(valor).strip().upper()
-            # Caça o padrão HH:MM em qualquer lugar do texto
             match = re.search(r'(\d{1,2}):(\d{2})', v_str)
             if match:
                 h = int(match.group(1))
                 m = match.group(2)
-                # Se o Google mandar formato americano (PM), converte para 24h
                 if 'PM' in v_str and h < 12: h += 12
-                # Se for 12 AM (Meia-noite)
                 if 'AM' in v_str and h == 12: h = 0
                 return f"{h:02d}:{m}"
             return v_str
