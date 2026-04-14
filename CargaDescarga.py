@@ -26,7 +26,15 @@ st.markdown("""
 
     /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
     .icon-magalu {
-        font-family: 'Material Symbols Rounded';
+        font-family: 'Material Symbols Rounded' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
         vertical-align: middle;
         display: inline-block;
         line-height: 1;
@@ -423,13 +431,13 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     st.markdown("<br>", unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
-    if c1.button(":material/check_circle: Sim, Transferir", use_container_width=True):
+    if c1.button("Confirmar Transferência", use_container_width=True):
         with st.spinner("Atualizando docas..."):
             if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
                 carregar_log_produtividade.clear()
                 st.rerun() 
                 
-    if c2.button(":material/cancel: Cancelar", use_container_width=True):
+    if c2.button("Cancelar", use_container_width=True):
         st.rerun()
 
 # --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
@@ -450,7 +458,7 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     motivo = st.selectbox("Selecione o motivo principal:", opcoes_atraso)
     detalhe = st.text_area("Detalhes adicionais (opcional):", placeholder="Ex: O caminhão chegou com as caixas tombadas...")
     
-    if st.button(":material/check_circle: Confirmar Finalização", use_container_width=True):
+    if st.button("Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
         for linha in dados_multiplos:
@@ -643,17 +651,17 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
-        ":material/home: Visão Geral",
-        ":material/assignment_ind: Registro Absenteísmo", 
-        ":material/local_shipping: Gestão de Docas", 
-        ":material/calendar_month: Registro de Alinhamento", 
-        ":material/monitoring: Produtividade (NS & Equipe)", 
-        ":material/attach_money: Financeiro (Diretoria)"
+        "Visão Geral",
+        "Registro Absenteísmo", 
+        "Gestão de Docas", 
+        "Registro de Alinhamento", 
+        "Produtividade (NS & Equipe)", 
+        "Financeiro (Diretoria)"
     ]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_container_width=True):
+if st.sidebar.button("Sincronizar Agora", type="secondary", use_container_width=True):
     with st.spinner("Puxando dados em tempo real da base..."):
         st.cache_data.clear()
         st.rerun()
@@ -661,20 +669,20 @@ if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_
 # ==========================================================
 # HOME
 # ==========================================================
-if pagina_selecionada == ":material/home: Visão Geral":
+if pagina_selecionada == "Visão Geral":
     render_home_dashboard()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
+elif pagina_selecionada == "Registro Absenteísmo":
     render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
         data_chamada = st.date_input("Data", date.today())
-        busca = st.text_input(":material/search: Buscar Colaborador", placeholder="ID ou Nome...")
+        busca = st.text_input("Buscar Colaborador", placeholder="ID ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if busca:
@@ -709,7 +717,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button(":material/save: Gravar no Sistema", use_container_width=True):
+        if st.button("Gravar no Sistema", use_container_width=True):
             ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
             if not ocorrencias.empty:
                 lista_final = []
@@ -730,7 +738,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
 # ==========================================================
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
-elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
+elif pagina_selecionada == "Gestão de Docas":
     render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
     
     df_log = carregar_log_produtividade()
@@ -987,7 +995,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
             if not ciente: bloqueio_ergonomico = True
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/play_circle: CONFIRMAR START", type="primary", use_container_width=True):
+        if st.button("Confirmar Start", type="primary", use_container_width=True):
             if not doca_sel or doca_sel == "A Definir": st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
             elif not equipe_sel: st.error("Selecione a equipe!")
             elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
@@ -1015,7 +1023,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/check_circle: Confirmar Alteração", type="primary", use_container_width=True):
+        if st.button("Confirmar Alteração", type="primary", use_container_width=True):
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
             linhas_para_gravar = []
@@ -1065,9 +1073,9 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs([
-        ":material/view_timeline: Visão das Docas (EM PROCESSO)", 
-        ":material/hourglass_top: Fila de Docas (PENDENTE)", 
-        ":material/group_add: Montar Equipes"
+        "Visão das Docas (EM PROCESSO)", 
+        "Fila de Docas (PENDENTE)", 
+        "Montar Equipes"
     ])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
@@ -1166,7 +1174,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         with c_btn:
-                            if st.button(":material/check_circle: Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                            if st.button("Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
@@ -1199,7 +1207,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                                             st.rerun()
                                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            if st.button(":material/swap_horiz: Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                            if st.button("Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                                 
                 if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
@@ -1334,7 +1342,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-magalu" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
-                            if st.button(":material/person_add: Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
+                            if st.button("Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
                                 popup_start_carga(doca_str, agenda_str, conf_str)
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
@@ -1387,7 +1395,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                     if not ciente: bloqueio_ergonomico = True
 
                 st.markdown('<br>', unsafe_allow_html=True)
-                if st.button(":material/save: Gravar / Atualizar Doca", use_container_width=True):
+                if st.button("Gravar / Atualizar Doca", use_container_width=True):
                     if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
                     elif not equipe_sel: st.warning("Selecione a equipe atual.")
                     elif bloqueio_ergonomico: st.error("Você precisa confirmar a ciência do risco ergonômico para gravar!")
@@ -1402,7 +1410,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 # ==========================================================
 # MÓDULO 3: FINANCEIRO E DRE
 # ==========================================================
-elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
+elif pagina_selecionada == "Financeiro (Diretoria)":
     try:
         with st.spinner('Sincronizando com Base de Dados Financeira...'):
             df_raw = carregar_dados_financeiros()
@@ -1574,7 +1582,7 @@ elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
 # ==========================================================
 # MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
 # ==========================================================
-elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
+elif pagina_selecionada == "Registro de Alinhamento":
     render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
 
     try:
@@ -1600,7 +1608,7 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
                     
             st.markdown('<br>', unsafe_allow_html=True)
             
-            if st.button(":material/save: Gravar Alinhamento", use_container_width=True, type="primary"):
+            if st.button("Gravar Alinhamento", use_container_width=True, type="primary"):
                 if not nome_sel:
                     st.warning("Selecione o colaborador.")
                 elif motivo_sel == "OUTROS" and not motivo_outro.strip():
@@ -1622,7 +1630,7 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
-elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
+elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
 
     try:
@@ -1674,7 +1682,7 @@ elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
                 sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
-                aba_macro, aba_equipe = st.tabs([":material/dashboard: Visão Macro & NS", ":material/engineering: Desempenho Individual"])
+                aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                 with aba_macro:
                     c1, c2, c3 = st.columns(3)
