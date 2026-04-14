@@ -1629,7 +1629,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V2)
 # ==========================================================
-elif pagina_selecionada == "Produtividade (NS & Equipe)":
+elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
     render_hero('Produtividade & Nível de Serviço', 'Análise de performance real: Tempo, SLA, Peças por Hora e Cubagem por Homem-Hora.', 'Analytics operacional')
 
     try:
@@ -1662,9 +1662,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     except: return 0.0
 
                 df_fin['MINUTOS'] = df_fin[col_tempo].apply(lambda x: sum(int(a) * 60**i for i, a in enumerate(reversed(str(x).split(':')))) if ':' in str(x) else 0)
-                df_fin['VAL_PECAS'] = df_fin[col_pecas].apply(para_num)
-                df_fin['VAL_M3'] = df_fin[col_m3].apply(para_num)
-                df_fin['VAL_QTD_AUX'] = df_fin[col_qtd_aux].apply(para_num).replace(0, 1) # Evita divisão por zero
+                df_fin['VAL_PECAS'] = df_fin[col_pecas].apply(para_num) if col_pecas else 0.0
+                df_fin['VAL_M3'] = df_fin[col_m3].apply(para_num) if col_m3 else 0.0
+                df_fin['VAL_QTD_AUX'] = df_fin[col_qtd_aux].apply(para_num).replace(0, 1) if col_qtd_aux else 1 # Evita divisão por zero
 
                 # --- CÁLCULO INDIVIDUAL (Divisão por equipe) ---
                 # Importante: Cada linha já é uma pessoa, então dividimos o total da agenda pelo tamanho da equipe
@@ -1695,7 +1695,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 pecas_por_hora = total_pecas_geral / total_horas if total_horas > 0 else 0
                 m3_por_hora = total_m3_geral / total_horas if total_horas > 0 else 0
                 
-                qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).upper().str.contains("NO PRAZO", na=False)])
+                # CORREÇÃO APLICADA AQUI: .astype(str).str.upper()
+                qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)])
                 sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
@@ -1716,7 +1717,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     col_g1, col_g2 = st.columns(2)
                     with col_g1:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155;'>⏱️ Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>timer</span> Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
                         df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
                         fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', color_discrete_sequence=['#0086FF'])
                         fig1.update_layout(xaxis_title="Minutos", yaxis_title=None, height=350, margin=dict(l=0,r=0,t=0,b=0))
@@ -1725,8 +1726,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                     with col_g2:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155;'>🚨 Motivos de Atraso</h4>", unsafe_allow_html=True)
-                        df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).upper().str.contains("NO PRAZO", na=False)]
+                        st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>error</span> Motivos de Atraso</h4>", unsafe_allow_html=True)
+                        
+                        # CORREÇÃO APLICADA AQUI TAMBÉM: .astype(str).str.upper()
+                        df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                         if not df_atrasos.empty:
                             df_motivos = df_atrasos[col_just].value_counts().reset_index()
                             fig2 = px.pie(df_motivos, values='count', names=col_just, hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
@@ -1736,7 +1739,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.markdown('</div>', unsafe_allow_html=True)
 
                 with aba_equipe:
-                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'>🧑‍🔧 Performance e Matriz de Volume</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance e Matriz de Volume</h4>", unsafe_allow_html=True)
                     
                     categorias_lista = df_fin[col_cat].dropna().unique().tolist()
                     cat_sel = st.selectbox("Filtrar ranking por Categoria:", ["Todas as Categorias"] + categorias_lista)
@@ -1760,7 +1763,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         
                         with c_rank1:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"##### Ranking de Volume (Peças)")
+                            st.markdown(f"##### <span class='icon-magalu'>leaderboard</span> Ranking de Volume (Peças)")
                             fig_p = px.bar(df_rank.head(15), x='Total_Pecas', y=col_aux, orientation='h', text_auto='.0f', color='Total_Pecas', color_continuous_scale='GnBu')
                             fig_p.update_layout(yaxis_autorange="reversed", height=450, showlegend=False, coloraxis_showscale=False)
                             st.plotly_chart(fig_p, use_container_width=True)
@@ -1768,7 +1771,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             
                         with c_rank2:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"##### Matriz de Volume Acumulado")
+                            st.markdown(f"##### <span class='icon-magalu'>grid_on</span> Matriz de Volume Acumulado")
                             st.dataframe(
                                 df_rank[[col_aux, 'Cargas', 'Total_Pecas', 'Total_M3', 'Tempo_Fmt']],
                                 column_config={
