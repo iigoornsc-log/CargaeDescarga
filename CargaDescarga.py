@@ -259,127 +259,122 @@ st.markdown("""
 # ==========================================================
 # 2. CONEXÃO GOOGLE SHEETS & CACHES (BLINDADO CONTRA API ERROR)
 # ==========================================================
-PLANILHA_OPERACIONAL_KEY = "1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI"
-PLANILHA_FINANCEIRA_KEY = "1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U"
-
-@st.cache_resource
 def conectar_google():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
         cred_dict = json.loads(st.secrets["google_json"])
         creds = Credentials.from_service_account_info(cred_dict, scopes=scopes)
-    except Exception:
+    except:
         creds = Credentials.from_service_account_file(r'C:\Users\IIGOORNSC\Documents\CargaDescarga\credential_key.json', scopes=scopes)
     return gspread.authorize(creds)
 
-@st.cache_resource
-def abrir_planilha_operacional():
-    return conectar_google().open_by_key(PLANILHA_OPERACIONAL_KEY)
-
-@st.cache_resource
-def abrir_planilha_financeira():
-    return conectar_google().open_by_key(PLANILHA_FINANCEIRA_KEY)
-
-
-def _ler_records_planilha(sh, nome_aba, tentativas=3, espera=1.0):
-    for tentativa in range(tentativas):
-        try:
-            ws = sh.worksheet(nome_aba)
-            return pd.DataFrame(ws.get_all_records())
-        except Exception:
-            if tentativa == tentativas - 1:
-                return pd.DataFrame()
-            time.sleep(espera)
-    return pd.DataFrame()
-
-
-def _ler_values_planilha(sh, nome_aba, tentativas=3, espera=1.0):
-    for tentativa in range(tentativas):
-        try:
-            ws = sh.worksheet(nome_aba)
-            values = ws.get_all_values()
-            if not values:
-                return pd.DataFrame()
-            return pd.DataFrame(values[1:], columns=values[0])
-        except Exception:
-            if tentativa == tentativas - 1:
-                return pd.DataFrame()
-            time.sleep(espera)
-    return pd.DataFrame()
-
 @st.cache_data(ttl=600)
 def carregar_dados_financeiros():
-    return _ler_values_planilha(abrir_planilha_financeira(), "HISTÓRICO 2025")
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            ws = sh.worksheet("HISTÓRICO 2025")
+            return pd.DataFrame(ws.get_all_values()[1:], columns=ws.get_all_values()[0])
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
-def carregar_bases_operacionais():
-    sh = abrir_planilha_operacional()
-    return {
-        "equipe": _ler_records_planilha(sh, "QUADRO CARGA e DESCARGA"),
-        "log_produtividade": _ler_records_planilha(sh, "LOG_PRODUTIVIDADE"),
-        "aux": _ler_records_planilha(sh, "aux"),
-        "matriz": _ler_records_planilha(sh, "MATRIZ_COMPETÊNCIA"),
-        "docas_finalizadas": _ler_records_planilha(sh, "DOCAS_FINALIZADAS"),
-        "auxexp": _ler_records_planilha(sh, "auxexp"),
-    }
-
-
 def carregar_equipe():
-    return carregar_bases_operacionais().get("equipe", pd.DataFrame()).copy()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("QUADRO CARGA e DESCARGA")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
-
+@st.cache_data(ttl=10)
 def carregar_log_produtividade():
-    bases = carregar_bases_operacionais()
-    df = bases.get("log_produtividade", pd.DataFrame())
-    return df.copy()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("LOG_PRODUTIVIDADE")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
-
+@st.cache_data(ttl=60)
 def carregar_aux():
-    return carregar_bases_operacionais().get("aux", pd.DataFrame()).copy()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("aux")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
-
+@st.cache_data(ttl=60)
 def carregar_matriz():
-    return carregar_bases_operacionais().get("matriz", pd.DataFrame()).copy()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("MATRIZ_COMPETÊNCIA")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
-
+@st.cache_data(ttl=60)
 def carregar_docas_finalizadas():
-    return carregar_bases_operacionais().get("docas_finalizadas", pd.DataFrame()).copy()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("DOCAS_FINALIZADAS") 
+            df = pd.DataFrame(ws.get_all_records())
+            return df
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
-
+@st.cache_data(ttl=60)
 def carregar_auxexp():
-    return carregar_bases_operacionais().get("auxexp", pd.DataFrame()).copy()
-
-
-def limpar_cache_operacional():
-    carregar_bases_operacionais.clear()
-
-
-def limpar_todos_os_caches():
-    carregar_bases_operacionais.clear()
-    carregar_dados_financeiros.clear()
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("auxexp")
+            return pd.DataFrame(ws.get_all_records())
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
 
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
 def gravar_absenteismo(dados_para_gravar):
-    sh = abrir_planilha_operacional()
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
     try:
         ws_log = sh.worksheet("LOG_ABSENTEISMO")
         ws_log.append_rows(dados_para_gravar)
-        limpar_cache_operacional()
         return True
-    except Exception:
+    except:
         st.error("Erro: Aba 'LOG_ABSENTEISMO' não encontrada.")
         return False
 
 def gravar_conclusao_doca(linhas_conclusao, linha_encerramento_log):
-    sh = abrir_planilha_operacional()
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
     try:
         ws_final = sh.worksheet("DOCAS_FINALIZADAS")
-        ws_final.append_rows(linhas_conclusao)
+        ws_final.append_rows(linhas_conclusao) 
         ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
         ws_log.append_rows([linha_encerramento_log])
-        limpar_cache_operacional()
         return True
     except Exception as e:
         st.error(f"Erro ao finalizar doca: {e}")
@@ -416,7 +411,8 @@ def processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, co
                 for p_restante in eq_antiga:
                     linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], p_restante])
 
-    sh = abrir_planilha_operacional()
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
     try:
         ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
         ws_log.append_rows(linhas_para_gravar)
@@ -438,7 +434,7 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     if c1.button("Confirmar Transferência", use_container_width=True):
         with st.spinner("Atualizando docas..."):
             if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
-                limpar_cache_operacional()
+                carregar_log_produtividade.clear()
                 st.rerun() 
                 
     if c2.button("Cancelar", use_container_width=True):
@@ -473,15 +469,15 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
             
         with st.spinner("Gravando justificativa e finalizando..."):
             if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
-                limpar_todos_os_caches()
+                st.cache_data.clear()
                 st.rerun()
 
 def gravar_alinhamento(dados_para_gravar):
-    sh = abrir_planilha_operacional()
+    client = conectar_google()
+    sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
     try:
         ws_alinhamento = sh.worksheet("ALINHAMENTO")
         ws_alinhamento.append_row(dados_para_gravar)
-        limpar_cache_operacional()
         return True
     except Exception as e:
         st.error(f"Erro ao gravar na aba 'ALINHAMENTO'. Verifique se ela existe. Detalhe: {e}")
@@ -667,7 +663,7 @@ pagina_selecionada = st.sidebar.radio(
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 if st.sidebar.button("Sincronizar Agora", type="secondary", use_container_width=True):
     with st.spinner("Puxando dados em tempo real da base..."):
-        limpar_todos_os_caches()
+        st.cache_data.clear()
         st.rerun()
 
 # ==========================================================
@@ -732,7 +728,7 @@ elif pagina_selecionada == "Registro Absenteísmo":
                     sucesso = gravar_absenteismo(lista_final)
                     if sucesso:
                         st.success(f"{len(lista_final)} registros salvos!")
-                        limpar_cache_operacional()
+                        carregar_equipe.clear()
             else:
                 st.warning("Nenhuma falta marcada.")
 
@@ -1008,7 +1004,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
                     if sucesso:
                         st.success("Carga iniciada!")
-                        limpar_cache_operacional()
+                        carregar_log_produtividade.clear()
                         st.rerun()
 
     # --- POP-UP: GERENCIAR OPERADOR (TRANSFERIR/RETIRAR) ---
@@ -1061,7 +1057,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
                     ws_log.append_rows(linhas_para_gravar)
                     st.success("Equipe atualizada com sucesso!")
-                    limpar_cache_operacional()
+                    carregar_log_produtividade.clear()
                     st.rerun()
                 except Exception as e: st.error(f"Erro ao gravar: {e}")
 
@@ -1207,7 +1203,7 @@ elif pagina_selecionada == "Gestão de Docas":
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
                                             st.success("Doca finalizada com sucesso!")
-                                            limpar_cache_operacional()
+                                            carregar_log_produtividade.clear()
                                             st.rerun()
                                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
@@ -1408,7 +1404,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
                             if sucesso:
                                 st.success(f"Doca {doca_sel} atualizada!")
-                                limpar_cache_operacional()
+                                carregar_log_produtividade.clear()
                                 st.rerun()
         except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
 # ==========================================================
