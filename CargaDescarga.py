@@ -9,7 +9,6 @@ from plotly.subplots import make_subplots
 import re
 import datetime
 import time
-from typing import Dict
 from datetime import date
 
 # ==========================================================
@@ -27,7 +26,15 @@ st.markdown("""
 
     /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
     .icon-magalu {
-        font-family: 'Material Symbols Rounded';
+        font-family: 'Material Symbols Rounded' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
         vertical-align: middle;
         display: inline-block;
         line-height: 1;
@@ -252,24 +259,8 @@ st.markdown("""
 # ==========================================================
 # 2. CONEXÃO GOOGLE SHEETS & CACHES (BLINDADO CONTRA API ERROR)
 # ==========================================================
-def _ler_worksheet_com_retry(spreadsheet, worksheet_name, *, records=True, max_tentativas=3, intervalo=1.5):
-    ultimo_erro = None
-    for tentativa in range(max_tentativas):
-        try:
-            ws = spreadsheet.worksheet(worksheet_name)
-            if records:
-                return pd.DataFrame(ws.get_all_records())
-            valores = ws.get_all_values()
-            if not valores:
-                return pd.DataFrame()
-            return pd.DataFrame(valores[1:], columns=valores[0])
-        except Exception as e:
-            ultimo_erro = e
-            if tentativa == max_tentativas - 1:
-                break
-            time.sleep(intervalo)
-    return pd.DataFrame()
-
+PLANILHA_OPERACIONAL_KEY = "1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI"
+PLANILHA_FINANCEIRA_KEY = "1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U"
 
 @st.cache_resource
 def conectar_google():
@@ -281,81 +272,92 @@ def conectar_google():
         creds = Credentials.from_service_account_file(r'C:\Users\IIGOORNSC\Documents\CargaDescarga\credential_key.json', scopes=scopes)
     return gspread.authorize(creds)
 
-
 @st.cache_resource
 def abrir_planilha_operacional():
-    client = conectar_google()
-    return client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
-
+    return conectar_google().open_by_key(PLANILHA_OPERACIONAL_KEY)
 
 @st.cache_resource
 def abrir_planilha_financeira():
-    client = conectar_google()
-    return client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+    return conectar_google().open_by_key(PLANILHA_FINANCEIRA_KEY)
 
+
+def _ler_records_planilha(sh, nome_aba, tentativas=3, espera=1.0):
+    for tentativa in range(tentativas):
+        try:
+            ws = sh.worksheet(nome_aba)
+            return pd.DataFrame(ws.get_all_records())
+        except Exception:
+            if tentativa == tentativas - 1:
+                return pd.DataFrame()
+            time.sleep(espera)
+    return pd.DataFrame()
+
+
+def _ler_values_planilha(sh, nome_aba, tentativas=3, espera=1.0):
+    for tentativa in range(tentativas):
+        try:
+            ws = sh.worksheet(nome_aba)
+            values = ws.get_all_values()
+            if not values:
+                return pd.DataFrame()
+            return pd.DataFrame(values[1:], columns=values[0])
+        except Exception:
+            if tentativa == tentativas - 1:
+                return pd.DataFrame()
+            time.sleep(espera)
+    return pd.DataFrame()
 
 @st.cache_data(ttl=600)
 def carregar_dados_financeiros():
-    sh = abrir_planilha_financeira()
-    return _ler_worksheet_com_retry(sh, "HISTÓRICO 2025", records=False)
-
+    return _ler_values_planilha(abrir_planilha_financeira(), "HISTÓRICO 2025")
 
 @st.cache_data(ttl=60)
-def carregar_bases_operacionais() -> Dict[str, pd.DataFrame]:
+def carregar_bases_operacionais():
     sh = abrir_planilha_operacional()
     return {
-        "equipe": _ler_worksheet_com_retry(sh, "QUADRO CARGA e DESCARGA"),
-        "log_produtividade": _ler_worksheet_com_retry(sh, "LOG_PRODUTIVIDADE"),
-        "aux": _ler_worksheet_com_retry(sh, "aux"),
-        "matriz": _ler_worksheet_com_retry(sh, "MATRIZ_COMPETÊNCIA"),
-        "docas_finalizadas": _ler_worksheet_com_retry(sh, "DOCAS_FINALIZADAS"),
-        "auxexp": _ler_worksheet_com_retry(sh, "auxexp"),
+        "equipe": _ler_records_planilha(sh, "QUADRO CARGA e DESCARGA"),
+        "log_produtividade": _ler_records_planilha(sh, "LOG_PRODUTIVIDADE"),
+        "aux": _ler_records_planilha(sh, "aux"),
+        "matriz": _ler_records_planilha(sh, "MATRIZ_COMPETÊNCIA"),
+        "docas_finalizadas": _ler_records_planilha(sh, "DOCAS_FINALIZADAS"),
+        "auxexp": _ler_records_planilha(sh, "auxexp"),
     }
 
 
-@st.cache_data(ttl=60)
 def carregar_equipe():
     return carregar_bases_operacionais().get("equipe", pd.DataFrame()).copy()
 
 
-@st.cache_data(ttl=10)
 def carregar_log_produtividade():
-    return carregar_bases_operacionais().get("log_produtividade", pd.DataFrame()).copy()
+    bases = carregar_bases_operacionais()
+    df = bases.get("log_produtividade", pd.DataFrame())
+    return df.copy()
 
 
-@st.cache_data(ttl=60)
 def carregar_aux():
     return carregar_bases_operacionais().get("aux", pd.DataFrame()).copy()
 
 
-@st.cache_data(ttl=60)
 def carregar_matriz():
     return carregar_bases_operacionais().get("matriz", pd.DataFrame()).copy()
 
 
-@st.cache_data(ttl=60)
 def carregar_docas_finalizadas():
     return carregar_bases_operacionais().get("docas_finalizadas", pd.DataFrame()).copy()
 
 
-@st.cache_data(ttl=60)
 def carregar_auxexp():
     return carregar_bases_operacionais().get("auxexp", pd.DataFrame()).copy()
 
 
 def limpar_cache_operacional():
     carregar_bases_operacionais.clear()
-    limpar_cache_operacional()
-    limpar_cache_operacional()
-    carregar_aux.clear()
-    carregar_matriz.clear()
-    carregar_docas_finalizadas.clear()
-    carregar_auxexp.clear()
 
 
 def limpar_todos_os_caches():
-    limpar_cache_operacional()
+    carregar_bases_operacionais.clear()
     carregar_dados_financeiros.clear()
+
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
@@ -364,8 +366,9 @@ def gravar_absenteismo(dados_para_gravar):
     try:
         ws_log = sh.worksheet("LOG_ABSENTEISMO")
         ws_log.append_rows(dados_para_gravar)
+        limpar_cache_operacional()
         return True
-    except:
+    except Exception:
         st.error("Erro: Aba 'LOG_ABSENTEISMO' não encontrada.")
         return False
 
@@ -373,9 +376,10 @@ def gravar_conclusao_doca(linhas_conclusao, linha_encerramento_log):
     sh = abrir_planilha_operacional()
     try:
         ws_final = sh.worksheet("DOCAS_FINALIZADAS")
-        ws_final.append_rows(linhas_conclusao) 
+        ws_final.append_rows(linhas_conclusao)
         ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
         ws_log.append_rows([linha_encerramento_log])
+        limpar_cache_operacional()
         return True
     except Exception as e:
         st.error(f"Erro ao finalizar doca: {e}")
@@ -431,13 +435,13 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     st.markdown("<br>", unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
-    if c1.button(":material/check_circle: Sim, Transferir", use_container_width=True):
+    if c1.button("Confirmar Transferência", use_container_width=True):
         with st.spinner("Atualizando docas..."):
             if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
                 limpar_cache_operacional()
                 st.rerun() 
                 
-    if c2.button(":material/cancel: Cancelar", use_container_width=True):
+    if c2.button("Cancelar", use_container_width=True):
         st.rerun()
 
 # --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
@@ -458,7 +462,7 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     motivo = st.selectbox("Selecione o motivo principal:", opcoes_atraso)
     detalhe = st.text_area("Detalhes adicionais (opcional):", placeholder="Ex: O caminhão chegou com as caixas tombadas...")
     
-    if st.button(":material/check_circle: Confirmar Finalização", use_container_width=True):
+    if st.button("Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
         for linha in dados_multiplos:
@@ -469,7 +473,7 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
             
         with st.spinner("Gravando justificativa e finalizando..."):
             if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
-                limpar_cache_operacional()
+                limpar_todos_os_caches()
                 st.rerun()
 
 def gravar_alinhamento(dados_para_gravar):
@@ -477,6 +481,7 @@ def gravar_alinhamento(dados_para_gravar):
     try:
         ws_alinhamento = sh.worksheet("ALINHAMENTO")
         ws_alinhamento.append_row(dados_para_gravar)
+        limpar_cache_operacional()
         return True
     except Exception as e:
         st.error(f"Erro ao gravar na aba 'ALINHAMENTO'. Verifique se ela existe. Detalhe: {e}")
@@ -650,17 +655,17 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
-        ":material/home: Visão Geral",
-        ":material/assignment_ind: Registro Absenteísmo", 
-        ":material/local_shipping: Gestão de Docas", 
-        ":material/calendar_month: Registro de Alinhamento", 
-        ":material/monitoring: Produtividade (NS & Equipe)", 
-        ":material/attach_money: Financeiro (Diretoria)"
+        "Visão Geral",
+        "Registro Absenteísmo", 
+        "Gestão de Docas", 
+        "Registro de Alinhamento", 
+        "Produtividade (NS & Equipe)", 
+        "Financeiro (Diretoria)"
     ]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_container_width=True):
+if st.sidebar.button("Sincronizar Agora", type="secondary", use_container_width=True):
     with st.spinner("Puxando dados em tempo real da base..."):
         limpar_todos_os_caches()
         st.rerun()
@@ -668,20 +673,20 @@ if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_
 # ==========================================================
 # HOME
 # ==========================================================
-if pagina_selecionada == ":material/home: Visão Geral":
+if pagina_selecionada == "Visão Geral":
     render_home_dashboard()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
+elif pagina_selecionada == "Registro Absenteísmo":
     render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
         data_chamada = st.date_input("Data", date.today())
-        busca = st.text_input(":material/search: Buscar Colaborador", placeholder="ID ou Nome...")
+        busca = st.text_input("Buscar Colaborador", placeholder="ID ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if busca:
@@ -716,7 +721,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button(":material/save: Gravar no Sistema", use_container_width=True):
+        if st.button("Gravar no Sistema", use_container_width=True):
             ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
             if not ocorrencias.empty:
                 lista_final = []
@@ -737,7 +742,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
 # ==========================================================
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
-elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
+elif pagina_selecionada == "Gestão de Docas":
     render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
     
     df_log = carregar_log_produtividade()
@@ -994,7 +999,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
             if not ciente: bloqueio_ergonomico = True
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/play_circle: CONFIRMAR START", type="primary", use_container_width=True):
+        if st.button("Confirmar Start", type="primary", use_container_width=True):
             if not doca_sel or doca_sel == "A Definir": st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
             elif not equipe_sel: st.error("Selecione a equipe!")
             elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
@@ -1022,7 +1027,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/check_circle: Confirmar Alteração", type="primary", use_container_width=True):
+        if st.button("Confirmar Alteração", type="primary", use_container_width=True):
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
             linhas_para_gravar = []
@@ -1072,9 +1077,9 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs([
-        ":material/view_timeline: Visão das Docas (EM PROCESSO)", 
-        ":material/hourglass_top: Fila de Docas (PENDENTE)", 
-        ":material/group_add: Montar Equipes"
+        "Visão das Docas (EM PROCESSO)", 
+        "Fila de Docas (PENDENTE)", 
+        "Montar Equipes"
     ])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
@@ -1173,7 +1178,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         with c_btn:
-                            if st.button(":material/check_circle: Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                            if st.button("Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
@@ -1206,7 +1211,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                                             st.rerun()
                                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            if st.button(":material/swap_horiz: Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                            if st.button("Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                                 
                 if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
@@ -1341,7 +1346,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-magalu" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
-                            if st.button(":material/person_add: Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
+                            if st.button("Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
                                 popup_start_carga(doca_str, agenda_str, conf_str)
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
@@ -1394,7 +1399,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                     if not ciente: bloqueio_ergonomico = True
 
                 st.markdown('<br>', unsafe_allow_html=True)
-                if st.button(":material/save: Gravar / Atualizar Doca", use_container_width=True):
+                if st.button("Gravar / Atualizar Doca", use_container_width=True):
                     if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
                     elif not equipe_sel: st.warning("Selecione a equipe atual.")
                     elif bloqueio_ergonomico: st.error("Você precisa confirmar a ciência do risco ergonômico para gravar!")
@@ -1409,7 +1414,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 # ==========================================================
 # MÓDULO 3: FINANCEIRO E DRE
 # ==========================================================
-elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
+elif pagina_selecionada == "Financeiro (Diretoria)":
     try:
         with st.spinner('Sincronizando com Base de Dados Financeira...'):
             df_raw = carregar_dados_financeiros()
@@ -1581,7 +1586,7 @@ elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
 # ==========================================================
 # MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
 # ==========================================================
-elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
+elif pagina_selecionada == "Registro de Alinhamento":
     render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
 
     try:
@@ -1607,7 +1612,7 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
                     
             st.markdown('<br>', unsafe_allow_html=True)
             
-            if st.button(":material/save: Gravar Alinhamento", use_container_width=True, type="primary"):
+            if st.button("Gravar Alinhamento", use_container_width=True, type="primary"):
                 if not nome_sel:
                     st.warning("Selecione o colaborador.")
                 elif motivo_sel == "OUTROS" and not motivo_outro.strip():
@@ -1629,7 +1634,7 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
-elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
+elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
 
     try:
@@ -1681,7 +1686,7 @@ elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
                 sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
-                aba_macro, aba_equipe = st.tabs([":material/dashboard: Visão Macro & NS", ":material/engineering: Desempenho Individual"])
+                aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                 with aba_macro:
                     c1, c2, c3 = st.columns(3)
