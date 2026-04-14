@@ -654,7 +654,7 @@ pagina_selecionada = st.sidebar.radio(
         "Registro Absenteísmo", 
         "Gestão de Docas", 
         "Registro de Alinhamento", 
-        "", 
+        "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)"
     ]
 )
