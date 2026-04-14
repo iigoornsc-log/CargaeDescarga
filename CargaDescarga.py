@@ -1630,148 +1630,456 @@ elif pagina_selecionada == "Registro de Alinhamento":
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
-    render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
+    render_hero(
+        'Produtividade & Nível de Serviço',
+        'Acompanhe SLA, tempo de ciclo, produção por hora e performance individual com leitura mais corporativa.',
+        'Analytics operacional'
+    )
 
     try:
         with st.spinner("Calculando métricas de performance..."):
             df_fin = carregar_docas_finalizadas()
-            
+
             if df_fin.empty:
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
+                # -----------------------------
+                # Padronização e detecção de colunas
+                # -----------------------------
                 colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
                 df_fin = df_fin.rename(columns=colunas_upper)
-                
+
                 col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
                 col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
                 col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
                 col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
                 col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
                 col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c), None)
+                col_pecas = next((c for c in df_fin.columns if 'PEÇA' in c or 'PECAS' in c), None)
+                col_m3 = next((c for c in df_fin.columns if 'M3' in c or 'M³' in c), None)
 
-                def tempo_para_minutos(t_str):
-                    try:
-                        h, m = map(int, str(t_str).split(':'))
-                        return h * 60 + m
-                    except: return 0
-                
-                def minutos_para_texto(mins):
-                    if pd.isna(mins) or mins == 0: return "00h00m"
-                    h = int(mins // 60)
-                    m = int(mins % 60)
-                    return f"{h:02d}h{m:02d}m"
+                colunas_obrigatorias = [col_data, col_agenda, col_tempo, col_just, col_cat, col_aux]
+                if any(c is None for c in colunas_obrigatorias):
+                    st.error(
+                        "Não foi possível identificar automaticamente todas as colunas obrigatórias da base "
+                        "(DATA, AGENDA, TEMPO, JUSTIFICATIVA, CATEGORIA e NOME/PESSOA)."
+                    )
+                else:
+                    # -----------------------------
+                    # Funções auxiliares
+                    # -----------------------------
+                    def tempo_para_minutos(t_str):
+                        try:
+                            h, m = map(int, str(t_str).split(':'))
+                            return h * 60 + m
+                        except:
+                            return 0
 
-                df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
-                
-                if col_data:
-                    df_fin[col_data] = pd.to_datetime(df_fin[col_data], format="%d/%m/%Y", errors='coerce')
-                    min_date, max_date = df_fin[col_data].min().date(), df_fin[col_data].max().date()
-                    col_f1, col_f2 = st.columns([1, 3])
-                    with col_f1:
-                        datas_sel = st.date_input("Filtrar Período", [min_date, max_date])
-                        if len(datas_sel) == 2:
-                            df_fin = df_fin[(df_fin[col_data].dt.date >= datas_sel[0]) & (df_fin[col_data].dt.date <= datas_sel[1])]
+                    def minutos_para_texto(mins):
+                        if pd.isna(mins) or mins == 0:
+                            return "00h00m"
+                        h = int(mins // 60)
+                        m = int(mins % 60)
+                        return f"{h:02d}h{m:02d}m"
 
-                df_agendas_unicas = df_fin.drop_duplicates(subset=[col_agenda])
+                    # -----------------------------
+                    # Preparação da base
+                    # -----------------------------
+                    df_fin = df_fin.copy()
+                    df_fin[col_data] = pd.to_datetime(df_fin[col_data], dayfirst=True, errors='coerce')
+                    df_fin = df_fin.dropna(subset=[col_data])
 
-                total_cargas = len(df_agendas_unicas)
-                tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
-                
-                qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)])
-                sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
-                cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
+                    df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
+                    df_fin = df_fin[df_fin['MINUTOS'] > 0].copy()
+                    df_fin['HORAS'] = df_fin['MINUTOS'] / 60
 
-                aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
-
-                with aba_macro:
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
-                    with c2:
-                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA (Nível de Serviço)</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B;">{qtd_no_prazo} cargas no prazo</div></div>', unsafe_allow_html=True)
-                    with c3:
-                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Tempo Médio Geral</div><div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div></div>', unsafe_allow_html=True)
-
-                    col_g1, col_g2 = st.columns(2)
-                    
-                    with col_g1:
-                        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>timer</span> Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
-                        df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
-                        df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
-                        
-                        fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
-                        fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, margin=dict(l=0, r=0, t=0, b=0), height=350)
-                        fig1.update_traces(textposition='outside', textfont=dict(weight='bold'))
-                        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown('</div>', unsafe_allow_html=True)
-
-                    with col_g2:
-                        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>error</span> Motivos de Atraso (Ofensores)</h4>", unsafe_allow_html=True)
-                        df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
-                        if not df_atrasos.empty:
-                            df_motivos = df_atrasos[col_just].value_counts().reset_index()
-                            df_motivos.columns = ['Motivo', 'Qtd']
-                            fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
-                            fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
-                            st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
-                        else:
-                            st.info("Nenhum atraso registrado no período! Operação perfeita!")
-                        st.markdown('</div>', unsafe_allow_html=True)
-
-                with aba_equipe:
-                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>", unsafe_allow_html=True)
-                    
-                    categorias_lista = df_fin[col_cat].dropna().unique().tolist()
-                    cat_sel = st.selectbox("Selecione a Categoria para comparar a equipe:", ["Todas as Categorias"] + categorias_lista)
-
-                    df_operadores = df_fin.copy()
-                    if cat_sel != "Todas as Categorias":
-                        df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
-
-                    if not df_operadores.empty:
-                        df_rank = df_operadores.groupby(col_aux).agg(
-                            Cargas_Participadas=(col_agenda, 'nunique'),
-                            Tempo_Medio_Minutos=('MINUTOS', 'mean')
-                        ).reset_index().sort_values('Tempo_Medio_Minutos') 
-                        
-                        df_rank = df_rank[df_rank['Cargas_Participadas'] > 0]
-                        df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
-                        
-                        media_geral_cat = df_rank['Tempo_Medio_Minutos'].mean()
-                        
-                        c_rank1, c_rank2 = st.columns([6, 4])
-                        
-                        with c_rank1:
-                            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>", unsafe_allow_html=True)
-                            
-                            fig_rank = px.bar(df_rank, x='Tempo_Medio_Minutos', y=col_aux, orientation='h', text='Tempo_Medio', 
-                                            color='Tempo_Medio_Minutos', color_continuous_scale='blues_r')
-                            
-                            fig_rank.add_vline(x=media_geral_cat, line_width=2, line_dash="dash", line_color="red", annotation_text="Média da Categoria")
-                            
-                            fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis_title="Minutos (Menos é Melhor)", yaxis_title=None, coloraxis_showscale=False, height=450)
-                            fig_rank.update_traces(textposition='inside', textfont=dict(color='white', weight='bold'))
-                            st.plotly_chart(fig_rank, use_container_width=True, config={'displayModeBar': False})
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            
-                        with c_rank2:
-                            st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>", unsafe_allow_html=True)
-                            st.dataframe(
-                                df_rank[[col_aux, 'Cargas_Participadas', 'Tempo_Medio']],
-                                column_config={
-                                    col_aux: "Operador",
-                                    "Cargas_Participadas": st.column_config.NumberColumn("Qtd Cargas", format="%d"),
-                                    "Tempo_Medio": "Tempo Médio"
-                                },
-                                hide_index=True, use_container_width=True, height=450
-                            )
-                            st.markdown('</div>', unsafe_allow_html=True)
+                    if col_pecas:
+                        df_fin[col_pecas] = pd.to_numeric(df_fin[col_pecas], errors='coerce').fillna(0)
                     else:
-                        st.info("Sem dados suficientes para esta categoria.")
+                        df_fin['PEÇAS_FALLBACK'] = 0
+                        col_pecas = 'PEÇAS_FALLBACK'
+
+                    if col_m3:
+                        df_fin[col_m3] = pd.to_numeric(df_fin[col_m3], errors='coerce').fillna(0)
+                    else:
+                        df_fin['M3_FALLBACK'] = 0
+                        col_m3 = 'M3_FALLBACK'
+
+                    # Filtros principais
+                    c_filtro1, c_filtro2 = st.columns(2)
+                    with c_filtro1:
+                        data_ini = st.date_input(
+                            "Data inicial",
+                            value=df_fin[col_data].min().date()
+                        )
+                    with c_filtro2:
+                        data_fim = st.date_input(
+                            "Data final",
+                            value=df_fin[col_data].max().date()
+                        )
+
+                    mask_periodo = (
+                        (df_fin[col_data].dt.date >= data_ini) &
+                        (df_fin[col_data].dt.date <= data_fim)
+                    )
+                    df_fin = df_fin[mask_periodo].copy()
+
+                    if df_fin.empty:
+                        st.warning("Não há dados no período selecionado.")
+                    else:
+                        # -----------------------------
+                        # Base única por agenda (visão macro)
+                        # -----------------------------
+                        df_agendas_unicas = df_fin.sort_values(col_data).drop_duplicates(subset=[col_agenda]).copy()
+
+                        df_agendas_unicas['PECAS_HORA_TOTAL'] = (
+                            df_agendas_unicas[col_pecas] / df_agendas_unicas['HORAS'].replace(0, pd.NA)
+                        ).fillna(0)
+
+                        df_agendas_unicas['M3_HORA_TOTAL'] = (
+                            df_agendas_unicas[col_m3] / df_agendas_unicas['HORAS'].replace(0, pd.NA)
+                        ).fillna(0)
+
+                        total_cargas = df_agendas_unicas[col_agenda].nunique()
+                        tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
+
+                        qtd_no_prazo = df_agendas_unicas[
+                            df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)
+                        ].shape[0]
+
+                        sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
+                        cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
+
+                        media_pecas_hora = df_agendas_unicas['PECAS_HORA_TOTAL'].mean()
+                        media_m3_hora = df_agendas_unicas['M3_HORA_TOTAL'].mean()
+
+                        # -----------------------------
+                        # Rateio por auxiliar (visão equipe)
+                        # -----------------------------
+                        df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
+                        df_fin['PECAS_PART'] = df_fin[col_pecas] / df_fin['QTD_AUXILIARES_AGENDA']
+                        df_fin['M3_PART'] = df_fin[col_m3] / df_fin['QTD_AUXILIARES_AGENDA']
+                        df_fin['PECAS_HORA_PART'] = (
+                            df_fin['PECAS_PART'] / df_fin['HORAS'].replace(0, pd.NA)
+                        ).fillna(0)
+                        df_fin['M3_HORA_PART'] = (
+                            df_fin['M3_PART'] / df_fin['HORAS'].replace(0, pd.NA)
+                        ).fillna(0)
+
+                        # -----------------------------
+                        # Abas internas
+                        # -----------------------------
+                        aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
+
+                        with aba_macro:
+                            # KPIs
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                st.markdown(
+                                    f'<div class="kpi-card" style="border-top: 4px solid #0086FF;">'
+                                    f'<div class="kpi-title">Cargas Finalizadas</div>'
+                                    f'<div class="kpi-value" style="font-size:28px;">{total_cargas}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                            with c2:
+                                st.markdown(
+                                    f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};">'
+                                    f'<div class="kpi-title">SLA (Nível de Serviço)</div>'
+                                    f'<div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div>'
+                                    f'<div style="font-size:11px; color:#64748B;">{qtd_no_prazo} cargas no prazo</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                            with c3:
+                                st.markdown(
+                                    f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;">'
+                                    f'<div class="kpi-title">Tempo Médio Geral</div>'
+                                    f'<div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                            with c4:
+                                st.markdown(
+                                    f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;">'
+                                    f'<div class="kpi-title">Média Peças / Hora</div>'
+                                    f'<div class="kpi-value" style="font-size:28px;">{media_pecas_hora:.1f}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                            with c5:
+                                st.markdown(
+                                    f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;">'
+                                    f'<div class="kpi-title">Média m³ / Hora</div>'
+                                    f'<div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+
+                            # Gráficos principais
+                            col_g1, col_g2 = st.columns(2)
+
+                            with col_g1:
+                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown(
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>schedule</span> Tempo Médio por Categoria</h4>",
+                                    unsafe_allow_html=True
+                                )
+
+                                df_cat = (
+                                    df_agendas_unicas.groupby(col_cat)['MINUTOS']
+                                    .mean()
+                                    .reset_index()
+                                    .sort_values('MINUTOS')
+                                )
+                                df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
+
+                                fig1 = px.bar(
+                                    df_cat,
+                                    x='MINUTOS',
+                                    y=col_cat,
+                                    orientation='h',
+                                    text='TEXTO_TEMPO',
+                                    color_discrete_sequence=['#0086FF']
+                                )
+                                fig1.update_layout(
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    xaxis=dict(showgrid=False, visible=False),
+                                    yaxis_title=None,
+                                    margin=dict(l=0, r=0, t=0, b=0),
+                                    height=350
+                                )
+                                fig1.update_traces(textposition='outside')
+                                st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+                                st.markdown('</div>', unsafe_allow_html=True)
+
+                            with col_g2:
+                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown(
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>pie_chart</span> Motivos de Atraso</h4>",
+                                    unsafe_allow_html=True
+                                )
+
+                                df_atrasos = df_agendas_unicas[
+                                    ~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)
+                                ]
+
+                                if not df_atrasos.empty:
+                                    df_motivos = df_atrasos[col_just].value_counts().reset_index()
+                                    df_motivos.columns = ['Motivo', 'Qtd']
+
+                                    fig2 = px.pie(
+                                        df_motivos,
+                                        values='Qtd',
+                                        names='Motivo',
+                                        hole=0.6,
+                                        color_discrete_sequence=px.colors.sequential.Reds_r
+                                    )
+                                    fig2.update_layout(
+                                        margin=dict(l=0, r=0, t=0, b=0),
+                                        height=350,
+                                        showlegend=True,
+                                        legend=dict(
+                                            orientation="h",
+                                            yanchor="bottom",
+                                            y=-0.2,
+                                            xanchor="center",
+                                            x=0.5
+                                        )
+                                    )
+                                    st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+                                else:
+                                    st.info("Nenhum atraso registrado no período.")
+                                st.markdown('</div>', unsafe_allow_html=True)
+
+                            # Gráficos extras de produção por hora
+                            col_g3, col_g4 = st.columns(2)
+
+                            with col_g3:
+                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown(
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>inventory_2</span> Média de Peças/Hora por Categoria</h4>",
+                                    unsafe_allow_html=True
+                                )
+
+                                df_pecas_cat = (
+                                    df_agendas_unicas.groupby(col_cat)['PECAS_HORA_TOTAL']
+                                    .mean()
+                                    .reset_index()
+                                    .sort_values('PECAS_HORA_TOTAL')
+                                )
+
+                                fig3 = px.bar(
+                                    df_pecas_cat,
+                                    x='PECAS_HORA_TOTAL',
+                                    y=col_cat,
+                                    orientation='h',
+                                    text='PECAS_HORA_TOTAL',
+                                    color_discrete_sequence=['#0EA5E9']
+                                )
+                                fig3.update_traces(texttemplate='%{text:.1f}', textposition='outside')
+                                fig3.update_layout(
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    xaxis_title="Peças por hora",
+                                    yaxis_title=None,
+                                    margin=dict(l=0, r=0, t=0, b=0),
+                                    height=350
+                                )
+                                st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+                                st.markdown('</div>', unsafe_allow_html=True)
+
+                            with col_g4:
+                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown(
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>deployed_code</span> Média de m³/Hora por Categoria</h4>",
+                                    unsafe_allow_html=True
+                                )
+
+                                df_m3_cat = (
+                                    df_agendas_unicas.groupby(col_cat)['M3_HORA_TOTAL']
+                                    .mean()
+                                    .reset_index()
+                                    .sort_values('M3_HORA_TOTAL')
+                                )
+
+                                fig4 = px.bar(
+                                    df_m3_cat,
+                                    x='M3_HORA_TOTAL',
+                                    y=col_cat,
+                                    orientation='h',
+                                    text='M3_HORA_TOTAL',
+                                    color_discrete_sequence=['#14B8A6']
+                                )
+                                fig4.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+                                fig4.update_layout(
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    xaxis_title="m³ por hora",
+                                    yaxis_title=None,
+                                    margin=dict(l=0, r=0, t=0, b=0),
+                                    height=350
+                                )
+                                st.plotly_chart(fig4, use_container_width=True, config={'displayModeBar': False})
+                                st.markdown('</div>', unsafe_allow_html=True)
+
+                        with aba_equipe:
+                            st.markdown(
+                                "<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>",
+                                unsafe_allow_html=True
+                            )
+
+                            categorias_lista = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
+                            cat_sel = st.selectbox(
+                                "Selecione a Categoria para comparar a equipe:",
+                                ["Todas as Categorias"] + categorias_lista
+                            )
+
+                            df_operadores = df_fin.copy()
+                            if cat_sel != "Todas as Categorias":
+                                df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
+
+                            if not df_operadores.empty:
+                                df_rank = (
+                                    df_operadores.groupby(col_aux)
+                                    .agg(
+                                        Cargas_Participadas=(col_agenda, 'nunique'),
+                                        Tempo_Medio_Minutos=('MINUTOS', 'mean'),
+                                        Pecas_Descarregadas=('PECAS_PART', 'sum'),
+                                        M3_Descarregados=('M3_PART', 'sum'),
+                                        Media_Pecas_Hora=('PECAS_HORA_PART', 'mean'),
+                                        Media_M3_Hora=('M3_HORA_PART', 'mean')
+                                    )
+                                    .reset_index()
+                                    .sort_values('Tempo_Medio_Minutos')
+                                )
+
+                                df_rank = df_rank[df_rank['Cargas_Participadas'] > 0].copy()
+                                df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
+                                df_rank['Pecas_Descarregadas'] = df_rank['Pecas_Descarregadas'].round(1)
+                                df_rank['M3_Descarregados'] = df_rank['M3_Descarregados'].round(2)
+                                df_rank['Media_Pecas_Hora'] = df_rank['Media_Pecas_Hora'].round(1)
+                                df_rank['Media_M3_Hora'] = df_rank['Media_M3_Hora'].round(2)
+
+                                media_geral_cat = df_rank['Tempo_Medio_Minutos'].mean()
+
+                                c_rank1, c_rank2 = st.columns([6, 4])
+
+                                with c_rank1:
+                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                    st.markdown(
+                                        f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>",
+                                        unsafe_allow_html=True
+                                    )
+
+                                    fig_rank = px.bar(
+                                        df_rank,
+                                        x='Tempo_Medio_Minutos',
+                                        y=col_aux,
+                                        orientation='h',
+                                        text='Tempo_Medio',
+                                        color='Tempo_Medio_Minutos',
+                                        color_continuous_scale='blues_r'
+                                    )
+
+                                    fig_rank.add_vline(
+                                        x=media_geral_cat,
+                                        line_width=2,
+                                        line_dash="dash",
+                                        line_color="red",
+                                        annotation_text="Média da Categoria"
+                                    )
+
+                                    fig_rank.update_layout(
+                                        plot_bgcolor='rgba(0,0,0,0)',
+                                        paper_bgcolor='rgba(0,0,0,0)',
+                                        xaxis_title="Minutos (menos é melhor)",
+                                        yaxis_title=None,
+                                        coloraxis_showscale=False,
+                                        height=450
+                                    )
+                                    fig_rank.update_traces(
+                                        textposition='inside',
+                                        textfont=dict(color='white')
+                                    )
+                                    st.plotly_chart(fig_rank, use_container_width=True, config={'displayModeBar': False})
+                                    st.markdown('</div>', unsafe_allow_html=True)
+
+                                with c_rank2:
+                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                    st.markdown(
+                                        "<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>",
+                                        unsafe_allow_html=True
+                                    )
+                                    st.dataframe(
+                                        df_rank[
+                                            [
+                                                col_aux,
+                                                'Cargas_Participadas',
+                                                'Tempo_Medio',
+                                                'Pecas_Descarregadas',
+                                                'M3_Descarregados',
+                                                'Media_Pecas_Hora',
+                                                'Media_M3_Hora'
+                                            ]
+                                        ],
+                                        column_config={
+                                            col_aux: "Operador",
+                                            "Cargas_Participadas": st.column_config.NumberColumn("Qtd Cargas", format="%d"),
+                                            "Tempo_Medio": "Tempo Médio",
+                                            "Pecas_Descarregadas": st.column_config.NumberColumn("Peças Desc.", format="%.1f"),
+                                            "M3_Descarregados": st.column_config.NumberColumn("m³ Desc.", format="%.2f"),
+                                            "Media_Pecas_Hora": st.column_config.NumberColumn("Peças/Hora", format="%.1f"),
+                                            "Media_M3_Hora": st.column_config.NumberColumn("m³/Hora", format="%.2f"),
+                                        },
+                                        hide_index=True,
+                                        use_container_width=True,
+                                        height=450
+                                    )
+                                    st.markdown('</div>', unsafe_allow_html=True)
+                            else:
+                                st.info("Sem dados suficientes para esta categoria.")
 
     except Exception as e:
         st.error(f"Erro no módulo de Produtividade: {e}")
