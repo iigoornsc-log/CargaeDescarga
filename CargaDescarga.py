@@ -690,7 +690,7 @@ elif pagina_selecionada == "Registro Absenteísmo":
             df_filtrado = df_equipe.copy()
 
         df_filtrado['OCORRÊNCIA'] = "PRESENTE" 
-        opcoes_ocorrencia = ["PRESENTE", "FALTA", "DSR", "BH", "LICENÇA", "ATESTADO"]
+        opcoes_ocorrencia = ["PRESENTE", "FALTA", "DSR", "BH", "LICENÇA", "ATESTADO", "FÉRIAS"]
 
         st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
         
