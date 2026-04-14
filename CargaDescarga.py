@@ -431,13 +431,13 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     st.markdown("<br>", unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
-    if c1.button(":material/check_circle: Confirmar Transferência", use_container_width=True):
+    if c1.button("Confirmar Transferência", use_container_width=True):
         with st.spinner("Atualizando docas..."):
             if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
                 carregar_log_produtividade.clear()
                 st.rerun() 
                 
-    if c2.button(":material/cancel: Cancelar", use_container_width=True):
+    if c2.button("Cancelar", use_container_width=True):
         st.rerun()
 
 # --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
@@ -458,7 +458,7 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     motivo = st.selectbox("Selecione o motivo principal:", opcoes_atraso)
     detalhe = st.text_area("Detalhes adicionais (opcional):", placeholder="Ex: O caminhão chegou com as caixas tombadas...")
     
-    if st.button(":material/check_circle: Confirmar Finalização", use_container_width=True):
+    if st.button("Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
         for linha in dados_multiplos:
@@ -651,17 +651,17 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
-        ":material/home: Visão Geral",
-        ":material/assignment_ind: Registro Absenteísmo", 
-        ":material/local_shipping: Gestão de Docas", 
-        ":material/calendar_month: Registro de Alinhamento", 
-        ":material/monitoring: Produtividade (NS & Equipe)", 
-        ":material/attach_money: Financeiro (Diretoria)"
+        "Visão Geral",
+        "Registro Absenteísmo", 
+        "Gestão de Docas", 
+        "Registro de Alinhamento", 
+        "Produtividade (NS & Equipe)", 
+        "Financeiro (Diretoria)"
     ]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_container_width=True):
+if st.sidebar.button("Sincronizar Agora", type="secondary", use_container_width=True):
     with st.spinner("Puxando dados em tempo real da base..."):
         st.cache_data.clear()
         st.rerun()
@@ -669,13 +669,13 @@ if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_
 # ==========================================================
 # HOME
 # ==========================================================
-if pagina_selecionada == ":material/home: Visão Geral":
+if pagina_selecionada == "Visão Geral":
     render_home_dashboard()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
+elif pagina_selecionada == "Registro Absenteísmo":
     render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
@@ -717,7 +717,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button(":material/save: Gravar no Sistema", use_container_width=True):
+        if st.button("Gravar no Sistema", use_container_width=True):
             ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
             if not ocorrencias.empty:
                 lista_final = []
@@ -738,7 +738,7 @@ elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
 # ==========================================================
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
-elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
+elif pagina_selecionada == "Gestão de Docas":
     render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
     
     df_log = carregar_log_produtividade()
@@ -990,12 +990,12 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
         bloqueio_ergonomico = False
         
         if fadigados:
-            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada (Madeira) nas últimas 24h.</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h.</span></div>", unsafe_allow_html=True)
             ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação.", key="chk_fadiga_popup")
             if not ciente: bloqueio_ergonomico = True
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/play_circle: Confirmar Start", type="primary", use_container_width=True):
+        if st.button("Confirmar Start", type="primary", use_container_width=True):
             if not doca_sel or doca_sel == "A Definir": st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
             elif not equipe_sel: st.error("Selecione a equipe!")
             elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
@@ -1023,7 +1023,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button(":material/check_circle: Confirmar Alteração", type="primary", use_container_width=True):
+        if st.button("Confirmar Alteração", type="primary", use_container_width=True):
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
             linhas_para_gravar = []
@@ -1073,9 +1073,9 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 
     # Criação das TRÊS abas
     aba1, aba2, aba3 = st.tabs([
-        ":material/view_timeline: Visão das Docas (EM PROCESSO)", 
-        ":material/hourglass_top: Fila de Docas (PENDENTE)", 
-        ":material/group_add: Montar Equipes"
+        "Visão das Docas (EM PROCESSO)", 
+        "Fila de Docas (PENDENTE)", 
+        "Montar Equipes"
     ])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
@@ -1174,7 +1174,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         with c_btn:
-                            if st.button(":material/check_circle: Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                            if st.button("Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
@@ -1207,7 +1207,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                                             st.rerun()
                                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            if st.button(":material/swap_horiz: Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                            if st.button("Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                                 
                 if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
@@ -1342,7 +1342,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                         c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-magalu" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
-                            if st.button(":material/person_add: Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
+                            if st.button("Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
                                 popup_start_carga(doca_str, agenda_str, conf_str)
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
@@ -1395,7 +1395,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
                     if not ciente: bloqueio_ergonomico = True
 
                 st.markdown('<br>', unsafe_allow_html=True)
-                if st.button(":material/save: Gravar / Atualizar Doca", use_container_width=True):
+                if st.button("Gravar / Atualizar Doca", use_container_width=True):
                     if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
                     elif not equipe_sel: st.warning("Selecione a equipe atual.")
                     elif bloqueio_ergonomico: st.error("Você precisa confirmar a ciência do risco ergonômico para gravar!")
@@ -1410,7 +1410,7 @@ elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
 # ==========================================================
 # MÓDULO 3: FINANCEIRO E DRE
 # ==========================================================
-elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
+elif pagina_selecionada == "Financeiro (Diretoria)":
     try:
         with st.spinner('Sincronizando com Base de Dados Financeira...'):
             df_raw = carregar_dados_financeiros()
@@ -1582,7 +1582,7 @@ elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
 # ==========================================================
 # MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
 # ==========================================================
-elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
+elif pagina_selecionada == "Registro de Alinhamento":
     render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
 
     try:
@@ -1608,7 +1608,7 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
                     
             st.markdown('<br>', unsafe_allow_html=True)
             
-            if st.button(":material/save: Gravar Alinhamento", use_container_width=True, type="primary"):
+            if st.button("Gravar Alinhamento", use_container_width=True, type="primary"):
                 if not nome_sel:
                     st.warning("Selecione o colaborador.")
                 elif motivo_sel == "OUTROS" and not motivo_outro.strip():
@@ -1628,10 +1628,10 @@ elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V2)
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
-elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
-    render_hero('Produtividade & Nível de Serviço', 'Análise de performance real: Tempo, SLA, Peças por Hora e Cubagem por Homem-Hora.', 'Analytics operacional')
+elif pagina_selecionada == "Produtividade (NS & Equipe)":
+    render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
 
     try:
         with st.spinner("Calculando métricas de performance..."):
@@ -1640,39 +1640,30 @@ elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
             if df_fin.empty:
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
-                # 1. Padronização e Limpeza
                 colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
                 df_fin = df_fin.rename(columns=colunas_upper)
                 
-                # Identificação das colunas (incluindo as novas)
                 col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
                 col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
                 col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
                 col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
                 col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
                 col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c), None)
-                col_qtd_aux = next((c for c in df_fin.columns if 'AUXILIARES' in c or 'EQUIPE' in c or 'QTD' in c), None)
+
+                def tempo_para_minutos(t_str):
+                    try:
+                        h, m = map(int, str(t_str).split(':'))
+                        return h * 60 + m
+                    except: return 0
                 
-                # Novas colunas de volume
-                col_pecas = next((c for c in df_fin.columns if 'PEÇAS' in c or 'PECAS' in c), None)
-                col_m3 = next((c for c in df_fin.columns if 'CUB' in c or 'M3' in c or 'M³' in c), None)
+                def minutos_para_texto(mins):
+                    if pd.isna(mins) or mins == 0: return "00h00m"
+                    h = int(mins // 60)
+                    m = int(mins % 60)
+                    return f"{h:02d}h{m:02d}m"
 
-                # 2. Tratamento Numérico
-                def para_num(val):
-                    try: return float(str(val).replace(',', '.'))
-                    except: return 0.0
-
-                df_fin['MINUTOS'] = df_fin[col_tempo].apply(lambda x: sum(int(a) * 60**i for i, a in enumerate(reversed(str(x).split(':')))) if ':' in str(x) else 0)
-                df_fin['VAL_PECAS'] = df_fin[col_pecas].apply(para_num) if col_pecas else 0.0
-                df_fin['VAL_M3'] = df_fin[col_m3].apply(para_num) if col_m3 else 0.0
-                df_fin['VAL_QTD_AUX'] = df_fin[col_qtd_aux].apply(para_num).replace(0, 1) if col_qtd_aux else 1 # Evita divisão por zero
-
-                # --- CÁLCULO INDIVIDUAL (Divisão por equipe) ---
-                # Importante: Cada linha já é uma pessoa, então dividimos o total da agenda pelo tamanho da equipe
-                df_fin['PECAS_INDIV'] = df_fin['VAL_PECAS'] / df_fin['VAL_QTD_AUX']
-                df_fin['M3_INDIV'] = df_fin['VAL_M3'] / df_fin['VAL_QTD_AUX']
-
-                # 3. Filtro de Data
+                df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
+                
                 if col_data:
                     df_fin[col_data] = pd.to_datetime(df_fin[col_data], format="%d/%m/%Y", errors='coerce')
                     min_date, max_date = df_fin[col_data].min().date(), df_fin[col_data].max().date()
@@ -1682,108 +1673,106 @@ elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
                         if len(datas_sel) == 2:
                             df_fin = df_fin[(df_fin[col_data].dt.date >= datas_sel[0]) & (df_fin[col_data].dt.date <= datas_sel[1])]
 
-                # 4. Agendas Únicas para Métricas Macro
                 df_agendas_unicas = df_fin.drop_duplicates(subset=[col_agenda])
-                
-                total_cargas = len(df_agendas_unicas)
-                total_minutos = df_agendas_unicas['MINUTOS'].sum()
-                total_horas = total_minutos / 60
-                
-                total_pecas_geral = df_agendas_unicas['VAL_PECAS'].sum()
-                total_m3_geral = df_agendas_unicas['VAL_M3'].sum()
 
-                # Médias por Hora
-                pecas_por_hora = total_pecas_geral / total_horas if total_horas > 0 else 0
-                m3_por_hora = total_m3_geral / total_horas if total_horas > 0 else 0
+                total_cargas = len(df_agendas_unicas)
+                tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                 
                 qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)])
                 sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
-                aba_macro, aba_equipe = st.tabs([":material/dashboard: Visão Macro & NS", ":material/engineering: Desempenho Individual"])
+                aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                 with aba_macro:
-                    # Linha 1 de KPIs
                     c1, c2, c3 = st.columns(3)
-                    with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value">{total_cargas}</div></div>', unsafe_allow_html=True)
-                    with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Global</div><div class="kpi-value" style="color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
-                    with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Volume Total Processado</div><div class="kpi-value" style="font-size:20px;">{total_pecas_geral:,.0f} Peças | {total_m3_geral:,.1f} m³</div></div>', unsafe_allow_html=True)
-
-                    # Linha 2 de KPIs (A produtividade por hora)
-                    c4, c5 = st.columns(2)
-                    with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #F59E0B;"><div class="kpi-title">Média Peças / Hora (Geral)</div><div class="kpi-value">{pecas_por_hora:,.0f} <span style="font-size:12px; color:#64748B;">pçs/h</span></div></div>', unsafe_allow_html=True)
-                    with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #00C853;"><div class="kpi-title">Média m³ / Hora (Geral)</div><div class="kpi-value">{m3_por_hora:,.2f} <span style="font-size:12px; color:#64748B;">m³/h</span></div></div>', unsafe_allow_html=True)
+                    with c1:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
+                    with c2:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA (Nível de Serviço)</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B;">{qtd_no_prazo} cargas no prazo</div></div>', unsafe_allow_html=True)
+                    with c3:
+                        st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Tempo Médio Geral</div><div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div></div>', unsafe_allow_html=True)
 
                     col_g1, col_g2 = st.columns(2)
+                    
                     with col_g1:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>timer</span> Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>timer</span> Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
                         df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
-                        fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', color_discrete_sequence=['#0086FF'])
-                        fig1.update_layout(xaxis_title="Minutos", yaxis_title=None, height=350, margin=dict(l=0,r=0,t=0,b=0))
-                        st.plotly_chart(fig1, use_container_width=True)
+                        df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
+                        
+                        fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
+                        fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, margin=dict(l=0, r=0, t=0, b=0), height=350)
+                        fig1.update_traces(textposition='outside', textfont=dict(weight='bold'))
+                        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
                         st.markdown('</div>', unsafe_allow_html=True)
 
                     with col_g2:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>error</span> Motivos de Atraso</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>error</span> Motivos de Atraso (Ofensores)</h4>", unsafe_allow_html=True)
                         df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                         if not df_atrasos.empty:
                             df_motivos = df_atrasos[col_just].value_counts().reset_index()
-                            fig2 = px.pie(df_motivos, values='count', names=col_just, hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
-                            fig2.update_layout(height=350, margin=dict(l=0,r=0,t=0,b=0))
-                            st.plotly_chart(fig2, use_container_width=True)
-                        else: st.info("Operação 100% no prazo!")
+                            df_motivos.columns = ['Motivo', 'Qtd']
+                            fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
+                            fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+                            st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+                        else:
+                            st.info("Nenhum atraso registrado no período! Operação perfeita!")
                         st.markdown('</div>', unsafe_allow_html=True)
 
                 with aba_equipe:
-                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance e Matriz de Volume</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>", unsafe_allow_html=True)
                     
                     categorias_lista = df_fin[col_cat].dropna().unique().tolist()
-                    cat_sel = st.selectbox("Filtrar ranking por Categoria:", ["Todas as Categorias"] + categorias_lista)
+                    cat_sel = st.selectbox("Selecione a Categoria para comparar a equipe:", ["Todas as Categorias"] + categorias_lista)
 
                     df_operadores = df_fin.copy()
                     if cat_sel != "Todas as Categorias":
                         df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
 
                     if not df_operadores.empty:
-                        # Agrupamento para o ranking individual
                         df_rank = df_operadores.groupby(col_aux).agg(
-                            Cargas=(col_agenda, 'nunique'),
-                            Tempo_Medio=('MINUTOS', 'mean'),
-                            Total_Pecas=('PECAS_INDIV', 'sum'),
-                            Total_M3=('M3_INDIV', 'sum')
-                        ).reset_index().sort_values('Total_Pecas', ascending=False)
+                            Cargas_Participadas=(col_agenda, 'nunique'),
+                            Tempo_Medio_Minutos=('MINUTOS', 'mean')
+                        ).reset_index().sort_values('Tempo_Medio_Minutos') 
                         
-                        df_rank['Tempo_Fmt'] = df_rank['Tempo_Medio'].apply(lambda x: f"{int(x//60):02d}h{int(x%60):02d}m")
-
-                        c_rank1, c_rank2 = st.columns([5, 5])
+                        df_rank = df_rank[df_rank['Cargas_Participadas'] > 0]
+                        df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
+                        
+                        media_geral_cat = df_rank['Tempo_Medio_Minutos'].mean()
+                        
+                        c_rank1, c_rank2 = st.columns([6, 4])
                         
                         with c_rank1:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"##### <span class='icon-magalu'>leaderboard</span> Ranking de Volume (Peças)")
-                            fig_p = px.bar(df_rank.head(15), x='Total_Pecas', y=col_aux, orientation='h', text_auto='.0f', color='Total_Pecas', color_continuous_scale='GnBu')
-                            fig_p.update_layout(yaxis_autorange="reversed", height=450, showlegend=False, coloraxis_showscale=False)
-                            st.plotly_chart(fig_p, use_container_width=True)
+                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>", unsafe_allow_html=True)
+                            
+                            fig_rank = px.bar(df_rank, x='Tempo_Medio_Minutos', y=col_aux, orientation='h', text='Tempo_Medio', 
+                                            color='Tempo_Medio_Minutos', color_continuous_scale='blues_r')
+                            
+                            fig_rank.add_vline(x=media_geral_cat, line_width=2, line_dash="dash", line_color="red", annotation_text="Média da Categoria")
+                            
+                            fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis_title="Minutos (Menos é Melhor)", yaxis_title=None, coloraxis_showscale=False, height=450)
+                            fig_rank.update_traces(textposition='inside', textfont=dict(color='white', weight='bold'))
+                            st.plotly_chart(fig_rank, use_container_width=True, config={'displayModeBar': False})
                             st.markdown('</div>', unsafe_allow_html=True)
                             
                         with c_rank2:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"##### <span class='icon-magalu'>grid_on</span> Matriz de Volume Acumulado")
+                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>", unsafe_allow_html=True)
                             st.dataframe(
-                                df_rank[[col_aux, 'Cargas', 'Total_Pecas', 'Total_M3', 'Tempo_Fmt']],
+                                df_rank[[col_aux, 'Cargas_Participadas', 'Tempo_Medio']],
                                 column_config={
                                     col_aux: "Operador",
-                                    "Cargas": st.column_config.NumberColumn("Cargas", format="%d"),
-                                    "Total_Pecas": st.column_config.NumberColumn("Peças Totais", format="%d"),
-                                    "Total_M3": st.column_config.NumberColumn("m³ Total", format="%.2f"),
-                                    "Tempo_Fmt": "Média Tempo"
+                                    "Cargas_Participadas": st.column_config.NumberColumn("Qtd Cargas", format="%d"),
+                                    "Tempo_Medio": "Tempo Médio"
                                 },
                                 hide_index=True, use_container_width=True, height=450
                             )
                             st.markdown('</div>', unsafe_allow_html=True)
                     else:
-                        st.info("Sem dados para esta categoria.")
+                        st.info("Sem dados suficientes para esta categoria.")
 
     except Exception as e:
-        st.error(f"Erro no processamento de produtividade: {e}")
+        st.error(f"Erro no módulo de Produtividade: {e}")
