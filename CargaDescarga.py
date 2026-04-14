@@ -654,7 +654,7 @@ pagina_selecionada = st.sidebar.radio(
         "Registro Absenteísmo", 
         "Gestão de Docas", 
         "Registro de Alinhamento", 
-        "Produtividade (NS & Equipe)", 
+        "", 
         "Financeiro (Diretoria)"
     ]
 )
@@ -1629,7 +1629,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V2)
 # ==========================================================
-elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
+elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero('Produtividade & Nível de Serviço', 'Análise de performance real: Tempo, SLA, Peças por Hora e Cubagem por Homem-Hora.', 'Analytics operacional')
 
     try:
