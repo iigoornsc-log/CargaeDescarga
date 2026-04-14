@@ -12,16 +12,12 @@ import time
 from datetime import date
 
 # ==========================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU AAAA+)
+# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU CORPORATIVO)
 # ==========================================================
 st.set_page_config(page_title="Magalu | Carga e Descarga", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
-    /* 1. FONTE PREMIUM (Apple/Stripe Style) */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    * { font-family: 'Inter', sans-serif !important; }
-
     /* 1. FONTE PREMIUM E ÍCONES GOOGLE MATERIAL */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
@@ -42,7 +38,7 @@ st.markdown("""
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
     }
 
-    /* 2. ANIMAÇÃO RGB LUIZALABS (Desnecessário, mas absurdamente foda) */
+    /* 2. ANIMAÇÃO RGB LUIZALABS */
     @keyframes magaluGlow {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -73,7 +69,7 @@ st.markdown("""
     }
     .magalu-page-subtitle { color: #64748B; font-size: 15px; font-weight: 500; margin-bottom: 25px; }
 
-    /* 4. ABAS (TABS) CORPORATIVAS - Adeus texto flutuante! */
+    /* 4. ABAS (TABS) CORPORATIVAS */
     [data-baseweb="tab-list"] {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -95,13 +91,11 @@ st.markdown("""
         background-color: #F1F5F9 !important;
         color: #0F172A !important;
     }
-    /* Aba Ativa (Azul Magalu com Glow) */
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #0086FF !important;
         color: #FFFFFF !important;
         box-shadow: 0 4px 15px rgba(0,134,255,0.35) !important;
     }
-    /* Ocultar aquela linha feia padrão do Streamlit embaixo da aba */
     [data-baseweb="tab-border"] { display: none; }
 
     /* 5. RIBBONS ANIMADOS */
@@ -115,7 +109,7 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 1px;
     }
 
-    /* 6. CARDS (Docas, Formulários) - EFEITO GLASSMORPHISM */
+    /* 6. CARDS GLASSMORPHISM */
     .magalu-card, div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(255, 255, 255, 0.95) !important;
         backdrop-filter: blur(10px) !important;
@@ -130,86 +124,48 @@ st.markdown("""
         box-shadow: 0 12px 40px rgba(0, 134, 255, 0.08) !important;
     }
 
-   /* DATE INPUT SIDEBAR - ESTILO MAGALU */
-section[data-testid="stSidebar"] div[data-baseweb="input"] > div {
-    background: #FFFFFF !important;
-    border-radius: 12px !important;
-    border: 1px solid #E2E8F0 !important;
-    min-height: 48px !important;
-    transition: all 0.3s ease !important;
-}
+    /* DATE INPUT SIDEBAR */
+    section[data-testid="stSidebar"] div[data-baseweb="input"] > div {
+        background: #FFFFFF !important; border-radius: 12px !important;
+        border: 1px solid #E2E8F0 !important; min-height: 48px !important; transition: all 0.3s ease !important;
+    }
+    section[data-testid="stSidebar"] div[data-baseweb="input"] > div:focus-within {
+        border-color: #0086FF !important; box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
+    }
+    section[data-testid="stSidebar"] input { color: #0F172A !important; font-weight: 600 !important; }
+    section[data-testid="stSidebar"] svg { color: #0086FF !important; }
 
-/* FOCO */
-section[data-testid="stSidebar"] div[data-baseweb="input"] > div:focus-within {
-    border-color: #0086FF !important;
-    box-shadow: 0 0 0 3px rgba(0,134,255,0.15) !important;
-}
-
-/* TEXTO */
-section[data-testid="stSidebar"] input {
-    color: #0F172A !important;
-    font-weight: 600 !important;
-}
-
-/* ÍCONE CALENDÁRIO */
-section[data-testid="stSidebar"] svg {
-    color: #0086FF !important;
-}
-
-    /* 7.1 CHIPS DO MULTISELECT (Tags da Equipe Azul Magalu) */
+    /* CHIPS MULTISELECT */
     span[data-baseweb="tag"] {
-        background-color: #E6F2FF !important;
-        color: #0086FF !important;
-        border-radius: 8px !important;
-        border: 1px solid #BAE6FD !important;
-        font-weight: 700 !important;
-        padding: 6px 12px !important;
-        margin: 4px 4px 4px 0px !important;
+        background-color: #E6F2FF !important; color: #0086FF !important;
+        border-radius: 8px !important; border: 1px solid #BAE6FD !important;
+        font-weight: 700 !important; padding: 6px 12px !important; margin: 4px 4px 4px 0px !important;
     }
-    span[data-baseweb="tag"] svg { fill: #0086FF !important; } /* Cor do X de fechar */
+    span[data-baseweb="tag"] svg { fill: #0086FF !important; } 
 
-    /* BOTÃO SIDEBAR - ESTILO MAGALU */
-section[data-testid="stSidebar"] .stButton>button {
-    background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 0.8rem 1rem;
-    box-shadow: 0 6px 20px rgba(0,134,255,0.25);
-    transition: all 0.3s ease;
-}
-
-/* HOVER */
-section[data-testid="stSidebar"] .stButton>button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0,134,255,0.4);
-}
-
-/* CLICK */
-section[data-testid="stSidebar"] .stButton>button:active {
-    transform: scale(0.97);
-}
+    /* BOTÃO SIDEBAR */
+    section[data-testid="stSidebar"] .stButton>button {
+        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%); color: #FFFFFF;
+        border: none; border-radius: 12px; font-weight: 700; font-size: 14px;
+        padding: 0.8rem 1rem; box-shadow: 0 6px 20px rgba(0,134,255,0.25); transition: all 0.3s ease;
+    }
+    section[data-testid="stSidebar"] .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,134,255,0.4); }
+    section[data-testid="stSidebar"] .stButton>button:active { transform: scale(0.97); }
     
-    /* Botão Verde "Finalizar" com Efeito Glow/Pulse */
+    /* BOTÃO PRIMARY (Verde) */
     button[kind="primary"] {
-        background: linear-gradient(135deg, #00C853 0%, #009624 100%) !important;
-        border: none !important; color: white !important; font-weight: 800 !important;
-        border-radius: 10px !important; box-shadow: 0 6px 20px rgba(0,200,83,0.3) !important;
-        transition: all 0.3s ease !important;
+        background: linear-gradient(135deg, #00C853 0%, #009624 100%) !important; border: none !important; color: white !important; font-weight: 800 !important;
+        border-radius: 10px !important; box-shadow: 0 6px 20px rgba(0,200,83,0.3) !important; transition: all 0.3s ease !important;
     }
-    button[kind="primary"]:hover {
-        box-shadow: 0 8px 25px rgba(0,200,83,0.5) !important; transform: translateY(-2px) !important;
-    }
+    button[kind="primary"]:hover { box-shadow: 0 8px 25px rgba(0,200,83,0.5) !important; transform: translateY(-2px) !important; }
 
-    /* 9. SCROLLBAR DE LUXO (O que separa os meninos dos homens no Front-end) */
+    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-    /* 10. KPI CARDS FINANCEIROS */
+    /* KPI CARDS */
     .kpi-card { 
         background: #FFFFFF; border-radius: 16px; padding: 20px 15px; 
         border: 1px solid #F1F5F9; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
@@ -220,167 +176,75 @@ section[data-testid="stSidebar"] .stButton>button:active {
     .kpi-title { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;}
     .kpi-value { color: #0F172A; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
 
-    /* 11. SIDEBAR E DASHBOARD PREMIUM */
+    /* SIDEBAR E DASHBOARD PREMIUM */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #082a63 0%, #00153d 100%) !important;
         border-right: 1px solid rgba(255,255,255,0.08);
     }
-    section[data-testid="stSidebar"] * {
-        color: #EAF2FF;
-    }
-    section[data-testid="stSidebar"] .stRadio > div {
-        gap: 8px;
-    }
+    section[data-testid="stSidebar"] * { color: #EAF2FF; }
+    section[data-testid="stSidebar"] .stRadio > div { gap: 8px; }
     section[data-testid="stSidebar"] label[data-baseweb="radio"] {
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        padding: 10px 12px;
-        margin-bottom: 8px;
-        transition: all 0.25s ease;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; transition: all 0.25s ease;
     }
     section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
-        background: rgba(255,255,255,0.12);
-        border-color: rgba(85,170,255,0.55);
+        background: rgba(255,255,255,0.12); border-color: rgba(85,170,255,0.55);
     }
     .magalu-shell {
         background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(247,250,255,0.98) 100%);
-        border: 1px solid rgba(255,255,255,0.7);
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-        padding: 28px;
-        margin-bottom: 22px;
+        border: 1px solid rgba(255,255,255,0.7); border-radius: 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+        padding: 28px; margin-bottom: 22px;
     }
     .magalu-hero {
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%);
-        border-radius: 28px;
-        padding: 34px 34px 26px 34px;
-        color: #FFFFFF;
-        box-shadow: 0 24px 70px rgba(0, 74, 173, 0.25);
-        margin-bottom: 24px;
+        position: relative; overflow: hidden; background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%);
+        border-radius: 28px; padding: 34px 34px 26px 34px; color: #FFFFFF;
+        box-shadow: 0 24px 70px rgba(0, 74, 173, 0.25); margin-bottom: 24px;
     }
     .magalu-hero::after {
-        content: "";
-        position: absolute;
-        inset: auto -80px -90px auto;
-        width: 320px;
-        height: 320px;
+        content: ""; position: absolute; inset: auto -80px -90px auto; width: 320px; height: 320px;
         background: radial-gradient(circle, rgba(0,255,255,0.22) 0%, rgba(0,255,255,0) 68%);
     }
     .magalu-hero::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
-        pointer-events: none;
+        content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0)); pointer-events: none;
     }
     .magalu-hero-badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 999px;
-        padding: 8px 14px;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: .08em;
-        margin-bottom: 16px;
-        text-transform: uppercase;
-        backdrop-filter: blur(8px);
+        display: inline-block; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+        margin-bottom: 16px; text-transform: uppercase; backdrop-filter: blur(8px);
     }
     .magalu-hero-title {
-        font-size: 40px;
-        font-weight: 900;
-        line-height: 1.02;
-        letter-spacing: -1.2px;
-        margin-bottom: 10px;
-        position: relative;
-        z-index: 2;
+        font-size: 40px; font-weight: 900; line-height: 1.02; letter-spacing: -1.2px;
+        margin-bottom: 10px; position: relative; z-index: 2;
     }
     .magalu-hero-subtitle {
-        color: rgba(255,255,255,0.82);
-        font-size: 16px;
-        max-width: 860px;
-        position: relative;
-        z-index: 2;
+        color: rgba(255,255,255,0.82); font-size: 16px; max-width: 860px; position: relative; z-index: 2;
     }
     .magalu-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin: 22px 0;
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 22px 0;
     }
     .magalu-feature-card {
-        background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
-        border: 1px solid #E5EEF9;
-        border-radius: 22px;
-        padding: 22px;
-        box-shadow: 0 12px 35px rgba(15,23,42,0.06);
-        min-height: 150px;
+        background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%); border: 1px solid #E5EEF9;
+        border-radius: 22px; padding: 22px; box-shadow: 0 12px 35px rgba(15,23,42,0.06); min-height: 150px;
     }
     .magalu-feature-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 16px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size: 24px;
-        margin-bottom: 14px;
-        background: linear-gradient(135deg, #E9F3FF 0%, #DDEBFF 100%);
-        color: #0A4FB3;
+        width: 52px; height: 52px; border-radius: 16px; display:flex; align-items:center;
+        justify-content:center; font-size: 24px; margin-bottom: 14px;
+        background: linear-gradient(135deg, #E9F3FF 0%, #DDEBFF 100%); color: #0A4FB3;
     }
-    .magalu-feature-title {
-        color: #0F172A;
-        font-size: 18px;
-        font-weight: 800;
-        margin-bottom: 6px;
-    }
-    .magalu-feature-text {
-        color: #64748B;
-        font-size: 14px;
-        line-height: 1.5;
-    }
+    .magalu-feature-title { color: #0F172A; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .magalu-feature-text { color: #64748B; font-size: 14px; line-height: 1.5; }
     .magalu-info-strip {
-        background: linear-gradient(90deg, #0A57C9 0%, #0094FF 55%, #FF6B3D 100%);
-        border-radius: 18px;
-        padding: 16px 20px;
-        color: #fff;
-        font-weight: 800;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-        box-shadow: 0 14px 40px rgba(0,134,255,0.18);
-        margin-top: 10px;
+        background: linear-gradient(90deg, #0A57C9 0%, #0094FF 55%, #FF6B3D 100%); border-radius: 18px;
+        padding: 16px 20px; color: #fff; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+        box-shadow: 0 14px 40px rgba(0,134,255,0.18); margin-top: 10px;
     }
     .magalu-mini-card {
-        background: rgba(255,255,255,0.94);
-        border: 1px solid #E6EDF7;
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 10px 30px rgba(15,23,42,0.05);
-        height: 100%;
+        background: rgba(255,255,255,0.94); border: 1px solid #E6EDF7; border-radius: 18px;
+        padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,0.05); height: 100%;
     }
-    .magalu-mini-label {
-        color: #64748B;
-        font-size: 11px;
-        text-transform: uppercase;
-        font-weight: 800;
-        letter-spacing: .06em;
-        margin-bottom: 6px;
-    }
-    .magalu-mini-value {
-        color: #0F172A;
-        font-size: 28px;
-        font-weight: 900;
-        letter-spacing: -0.8px;
-        margin-bottom: 4px;
-    }
-    .magalu-mini-desc {
-        color: #64748B;
-        font-size: 13px;
-    }
-
+    .magalu-mini-label { color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .06em; margin-bottom: 6px; }
+    .magalu-mini-value { color: #0F172A; font-size: 28px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 4px; }
+    .magalu-mini-desc { color: #64748B; font-size: 13px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -406,7 +270,7 @@ def carregar_dados_financeiros():
             return pd.DataFrame(ws.get_all_values()[1:], columns=ws.get_all_values()[0])
         except Exception as e:
             if tentativa == 2: return pd.DataFrame()
-            time.sleep(1.5) # Amortecedor de requisição
+            time.sleep(1.5)
 
 @st.cache_data(ttl=60)
 def carregar_equipe():
@@ -549,7 +413,7 @@ def processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, co
         st.error("Erro ao gravar Log.")
         return False
 
-@st.dialog("⚠️ Confirmação de Transferência")
+@st.dialog("Confirmação de Transferência")
 def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas):
     st.write("Colaboradores já alocados em outras docas:")
     for p, d in conflitos.items():
@@ -559,17 +423,17 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     st.markdown("<br>", unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
-    if c1.button("✅ Sim, Transferir", use_container_width=True):
+    if c1.button(":material/check_circle: Sim, Transferir", use_container_width=True):
         with st.spinner("Atualizando docas..."):
             if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
                 carregar_log_produtividade.clear()
                 st.rerun() 
                 
-    if c2.button("❌ Cancelar", use_container_width=True):
+    if c2.button(":material/cancel: Cancelar", use_container_width=True):
         st.rerun()
 
 # --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
-@st.dialog("📝 Justificativa de Atraso")
+@st.dialog("Justificativa de Atraso")
 def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga, pecas_val, m3_val):
     st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
     
@@ -586,15 +450,14 @@ def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga
     motivo = st.selectbox("Selecione o motivo principal:", opcoes_atraso)
     detalhe = st.text_area("Detalhes adicionais (opcional):", placeholder="Ex: O caminhão chegou com as caixas tombadas...")
     
-    if st.button("Confirmar Finalização", use_container_width=True):
+    if st.button(":material/check_circle: Confirmar Finalização", use_container_width=True):
         justificativa_final = f"{motivo} - {detalhe}".strip(" - ")
         
-        # O PULO DO GATO: Adiciona a Justificativa, Categoria, Peças e M³ no fim da linha
         for linha in dados_multiplos:
             linha.append(justificativa_final)
             linha.append(categoria_carga)
-            linha.append(pecas_val) # <--- Gravando as Peças
-            linha.append(m3_val)    # <--- Gravando os M³
+            linha.append(pecas_val) 
+            linha.append(m3_val)    
             
         with st.spinner("Gravando justificativa e finalizando..."):
             if gravar_conclusao_doca(dados_multiplos, linha_log_fecha):
@@ -683,8 +546,6 @@ def tratar_dados(df_h):
     df_full['VALOR_ESTIMADO'] = df_full['VALOR_ESTIMADO'].fillna(500.00).round(2)
 
     return df_main, df_full
-
-
 
 
 def render_hero(titulo, subtitulo, badge="Plataforma Operacional"):
@@ -782,37 +643,38 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
+        ":material/home: Visão Geral",
         ":material/assignment_ind: Registro Absenteísmo", 
         ":material/local_shipping: Gestão de Docas", 
-        ":material/event_note: Registro de Alinhamento", 
-        ":material/insights: Produtividade (NS & Equipe)", 
-        ":material/payments: Financeiro (Diretoria)"
+        ":material/calendar_month: Registro de Alinhamento", 
+        ":material/monitoring: Produtividade (NS & Equipe)", 
+        ":material/attach_money: Financeiro (Diretoria)"
     ]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-if st.sidebar.button("🔄 Sincronizar Agora", type="secondary", use_container_width=True):
-    with st.spinner("📡 Puxando dados em tempo real da base..."):
+if st.sidebar.button(":material/sync: Sincronizar Agora", type="secondary", use_container_width=True):
+    with st.spinner("Puxando dados em tempo real da base..."):
         st.cache_data.clear()
         st.rerun()
 
 # ==========================================================
 # HOME
 # ==========================================================
-if pagina_selecionada == "🏠 Visão Geral":
+if pagina_selecionada == ":material/home: Visão Geral":
     render_home_dashboard()
 
 # ==========================================================
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
-elif pagina_selecionada == "📋 Registro Absenteísmo":
+elif pagina_selecionada == ":material/assignment_ind: Registro Absenteísmo":
     render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
         data_chamada = st.date_input("Data", date.today())
-        busca = st.text_input("🔍 Buscar Colaborador", placeholder="ID ou Nome...")
+        busca = st.text_input(":material/search: Buscar Colaborador", placeholder="ID ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if busca:
@@ -825,22 +687,15 @@ elif pagina_selecionada == "📋 Registro Absenteísmo":
 
         st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
         
-        df_editado = st.data_editor
-            # 1. Garante que o ID seja lido como Texto puro (removendo qualquer .0 que o Pandas possa inventar)
         df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.replace('\.0$', '', regex=True)
 
-        # 2. O Editor com a correção no Column Config
-        df_editado = st.data_editor
-            # 1. Fazemos uma CÓPIA segura para o Pandas não ignorar nossas alterações
         df_filtrado = df_filtrado.copy()
 
-        # 2. Limpeza Extrema (Mata NaN, tira espaços, e remove o '.0' se existir)
         df_filtrado['ID'] = df_filtrado['ID'].fillna('')
         df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.strip()
         df_filtrado['ID'] = df_filtrado['ID'].replace(['nan', 'None', '<NA>'], '')
         df_filtrado['ID'] = df_filtrado['ID'].str.replace(r'\.0$', '', regex=True)
 
-        # 3. O Editor de Dados Protegido
         df_editado = st.data_editor(
             df_filtrado[['ID', 'NOME', 'CARGO', 'TURNO', 'OCORRÊNCIA']],
             column_config={
@@ -854,7 +709,7 @@ elif pagina_selecionada == "📋 Registro Absenteísmo":
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Gravar no Sistema", use_container_width=True):
+        if st.button(":material/save: Gravar no Sistema", use_container_width=True):
             ocorrencias = df_editado[df_editado['OCORRÊNCIA'] != "PRESENTE"]
             if not ocorrencias.empty:
                 lista_final = []
@@ -864,7 +719,7 @@ elif pagina_selecionada == "📋 Registro Absenteísmo":
                 with st.spinner("Gravando..."):
                     sucesso = gravar_absenteismo(lista_final)
                     if sucesso:
-                        st.success(f"✅ {len(lista_final)} registros salvos!")
+                        st.success(f"{len(lista_final)} registros salvos!")
                         carregar_equipe.clear()
             else:
                 st.warning("Nenhuma falta marcada.")
@@ -875,7 +730,7 @@ elif pagina_selecionada == "📋 Registro Absenteísmo":
 # ==========================================================
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
-elif pagina_selecionada == "🚛 Gestão de Docas":
+elif pagina_selecionada == ":material/local_shipping: Gestão de Docas":
     render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
     
     df_log = carregar_log_produtividade()
@@ -885,7 +740,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     
     # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
     if not df_aux_exp.empty:
-        # Garante que a coluna exista para não dar erro
         if 'Status Chegada' not in df_aux_exp.columns:
             df_aux_exp['Status Chegada'] = ''
             
@@ -924,13 +778,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 'PEDIDOS': 'sum',
                 'LIMITE_RAW': 'min',
                 'STATUS_CALC': lambda x: 'AGUARDANDO' if 'AGUARDANDO' in x.values else 'LIBERADO',
-                # A MÁGICA AQUI: Puxando o status do caminhão!
                 'Status Chegada': lambda x: 'AGUARD CHEGADA' if any('AGUARD' in str(v).upper() for v in x.dropna()) else 'NO PÁTIO'
             }).reset_index()
 
-            df_exp_grouped['TIPO_OPERACAO'] = "⬆️ EXPEDIÇÃO"
+            df_exp_grouped['TIPO_OPERACAO'] = "EXPEDIÇÃO"
             df_exp_grouped['STATUS'] = df_exp_grouped['STATUS_CALC']
-            df_exp_grouped['STATUS_CHEGADA_RAW'] = df_exp_grouped['Status Chegada'] # Salva para o painel ler depois
+            df_exp_grouped['STATUS_CHEGADA_RAW'] = df_exp_grouped['Status Chegada'] 
             df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] 
             df_exp_grouped['PEÇAS_VAL'] = df_exp_grouped['PEDIDOS'] 
             df_exp_grouped['M3_VAL'] = df_exp_grouped['VOLUME_M3']
@@ -940,7 +793,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             df_exp_grouped['R$ DESCARGA'] = "-"
             df_exp_grouped['CONFERENTE'] = "Expedição"
             df_exp_grouped['META'] = 120 
-            
             
             def extrair_hora(valor):
                 if pd.isna(valor) or str(valor).strip() == "": return "00:00"
@@ -968,15 +820,13 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     # --- 2. PROCESSAMENTO DO RECEBIMENTO ---
     if not df_aux_rec.empty:
         df_aux_rec['AGENDA WMS'] = df_aux_rec['AGENDA WMS'].astype(str).str.strip()
-        df_aux_rec['TIPO_OPERACAO'] = "⬇️ RECEBIMENTO"
+        df_aux_rec['TIPO_OPERACAO'] = "RECEBIMENTO"
         
-        # Se você criar a coluna 'CUB' na planilha, o pandas lê automático. 
-        # Caso não exista ainda, criamos como 0 para não dar erro.
         if 'CUB' not in df_aux_rec.columns:
             df_aux_rec['CUB'] = 0
             
-        df_aux_rec['PEÇAS_VAL'] = df_aux_rec['PEÇAS'] # Valor real de peças
-        df_aux_rec['M3_VAL'] = df_aux_rec['CUB']     # Valor real de cubagem
+        df_aux_rec['PEÇAS_VAL'] = df_aux_rec['PEÇAS'] 
+        df_aux_rec['M3_VAL'] = df_aux_rec['CUB']     
         df_aux_rec_final = df_aux_rec
     else:
         df_aux_rec_final = pd.DataFrame()
@@ -984,7 +834,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     # --- 3. FUSÃO E IDENTIFICAÇÃO ---
     df_aux = pd.concat([df_aux_rec_final, df_aux_exp_final], ignore_index=True)
     
-    # A TRAVA DE SEGURANÇA AQUI: Garante que a variável sempre exista, mesmo vazia!
     agendas_logadas = [] 
     
     if not df_aux.empty:
@@ -1008,17 +857,17 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 t_badges.append("ECOM")
                 h_badges.append("<span style='background:#E0F2FE; color:#0284C7; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #BAE6FD;'><span class='icon-magalu' style='font-size:11px;'>shopping_cart</span> ECOM</span>")
             if str(row.get('FULL', '')).upper() in ['TRUE', '1', 'SIM']:
-                t_badges.append("📦 FULL")
-                h_badges.append("<span style='background:#FAE8FF; color:#C026D3; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #F0ABFC;'>FULL</span>")
+                t_badges.append("FULL")
+                h_badges.append("<span style='background:#FAE8FF; color:#C026D3; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #F0ABFC;'><span class='icon-magalu' style='font-size:11px;'>inventory_2</span> FULL</span>")
             if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']:
-                t_badges.append("⬆️ CARREG")
-                h_badges.append("<span style='background:#FFEDD5; color:#EA580C; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDBA74;'>CARREG</span>")
+                t_badges.append("CARREG")
+                h_badges.append("<span style='background:#FFEDD5; color:#EA580C; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDBA74;'><span class='icon-magalu' style='font-size:11px;'>upload</span> CARREG</span>")
             if str(row.get('DESCARGA', '')).upper() in ['TRUE', '1', 'SIM']:
-                t_badges.append("⬇️ DESC")
-                h_badges.append("<span style='background:#DCFCE7; color:#16A34A; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #86EFAC;'>DESC</span>")
+                t_badges.append("DESC")
+                h_badges.append("<span style='background:#DCFCE7; color:#16A34A; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #86EFAC;'><span class='icon-magalu' style='font-size:11px;'>download</span> DESC</span>")
             if str(row.get('ENSINAR', '')).upper() in ['TRUE', '1', 'SIM']:
-                t_badges.append("⭐ MESTRE")
-                h_badges.append("<span style='background:#FEF9C3; color:#CA8A04; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDE047;'>⭐ MESTRE</span>")
+                t_badges.append("MESTRE")
+                h_badges.append("<span style='background:#FEF9C3; color:#CA8A04; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDE047;'><span class='icon-magalu' style='font-size:11px;'>star</span> MESTRE</span>")
             if t_badges:
                 dict_skills_text[nome_matriz] = " | ".join(t_badges)
                 dict_skills_html[nome_matriz] = "".join(h_badges)
@@ -1116,9 +965,9 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             return False
 
     # --- POP-UP: START NA CARGA ---
-    @st.dialog("🚀 START na Carga (Alocar Equipe)")
+    @st.dialog("START na Carga (Alocar Equipe)")
     def popup_start_carga(doca_sel, agenda_sel, conferente_sel):
-        st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'>Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'><span class='icon-magalu'>pin_drop</span> Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; <span class='icon-magalu'>tag</span> Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; <span class='icon-magalu'>badge</span> Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
         equipe_sel = st.multiselect("Selecione os colaboradores para iniciar:", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
         
         conflitos = {}
@@ -1126,19 +975,19 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if pessoa in mapa_pessoas:
                 if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
         if conflitos:
-            st.warning("⚠️ Os colaboradores abaixo já estão ocupados e serão transferidos:")
+            st.warning("Os colaboradores abaixo já estão ocupados e serão transferidos:")
             for p, d in conflitos.items(): st.markdown(f"- **{p}** (Sairá da Doca {d})")
 
         fadigados = checar_fadiga(equipe_sel, agenda_sel, df_log, df_aux)
         bloqueio_ergonomico = False
         
         if fadigados:
-            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'>🚨 ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada (Madeira) nas últimas 24h.</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h.</span></div>", unsafe_allow_html=True)
             ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação.", key="chk_fadiga_popup")
             if not ciente: bloqueio_ergonomico = True
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button("🚀 CONFIRMAR START", type="primary", use_container_width=True):
+        if st.button(":material/play_circle: CONFIRMAR START", type="primary", use_container_width=True):
             if not doca_sel or doca_sel == "A Definir": st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
             elif not equipe_sel: st.error("Selecione a equipe!")
             elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
@@ -1151,12 +1000,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         st.rerun()
 
     # --- POP-UP: GERENCIAR OPERADOR (TRANSFERIR/RETIRAR) ---
-    @st.dialog("🔄 Gerenciar Operador da Doca")
+    @st.dialog("Gerenciar Operador da Doca")
     def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
         doca_origem_str = str(doca_origem).strip()
         st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
         operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
-        acao = st.radio("O que deseja fazer com este colaborador?", ["❌ Retirar da Operação (Ficará Livre no Pátio)", "➡️ Transferir para outra Doca ativa"])
+        acao = st.radio("O que deseja fazer com este colaborador?", ["Retirar da Operação (Ficará Livre no Pátio)", "Transferir para outra Doca ativa"])
         docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
         doca_destino = None
         if "Transferir" in acao:
@@ -1166,7 +1015,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button("🔄 Confirmar Alteração", type="primary", use_container_width=True):
+        if st.button(":material/check_circle: Confirmar Alteração", type="primary", use_container_width=True):
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
             linhas_para_gravar = []
@@ -1209,9 +1058,9 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     with st.container(border=True):
         c_f1, c_f2 = st.columns(2)
         with c_f1:
-            filtro_op = st.selectbox("🔍 Filtrar por Operação:", ["Todas", "⬇️ RECEBIMENTO", "⬆️ EXPEDIÇÃO"])
+            filtro_op = st.selectbox("Filtrar por Operação:", ["Todas", "RECEBIMENTO", "EXPEDIÇÃO"])
         with c_f2:
-            filtro_doca = st.text_input("📍 Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
+            filtro_doca = st.text_input("Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Criação das TRÊS abas
@@ -1246,7 +1095,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     return meta_minutos - ((agora_dt - inicio_dt).total_seconds() / 60)
                 except: return 99999 # Joga pro final se der erro
 
-            # Calcula a urgência e ORDENA (Os mais negativos = mais atrasados sobem pro topo!)
             df_ativos['URGENCIA'] = df_ativos.apply(calc_urgencia_processo, axis=1)
             df_ativos = df_ativos.sort_values('URGENCIA', ascending=True)
 
@@ -1256,13 +1104,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 for index, row in df_ativos.iterrows():
                     agenda_str = str(row['AGENDA']).strip()
                     
-                    # PEGA O TIPO DE OPERAÇÃO ANTES PARA APLICAR O FILTRO
                     aux_row = pd.Series()
                     if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
                         aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
-                    tipo_op = str(aux_row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
+                    tipo_op = str(aux_row.get('TIPO_OPERACAO', 'RECEBIMENTO'))
                     
-                    # APLICA OS FILTROS DA TELA
                     if filtro_op != "Todas" and filtro_op not in tipo_op: continue
                     if filtro_doca and filtro_doca not in str(row['DOCA']) and filtro_doca not in agenda_str: continue
                     
@@ -1271,12 +1117,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
                     meta_minutos = 60
                     if not aux_row.empty:
-                        pagto_str = "✅ Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                        pagto_str = "<span class='icon-magalu' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-magalu' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
                         valor_desc = aux_row.get('R$ DESCARGA', '-')
                         if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                         linha_val = aux_row.get('LINHA', aux_row.get('CATEGORIA', '-'))
                         
-                        # --- COLE ESTA LINHA NOVA AQUI ---
                         info = {'LINHA': linha_val, 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-'), 'PEÇAS_BRUTO': aux_row.get('PEÇAS_VAL', 0), 'M3_BRUTO': aux_row.get('M3_VAL', 0)}
                         
                         try:
@@ -1291,11 +1136,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     
                     if restante_min >= 0:
                         h, m = int(restante_min // 60), int(restante_min % 60)
-                        cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"⏳ Resta {h:02d}h{m:02d}m"
+                        cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-magalu' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
                     else:
                         atraso = abs(restante_min)
                         h, m = int(atraso // 60), int(atraso % 60)
-                        cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"🚨 Atraso -{h:02d}h{m:02d}m"
+                        cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-magalu' style='font-size:12px;'>warning</span> Atraso -{h:02d}h{m:02d}m"
 
                     html_equipe_cards = renderizar_equipe_html(row['AUXILIARES'])
                     auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
@@ -1313,7 +1158,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         st.markdown(css_hack, unsafe_allow_html=True)
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:{cor_tema};'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
-                        c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'>⌚ Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
+                        c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-magalu' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
                         st.markdown(html_detalhes, unsafe_allow_html=True)
@@ -1321,14 +1166,13 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         
                         c_eq, c_btn = st.columns([7, 3])
                         with c_btn:
-                            if st.button("✅ Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                            if st.button(":material/check_circle: Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                 clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                 duracao_final = clique_dt - row['DATA_HORA_DT']
                                 total_minutos_final = int(duracao_final.total_seconds() / 60)
                                 horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                 tempo_str = f"{horas:02d}:{mins:02d}"
                                 
-                                # Puxando as 3 informações ocultas do card
                                 cat_final = str(info['LINHA']).upper()
                                 pecas_final = info.get('PEÇAS_BRUTO', 0)
                                 m3_final = info.get('M3_BRUTO', 0)
@@ -1340,23 +1184,22 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
                                 
                                 if restante_min < 0: 
-                                    # Manda as peças e M³ lá pro pop-up!
                                     exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final, pecas_final, m3_final)
                                 else:
                                     for linha in linhas_conclusao_multiplas: 
                                         linha.append("No Prazo")
                                         linha.append(cat_final)
-                                        linha.append(pecas_final) # <--- Gravando as Peças
-                                        linha.append(m3_final)    # <--- Gravando os M³
+                                        linha.append(pecas_final)
+                                        linha.append(m3_final)    
                                         
                                     with st.spinner("Finalizando..."):
                                         if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
-                                            st.success(f"Doca finalizada com sucesso!")
+                                            st.success("Doca finalizada com sucesso!")
                                             carregar_log_produtividade.clear()
                                             st.rerun()
                                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            if st.button("🔄 Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                            if st.button(":material/swap_horiz: Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                                 
                 if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
@@ -1387,7 +1230,6 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         h_lim, m_lim = int(partes[0]), int(partes[1][:2])
                         limite_dt = agora_dt.replace(hour=h_lim, minute=m_lim, second=0, microsecond=0)
                         
-                        # --- CORREÇÃO DA VIRADA DE DIA (MADRUGADA) ---
                         if h_lim < 12 and agora_dt.hour >= 12:
                             limite_dt += datetime.timedelta(days=1)
                         elif h_lim >= 18 and agora_dt.hour < 12:
@@ -1396,7 +1238,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         hora_max_inicio = limite_dt - datetime.timedelta(minutes=meta_minutos)
                         return (hora_max_inicio - agora_dt).total_seconds() / 60
                 except: pass
-                return 99999 # Joga pro fim da fila se não tiver meta
+                return 99999 
 
             df_pendentes['URGENCIA'] = df_pendentes.apply(calc_urgencia_pendente, axis=1)
             df_pendentes = df_pendentes.sort_values('URGENCIA', ascending=True)
@@ -1405,7 +1247,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             else:
                 cards_exibidos_aba2 = 0
                 for index, row in df_pendentes.iterrows():
-                    tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
+                    tipo_op = str(row.get('TIPO_OPERACAO', 'RECEBIMENTO'))
                     agenda_str = str(row['AGENDA WMS'])
                     doca_str = str(row[col_doca]).strip() if col_doca and pd.notna(row[col_doca]) else "A Definir"
                     
@@ -1417,17 +1259,16 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                     if doca_str.lower() in ['nan', 'none', '']: doca_str = "A Definir"
                     conf_str = str(row[col_conf]).strip() if col_conf and pd.notna(row[col_conf]) else "A Definir"
                     if conf_str.lower() in ['nan', 'none', '']: conf_str = "A Definir"
-                    pagto_str = "✅ Sim" if str(row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                    pagto_str = "<span class='icon-magalu' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-magalu' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
                     valor_desc = row.get('R$ DESCARGA', '-')
                     if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                     linha_val = row.get('LINHA', row.get('CATEGORIA', '-'))
                     
-                    # --- COLE ESTA LINHA NOVA AQUI ---
                     info = {'LINHA': linha_val, 'SKU': row.get('SKU', '-'), 'PEÇAS': row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': row.get('STATUS', '-'), 'PEÇAS_BRUTO': row.get('PEÇAS_VAL', 0), 'M3_BRUTO': row.get('M3_VAL', 0)}
                     
                     meta_minutos = 60
                     limite_str, hora_max_str = "", "-"
-                    txt_timer_pend, cor_timer_pend, bg_timer_pend = "⏳ Aguardando...", "#F59E0B", "#FEF3C7"
+                    txt_timer_pend, cor_timer_pend, bg_timer_pend = "<span class='icon-magalu' style='font-size:12px;'>schedule</span> Aguardando...", "#F59E0B", "#FEF3C7"
                     try:
                         col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
                         if col_meta and pd.notna(row[col_meta]): meta_minutos = int(float(str(row[col_meta]).replace(',', '.')))
@@ -1448,22 +1289,19 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                             diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
                             if diff_min >= 0:
                                 h, m = int(diff_min // 60), int(diff_min % 60)
-                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#00C853", "#E6F9EC", f"🟢 Sobra {h:02d}h{m:02d}m p/ Iniciar"
+                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#00C853", "#E6F9EC", f"<span class='icon-magalu' style='font-size:12px;'>check_circle</span> Sobra {h:02d}h{m:02d}m p/ Iniciar"
                             else:
                                 atraso = abs(diff_min)
                                 h, m = int(atraso // 60), int(atraso % 60)
-                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"🚨 ATRASADO HÁ {h:02d}h{m:02d}m"
+                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"<span class='icon-magalu' style='font-size:12px;'>error</span> ATRASADO HÁ {h:02d}h{m:02d}m"
                     except: pass
                     
-                    # --- INTERCEPTAÇÃO DE ANSIEDADE (CAMINHÃO NÃO CHEGOU) ---
-                    tipo_op = str(row.get('TIPO_OPERACAO', '⬇️ RECEBIMENTO'))
                     status_chegada = str(row.get('STATUS_CHEGADA_RAW', '')).upper()
                     
-                    # Se for expedição e o caminhão não estiver no CD, desliga a cor vermelha de atraso
                     if "EXPEDIÇÃO" in tipo_op and "AGUARD" in status_chegada:
-                        txt_timer_pend = "🚚 AGUARDANDO VEÍCULO"
-                        cor_timer_pend = "#64748B" # Cinza Sutil
-                        bg_timer_pend = "#F1F5F9"  # Fundo Cinza Claro
+                        txt_timer_pend = "<span class='icon-magalu' style='font-size:12px;'>local_shipping</span> AGUARDANDO VEÍCULO"
+                        cor_timer_pend = "#64748B" 
+                        bg_timer_pend = "#F1F5F9"  
                     
                     with st.container(border=True):
                         if "EXPEDIÇÃO" in tipo_op:
@@ -1493,10 +1331,10 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
 """, unsafe_allow_html=True)
                         
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
-                        c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
+                        c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-magalu" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
-                            if st.button("➕ Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
+                            if st.button(":material/person_add: Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
                                 popup_start_carga(doca_str, agenda_str, conf_str)
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
@@ -1505,15 +1343,15 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     with aba3:
         try:
             with st.container(border=True):
-                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">📍 Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
+                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-magalu">edit_location</span> Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
                 lista_agendas = []
                 if not df_aux.empty: lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
-                opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
+                opcoes_agenda = [""] + lista_agendas + ["DIGITAR OUTRA AGENDA..."]
                 agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar)", options=opcoes_agenda, index=0)
-                if agenda_combo == "➕ DIGITAR OUTRA AGENDA...": agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
+                if agenda_combo == "DIGITAR OUTRA AGENDA...": agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
                 else: agenda_sel = agenda_combo
                 doca_padrao, conf_padrao = "", ""
-                if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
+                if agenda_sel and agenda_sel != "DIGITAR OUTRA AGENDA..." and not df_aux.empty:
                     match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
                     if not match.empty:
                         col_l = [str(c).upper().strip() for c in match.columns]
@@ -1544,12 +1382,12 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                 bloqueio_ergonomico = False
                 
                 if fadigados:
-                    st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'>🚨 ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
                     ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação na carga pesada.", key="chk_fadiga_aba3")
                     if not ciente: bloqueio_ergonomico = True
 
                 st.markdown('<br>', unsafe_allow_html=True)
-                if st.button("Gravar / Atualizar Doca", use_container_width=True):
+                if st.button(":material/save: Gravar / Atualizar Doca", use_container_width=True):
                     if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
                     elif not equipe_sel: st.warning("Selecione a equipe atual.")
                     elif bloqueio_ergonomico: st.error("Você precisa confirmar a ciência do risco ergonômico para gravar!")
@@ -1557,15 +1395,14 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                         with st.spinner("Registrando movimentação..."):
                             sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
                             if sucesso:
-                                st.success(f"✅ Doca {doca_sel} atualizada!")
-                                st.balloons()
+                                st.success(f"Doca {doca_sel} atualizada!")
                                 carregar_log_produtividade.clear()
                                 st.rerun()
         except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
 # ==========================================================
 # MÓDULO 3: FINANCEIRO E DRE
 # ==========================================================
-elif pagina_selecionada == "📊 Financeiro (Diretoria)":
+elif pagina_selecionada == ":material/payments: Financeiro (Diretoria)":
     try:
         with st.spinner('Sincronizando com Base de Dados Financeira...'):
             df_raw = carregar_dados_financeiros()
@@ -1607,7 +1444,6 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
             # --- 5 KPIs no Topo (Design Premium Corporativo) ---
             col1, col2, col3, col4, col5 = st.columns(5)
             
-            # Função limpa para gerar os cards padronizados sem poluição visual
             def render_kpi(titulo, valor, subtitulo, cor_hex):
                 return f"""
                 <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative; overflow: hidden; margin-bottom: 20px;">
@@ -1635,7 +1471,7 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
             col_t1, col_t2 = st.columns(2)
             
             with col_t1:
-                st.markdown("<h4 style='color: #334155;'>🏆 Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>emoji_events</span> Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
                 if not rec.empty:
                     top_rec = rec.groupby('FORNECEDOR/SELLER').agg(
                         Cargas=('VALOR_REAL', 'count'),
@@ -1658,7 +1494,7 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
                     )
             
             with col_t2:
-                st.markdown("<h4 style='color: #334155;'>⚠️ Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>warning</span> Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
                 if not aus.empty:
                     top_aus = aus.groupby('FORNECEDOR/SELLER').agg(
                         Faltas=('VALOR_PERDIDO', 'count'),
@@ -1682,7 +1518,7 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 
             # --- Gráfico de Barras e Linha ---
             st.markdown('<div class="magalu-card" style="margin-top: 15px;">', unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #334155;'>📊 Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>stacked_bar_chart</span> Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
             
             ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(
                 ARRECADADO=('VALOR_REAL', 'sum'), 
@@ -1690,34 +1526,31 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
             ).reset_index().sort_values('MES_ORDENACAO')
             
             if not ev_mes.empty:
-                # Criando as etiquetas formatadas em R$ para exibir no gráfico
                 text_arrecadado = [formatar_moeda_br(v) for v in ev_mes['ARRECADADO']]
                 text_perdido = [formatar_moeda_br(v) for v in ev_mes['PERDIDO']]
 
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
                 
-                # Barras de Faturamento (com valor dentro/em cima da barra)
                 fig.add_trace(go.Bar(
                     x=ev_mes['MES_NOME'], 
                     y=ev_mes['ARRECADADO'], 
                     name="Faturado (R$)", 
                     marker_color='#0086FF', 
                     text=text_arrecadado,
-                    textposition='auto', # 'auto' coloca dentro se couber, ou fora se a barra for pequena
+                    textposition='auto', 
                     textfont=dict(size=11, color='#FFFFFF', weight='bold'),
                     hovertemplate="%{x}<br>Faturado: %{text}<extra></extra>"
                 ), secondary_y=False)
                 
-                # Linha Vermelha de Perdas (com valor acima do ponto)
                 fig.add_trace(go.Scatter(
                     x=ev_mes['MES_NOME'], 
                     y=ev_mes['PERDIDO'], 
                     name="Perda por Ausência (R$)", 
-                    mode='lines+markers+text', # O '+text' obriga a mostrar o rótulo
+                    mode='lines+markers+text', 
                     line=dict(color='#FF3366', width=4), 
                     marker=dict(size=8), 
                     text=text_perdido,
-                    textposition='top center', # Coloca o valor acima da linha vermelha
+                    textposition='top center', 
                     textfont=dict(size=11, color='#FF3366', weight='bold'),
                     hovertemplate="%{x}<br>Perdido: %{text}<extra></extra>"
                 ), secondary_y=True)
@@ -1729,7 +1562,6 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
                     legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
                 )
                 
-                # Tira as linhas de grade para ficar um gráfico mais limpo
                 fig.update_yaxes(showgrid=False, secondary_y=False)
                 fig.update_yaxes(showgrid=False, secondary_y=True)
                 
@@ -1742,19 +1574,17 @@ elif pagina_selecionada == "📊 Financeiro (Diretoria)":
 # ==========================================================
 # MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
 # ==========================================================
-elif pagina_selecionada == "📅 Registro de Alinhamento":
+elif pagina_selecionada == ":material/calendar_month: Registro de Alinhamento":
     render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
 
     try:
-        # Puxa a mesma lista de funcionários que já usamos
         df_equipe = carregar_equipe()
         lista_funcionarios = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
         lista_funcionarios = [str(nome).strip() for nome in lista_funcionarios if str(nome).strip() != '']
         lista_funcionarios.sort()
         
-        # O nosso container com efeito de Vidro Fosco
         with st.container(border=True):
-            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;">🗓️ Novo Alinhamento</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-magalu">calendar_month</span> Novo Alinhamento</h4>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
@@ -1764,15 +1594,13 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
             with col2:
                 data_sel = st.date_input("Data do Alinhamento (Folga)", format="DD/MM/YYYY")
                 
-                # A Mágica: O campo 'Outros' só aparece se a opção for selecionada
                 motivo_outro = ""
                 if motivo_sel == "OUTROS":
                     motivo_outro = st.text_input("Descreva o motivo (Obrigatório):", placeholder="Ex: Licença paternidade, Folga prêmio...")
                     
             st.markdown('<br>', unsafe_allow_html=True)
             
-            # Botão verde Premium
-            if st.button("💾 Gravar Alinhamento", use_container_width=True, type="primary"):
+            if st.button(":material/save: Gravar Alinhamento", use_container_width=True, type="primary"):
                 if not nome_sel:
                     st.warning("Selecione o colaborador.")
                 elif motivo_sel == "OUTROS" and not motivo_outro.strip():
@@ -1782,13 +1610,11 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
                     data_folga_str = data_sel.strftime("%d/%m/%Y")
                     data_registro_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y %H:%M:%S")
                     
-                    # Ordem dos dados: Registro (Agora), Nome, Data da Folga, Motivo
                     linha_gravar = [data_registro_str, nome_sel, data_folga_str, motivo_final]
                     
                     with st.spinner("Registrando no sistema..."):
                         if gravar_alinhamento(linha_gravar):
-                            st.success(f"✅ Sucesso! Alinhamento de {nome_sel} para o dia {data_folga_str} ({motivo_final}) registrado!")
-                            st.balloons()
+                            st.success(f"Sucesso! Alinhamento de {nome_sel} para o dia {data_folga_str} ({motivo_final}) registrado!")
                             
     except Exception as e:
         st.error(f"Erro no módulo de Alinhamento: {e}")
@@ -1796,7 +1622,7 @@ elif pagina_selecionada == "📅 Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
-elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
+elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
     render_hero('Produtividade & Nível de Serviço', 'Acompanhe SLA, tempo de ciclo e performance individual com leitura de indicadores mais corporativa.', 'Analytics operacional')
 
     try:
@@ -1806,11 +1632,9 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
             if df_fin.empty:
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
-                # Padronizar nomes de colunas para evitar erros de digitação na planilha
                 colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
                 df_fin = df_fin.rename(columns=colunas_upper)
                 
-                # Encontrar as colunas dinamicamente
                 col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
                 col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
                 col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
@@ -1818,14 +1642,12 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                 col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
                 col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c), None)
 
-                # Função para converter "02:30" em 150 minutos para fazer conta matemática
                 def tempo_para_minutos(t_str):
                     try:
                         h, m = map(int, str(t_str).split(':'))
                         return h * 60 + m
                     except: return 0
                 
-                # Função para converter 150 minutos de volta para "02h30m" bonito
                 def minutos_para_texto(mins):
                     if pd.isna(mins) or mins == 0: return "00h00m"
                     h = int(mins // 60)
@@ -1834,7 +1656,6 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
 
                 df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
                 
-                # --- Filtro de Data ---
                 if col_data:
                     df_fin[col_data] = pd.to_datetime(df_fin[col_data], format="%d/%m/%Y", errors='coerce')
                     min_date, max_date = df_fin[col_data].min().date(), df_fin[col_data].max().date()
@@ -1844,23 +1665,18 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                         if len(datas_sel) == 2:
                             df_fin = df_fin[(df_fin[col_data].dt.date >= datas_sel[0]) & (df_fin[col_data].dt.date <= datas_sel[1])]
 
-                # Remove linhas duplicadas de Agenda (para não contar o tempo da mesma agenda 5x se tiver 5 ajudantes)
                 df_agendas_unicas = df_fin.drop_duplicates(subset=[col_agenda])
 
-                # --- CÁLCULOS DOS KPIS ---
                 total_cargas = len(df_agendas_unicas)
                 tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                 
-                # Cálculo de SLA (Nível de Serviço)
                 qtd_no_prazo = len(df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)])
                 sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                 cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
-                # Criação das Abas Internas (Visão Macro x Visão Equipe)
-                aba_macro, aba_equipe = st.tabs(["📊 Visão Macro & NS", "🧑‍🔧 Desempenho Indivídual"])
+                aba_macro, aba_equipe = st.tabs([":material/dashboard: Visão Macro & NS", ":material/engineering: Desempenho Individual"])
 
                 with aba_macro:
-                    # --- CARDS DE KPI ---
                     c1, c2, c3 = st.columns(3)
                     with c1:
                         st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
@@ -1869,12 +1685,11 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                     with c3:
                         st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Tempo Médio Geral</div><div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div></div>', unsafe_allow_html=True)
 
-                    # --- GRÁFICOS ---
                     col_g1, col_g2 = st.columns(2)
                     
                     with col_g1:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'>⏱️ Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>timer</span> Tempo Médio por Categoria</h4>", unsafe_allow_html=True)
                         df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
                         df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
                         
@@ -1886,7 +1701,7 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
 
                     with col_g2:
                         st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'>🚨 Motivos de Atraso (Ofensores)</h4>", unsafe_allow_html=True)
+                        st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>error</span> Motivos de Atraso (Ofensores)</h4>", unsafe_allow_html=True)
                         df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                         if not df_atrasos.empty:
                             df_motivos = df_atrasos[col_just].value_counts().reset_index()
@@ -1895,11 +1710,11 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                             fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
                             st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
                         else:
-                            st.info("Nenhum atraso registrado no período! Operação perfeita! 🎉")
+                            st.info("Nenhum atraso registrado no período! Operação perfeita!")
                         st.markdown('</div>', unsafe_allow_html=True)
 
                 with aba_equipe:
-                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'>🏆 Performance Individual por Categoria</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>", unsafe_allow_html=True)
                     
                     categorias_lista = df_fin[col_cat].dropna().unique().tolist()
                     cat_sel = st.selectbox("Selecione a Categoria para comparar a equipe:", ["Todas as Categorias"] + categorias_lista)
@@ -1909,11 +1724,10 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                         df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
 
                     if not df_operadores.empty:
-                        # Agrupando por Auxiliar para ver Produtividade
                         df_rank = df_operadores.groupby(col_aux).agg(
                             Cargas_Participadas=(col_agenda, 'nunique'),
                             Tempo_Medio_Minutos=('MINUTOS', 'mean')
-                        ).reset_index().sort_values('Tempo_Medio_Minutos') # Do mais rápido pro mais lento
+                        ).reset_index().sort_values('Tempo_Medio_Minutos') 
                         
                         df_rank = df_rank[df_rank['Cargas_Participadas'] > 0]
                         df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
@@ -1924,13 +1738,11 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                         
                         with c_rank1:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"<h5 style='color:#334155;'>Ranking de Velocidade - {cat_sel}</h5>", unsafe_allow_html=True)
+                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>", unsafe_allow_html=True)
                             
-                            # Gráfico de barras comparando quem é o mais rápido
                             fig_rank = px.bar(df_rank, x='Tempo_Medio_Minutos', y=col_aux, orientation='h', text='Tempo_Medio', 
                                             color='Tempo_Medio_Minutos', color_continuous_scale='blues_r')
                             
-                            # Linha de Média Geral para o cara saber se tá acima ou abaixo da média da empresa
                             fig_rank.add_vline(x=media_geral_cat, line_width=2, line_dash="dash", line_color="red", annotation_text="Média da Categoria")
                             
                             fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis_title="Minutos (Menos é Melhor)", yaxis_title=None, coloraxis_showscale=False, height=450)
@@ -1940,7 +1752,7 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
                             
                         with c_rank2:
                             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                            st.markdown(f"<h5 style='color:#334155;'>Matriz de Participação</h5>", unsafe_allow_html=True)
+                            st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>", unsafe_allow_html=True)
                             st.dataframe(
                                 df_rank[[col_aux, 'Cargas_Participadas', 'Tempo_Medio']],
                                 column_config={
@@ -1956,4 +1768,3 @@ elif pagina_selecionada == "📈 Produtividade (NS & Equipe)":
 
     except Exception as e:
         st.error(f"Erro no módulo de Produtividade: {e}")
-   
