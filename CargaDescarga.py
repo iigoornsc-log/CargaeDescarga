@@ -22,6 +22,21 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     * { font-family: 'Inter', sans-serif !important; }
 
+    /* 1. FONTE PREMIUM E ÍCONES GOOGLE MATERIAL */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
+    
+    * { font-family: 'Inter', sans-serif !important; }
+
+    /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
+    .icon-magalu {
+        font-family: 'Material Symbols Rounded';
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 1;
+        font-size: inherit;
+    }
+
     /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
     .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
@@ -693,27 +708,27 @@ def render_home_dashboard():
         <div class="magalu-shell">
             <div class="magalu-grid">
                 <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon">📋</div>
+                    <div class="magalu-feature-icon"><span class="icon-magalu">assignment_ind</span></div>
                     <div class="magalu-feature-title">Registro de Absenteísmo</div>
                     <div class="magalu-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
                 </div>
                 <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon">🚛</div>
+                    <div class="magalu-feature-icon"><span class="icon-magalu">local_shipping</span></div>
                     <div class="magalu-feature-title">Gestão de Docas</div>
                     <div class="magalu-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
                 </div>
                 <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon">🗓️</div>
+                    <div class="magalu-feature-icon"><span class="icon-magalu">calendar_month</span></div>
                     <div class="magalu-feature-title">Registro de Alinhamento</div>
                     <div class="magalu-feature-text">Programe folgas e movimentos da equipe em uma experiência mais organizada e intuitiva.</div>
                 </div>
                 <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon">📈</div>
+                    <div class="magalu-feature-icon"><span class="icon-magalu">monitoring</span></div>
                     <div class="magalu-feature-title">Produtividade</div>
                     <div class="magalu-feature-text">KPIs mais corporativos para tempo médio, SLA e leitura de performance por agenda e colaborador.</div>
                 </div>
                 <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon">💰</div>
+                    <div class="magalu-feature-icon"><span class="icon-magalu">attach_money</span></div>
                     <div class="magalu-feature-title">Financeiro</div>
                     <div class="magalu-feature-text">Indicadores com linguagem visual de diretoria para faturamento, perdas e ticket médio.</div>
                 </div>
@@ -766,7 +781,13 @@ st.sidebar.markdown("""
 
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
-    ["📋 Registro Absenteísmo", "🚛 Gestão de Docas", "📅 Registro de Alinhamento", "📈 Produtividade (NS & Equipe)", "📊 Financeiro (Diretoria)"]
+    [
+        ":material/assignment_ind: Registro Absenteísmo", 
+        ":material/local_shipping: Gestão de Docas", 
+        ":material/event_note: Registro de Alinhamento", 
+        ":material/insights: Produtividade (NS & Equipe)", 
+        ":material/payments: Financeiro (Diretoria)"
+    ]
 )
 
 st.sidebar.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -984,8 +1005,8 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             if not nome_matriz: continue
             t_badges, h_badges = [], []
             if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']:
-                t_badges.append("🛒 ECOM")
-                h_badges.append("<span style='background:#E0F2FE; color:#0284C7; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #BAE6FD;'>ECOM</span>")
+                t_badges.append("ECOM")
+                h_badges.append("<span style='background:#E0F2FE; color:#0284C7; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #BAE6FD;'><span class='icon-magalu' style='font-size:11px;'>shopping_cart</span> ECOM</span>")
             if str(row.get('FULL', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("📦 FULL")
                 h_badges.append("<span style='background:#FAE8FF; color:#C026D3; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #F0ABFC;'>FULL</span>")
@@ -1194,7 +1215,11 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Criação das TRÊS abas
-    aba1, aba2, aba3 = st.tabs(["👀 Visão das Docas (EM PROCESSO)", "⏳ Fila de Docas (PENDENTE)", "✍️ Montar Equipes"])
+    aba1, aba2, aba3 = st.tabs([
+        ":material/view_timeline: Visão das Docas (EM PROCESSO)", 
+        ":material/hourglass_top: Fila de Docas (PENDENTE)", 
+        ":material/group_add: Montar Equipes"
+    ])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
