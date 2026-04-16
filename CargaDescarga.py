@@ -12,9 +12,9 @@ import time
 from datetime import date
 
 # ==========================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALU CORPORATIVO)
+# 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MagaluLOG CORPORATIVO)
 # ==========================================================
-st.set_page_config(page_title="Magalu | Carga e Descarga", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="MagaluLOG | Carga e Descarga", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -25,7 +25,7 @@ st.markdown("""
     * { font-family: 'Inter', sans-serif !important; }
 
     /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
-    .icon-magalu {
+    .icon-MagaluLOG {
         font-family: 'Material Symbols Rounded' !important;
         font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
         font-weight: normal;
@@ -47,7 +47,7 @@ st.markdown("""
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
-    @keyframes magaluGlow {
+    @keyframes Glow {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
@@ -58,7 +58,7 @@ st.markdown("""
         content: ""; position: fixed; top: 0; left: 0; right: 0; height: 5px;
         background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF, #FF007F);
         background-size: 300% 300%;
-        animation: magaluGlow 6s linear infinite;
+        animation: MagaluLOGGlow 6s linear infinite;
         z-index: 999999;
     }
 
@@ -69,13 +69,13 @@ st.markdown("""
     }
 
     /* 3. TÍTULOS COM DEGRADÊ METÁLICO */
-    .magalu-page-title { 
+    .MagaluLOG-page-title { 
         background: linear-gradient(135deg, #0086FF 0%, #001A57 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 2px;
     }
-    .magalu-page-subtitle { color: #64748B; font-size: 15px; font-weight: 500; margin-bottom: 25px; }
+    .MagaluLOG-page-subtitle { color: #64748B; font-size: 15px; font-weight: 500; margin-bottom: 25px; }
 
     /* 4. ABAS (TABS) CORPORATIVAS */
     [data-baseweb="tab-list"] {
@@ -107,10 +107,10 @@ st.markdown("""
     [data-baseweb="tab-border"] { display: none; }
 
     /* 5. RIBBONS ANIMADOS */
-    .magalu-ribbon {
+    .MagaluLOG-ribbon {
         background: linear-gradient(90deg, #0086FF, #005BFF, #FF007F, #0086FF);
         background-size: 300% 300%;
-        animation: magaluGlow 8s ease infinite;
+        animation: MagaluLOGGlow 8s ease infinite;
         color: #FFFFFF; padding: 8px 24px; font-size: 13px; font-weight: 700;
         border-radius: 0px 8px 8px 0px; margin-bottom: 15px; margin-top: 10px;
         position: relative; left: -1rem; box-shadow: 0 4px 15px rgba(0,134,255,0.3);
@@ -118,7 +118,7 @@ st.markdown("""
     }
 
     /* 6. CARDS GLASSMORPHISM */
-    .magalu-card, div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"] {
+    .MagaluLOG-card, div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(255, 255, 255, 0.95) !important;
         backdrop-filter: blur(10px) !important;
         border: 1px solid rgba(255,255,255,0.6) !important;
@@ -198,61 +198,61 @@ st.markdown("""
     section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
         background: rgba(255,255,255,0.12); border-color: rgba(85,170,255,0.55);
     }
-    .magalu-shell {
+    .MagaluLOG-shell {
         background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(247,250,255,0.98) 100%);
         border: 1px solid rgba(255,255,255,0.7); border-radius: 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
         padding: 28px; margin-bottom: 22px;
     }
-    .magalu-hero {
+    .MagaluLOG-hero {
         position: relative; overflow: hidden; background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%);
         border-radius: 28px; padding: 34px 34px 26px 34px; color: #FFFFFF;
         box-shadow: 0 24px 70px rgba(0, 74, 173, 0.25); margin-bottom: 24px;
     }
-    .magalu-hero::after {
+    .MagaluLOG-hero::after {
         content: ""; position: absolute; inset: auto -80px -90px auto; width: 320px; height: 320px;
         background: radial-gradient(circle, rgba(0,255,255,0.22) 0%, rgba(0,255,255,0) 68%);
     }
-    .magalu-hero::before {
+    .MagaluLOG-hero::before {
         content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0)); pointer-events: none;
     }
-    .magalu-hero-badge {
+    .MagaluLOG-hero-badge {
         display: inline-block; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
         border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em;
         margin-bottom: 16px; text-transform: uppercase; backdrop-filter: blur(8px);
     }
-    .magalu-hero-title {
+    .MagaluLOG-hero-title {
         font-size: 40px; font-weight: 900; line-height: 1.02; letter-spacing: -1.2px;
         margin-bottom: 10px; position: relative; z-index: 2;
     }
-    .magalu-hero-subtitle {
+    .MagaluLOG-hero-subtitle {
         color: rgba(255,255,255,0.82); font-size: 16px; max-width: 860px; position: relative; z-index: 2;
     }
-    .magalu-grid {
+    .MagaluLOG-grid {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 22px 0;
     }
-    .magalu-feature-card {
+    .MagaluLOG-feature-card {
         background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%); border: 1px solid #E5EEF9;
         border-radius: 22px; padding: 22px; box-shadow: 0 12px 35px rgba(15,23,42,0.06); min-height: 150px;
     }
-    .magalu-feature-icon {
+    .MagaluLOG-feature-icon {
         width: 52px; height: 52px; border-radius: 16px; display:flex; align-items:center;
         justify-content:center; font-size: 24px; margin-bottom: 14px;
         background: linear-gradient(135deg, #E9F3FF 0%, #DDEBFF 100%); color: #0A4FB3;
     }
-    .magalu-feature-title { color: #0F172A; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-    .magalu-feature-text { color: #64748B; font-size: 14px; line-height: 1.5; }
-    .magalu-info-strip {
+    .MagaluLOG-feature-title { color: #0F172A; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .MagaluLOG-feature-text { color: #64748B; font-size: 14px; line-height: 1.5; }
+    .MagaluLOG-info-strip {
         background: linear-gradient(90deg, #0A57C9 0%, #0094FF 55%, #FF6B3D 100%); border-radius: 18px;
         padding: 16px 20px; color: #fff; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
         box-shadow: 0 14px 40px rgba(0,134,255,0.18); margin-top: 10px;
     }
-    .magalu-mini-card {
+    .MagaluLOG-mini-card {
         background: rgba(255,255,255,0.94); border: 1px solid #E6EDF7; border-radius: 18px;
         padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,0.05); height: 100%;
     }
-    .magalu-mini-label { color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .06em; margin-bottom: 6px; }
-    .magalu-mini-value { color: #0F172A; font-size: 28px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 4px; }
-    .magalu-mini-desc { color: #64748B; font-size: 13px; }
+    .MagaluLOG-mini-label { color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .06em; margin-bottom: 6px; }
+    .MagaluLOG-mini-value { color: #0F172A; font-size: 28px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 4px; }
+    .MagaluLOG-mini-desc { color: #64748B; font-size: 13px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -440,7 +440,7 @@ def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel,
     if c2.button("Cancelar", use_container_width=True):
         st.rerun()
 
-# --- POP-UP MAGALU: JUSTIFICATIVA DE ATRASO ---
+# --- POP-UP MagaluLOG: JUSTIFICATIVA DE ATRASO ---
 @st.dialog("Justificativa de Atraso")
 def exibir_popup_justificativa(dados_multiplos, linha_log_fecha, categoria_carga, pecas_val, m3_val):
     st.warning("Esta carga ultrapassou o tempo de meta. Por favor, informe o motivo do atraso para finalizar:")
@@ -558,10 +558,10 @@ def tratar_dados(df_h):
 
 def render_hero(titulo, subtitulo, badge="Plataforma Operacional"):
     st.markdown(f"""
-        <div class="magalu-hero">
-            <div class="magalu-hero-badge">{badge}</div>
-            <div class="magalu-hero-title">{titulo}</div>
-            <div class="magalu-hero-subtitle">{subtitulo}</div>
+        <div class="MagaluLOG-hero">
+            <div class="MagaluLOG-hero-badge">{badge}</div>
+            <div class="MagaluLOG-hero-title">{titulo}</div>
+            <div class="MagaluLOG-hero-subtitle">{subtitulo}</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -570,65 +570,65 @@ def render_home_dashboard():
     render_hero(
         "Sistema Carga e Descarga",
         "Painel central para absenteísmo, gestão de docas, alinhamentos, produtividade e visão financeira com identidade mais executiva.",
-        "Magalu • Controle em tempo real"
+        "MagaluLOG • Controle em tempo real"
     )
 
     st.markdown("""
-        <div class="magalu-shell">
-            <div class="magalu-grid">
-                <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon"><span class="icon-magalu">assignment_ind</span></div>
-                    <div class="magalu-feature-title">Registro de Absenteísmo</div>
-                    <div class="magalu-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
+        <div class="MagaluLOG-shell">
+            <div class="MagaluLOG-grid">
+                <div class="MagaluLOG-feature-card">
+                    <div class="MagaluLOG-feature-icon"><span class="icon-MagaluLOG">assignment_ind</span></div>
+                    <div class="MagaluLOG-feature-title">Registro de Absenteísmo</div>
+                    <div class="MagaluLOG-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
                 </div>
-                <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon"><span class="icon-magalu">local_shipping</span></div>
-                    <div class="magalu-feature-title">Gestão de Docas</div>
-                    <div class="magalu-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
+                <div class="MagaluLOG-feature-card">
+                    <div class="MagaluLOG-feature-icon"><span class="icon-MagaluLOG">local_shipping</span></div>
+                    <div class="MagaluLOG-feature-title">Gestão de Docas</div>
+                    <div class="MagaluLOG-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
                 </div>
-                <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon"><span class="icon-magalu">calendar_month</span></div>
-                    <div class="magalu-feature-title">Registro de Alinhamento</div>
-                    <div class="magalu-feature-text">Programe folgas e movimentos da equipe em uma experiência mais organizada e intuitiva.</div>
+                <div class="MagaluLOG-feature-card">
+                    <div class="MagaluLOG-feature-icon"><span class="icon-MagaluLOG">calendar_month</span></div>
+                    <div class="MagaluLOG-feature-title">Registro de Alinhamento</div>
+                    <div class="MagaluLOG-feature-text">Programe folgas e movimentos da equipe em uma experiência mais organizada e intuitiva.</div>
                 </div>
-                <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon"><span class="icon-magalu">monitoring</span></div>
-                    <div class="magalu-feature-title">Produtividade</div>
-                    <div class="magalu-feature-text">KPIs mais corporativos para tempo médio, SLA e leitura de performance por agenda e colaborador.</div>
+                <div class="MagaluLOG-feature-card">
+                    <div class="MagaluLOG-feature-icon"><span class="icon-MagaluLOG">monitoring</span></div>
+                    <div class="MagaluLOG-feature-title">Produtividade</div>
+                    <div class="MagaluLOG-feature-text">KPIs mais corporativos para tempo médio, SLA e leitura de performance por agenda e colaborador.</div>
                 </div>
-                <div class="magalu-feature-card">
-                    <div class="magalu-feature-icon"><span class="icon-magalu">attach_money</span></div>
-                    <div class="magalu-feature-title">Financeiro</div>
-                    <div class="magalu-feature-text">Indicadores com linguagem visual de diretoria para faturamento, perdas e ticket médio.</div>
+                <div class="MagaluLOG-feature-card">
+                    <div class="MagaluLOG-feature-icon"><span class="icon-MagaluLOG">attach_money</span></div>
+                    <div class="MagaluLOG-feature-title">Financeiro</div>
+                    <div class="MagaluLOG-feature-text">Indicadores com linguagem visual de diretoria para faturamento, perdas e ticket médio.</div>
                 </div>
             </div>
-            <div class="magalu-info-strip">Eficiência e produtividade em tempo real</div>
+            <div class="MagaluLOG-info-strip">Eficiência e produtividade em tempo real</div>
         </div>
     """, unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("""
-            <div class="magalu-mini-card">
-                <div class="magalu-mini-label">Visual novo</div>
-                <div class="magalu-mini-value">Dashboard</div>
-                <div class="magalu-mini-desc">Hero section, cards premium e sidebar mais elegante.</div>
+            <div class="MagaluLOG-mini-card">
+                <div class="MagaluLOG-mini-label">Visual novo</div>
+                <div class="MagaluLOG-mini-value">Dashboard</div>
+                <div class="MagaluLOG-mini-desc">Hero section, cards premium e sidebar mais elegante.</div>
             </div>
         """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
-            <div class="magalu-mini-card">
-                <div class="magalu-mini-label">Impacto</div>
-                <div class="magalu-mini-value">Mais UX</div>
-                <div class="magalu-mini-desc">Leitura rápida, sensação de produto interno de alto nível.</div>
+            <div class="MagaluLOG-mini-card">
+                <div class="MagaluLOG-mini-label">Impacto</div>
+                <div class="MagaluLOG-mini-value">Mais UX</div>
+                <div class="MagaluLOG-mini-desc">Leitura rápida, sensação de produto interno de alto nível.</div>
             </div>
         """, unsafe_allow_html=True)
     with c3:
         st.markdown("""
-            <div class="magalu-mini-card">
-                <div class="magalu-mini-label">Lógica preservada</div>
-                <div class="magalu-mini-value">100%</div>
-                <div class="magalu-mini-desc">Mudança concentrada no front, mantendo sua operação atual.</div>
+            <div class="MagaluLOG-mini-card">
+                <div class="MagaluLOG-mini-label">Lógica preservada</div>
+                <div class="MagaluLOG-mini-value">100%</div>
+                <div class="MagaluLOG-mini-desc">Mudança concentrada no front, mantendo sua operação atual.</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -640,10 +640,10 @@ def render_home_dashboard():
 st.sidebar.markdown("""
     <div style="padding: 10px 8px 4px 8px; margin-bottom: 14px;">
         <div style="background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); border:1px solid rgba(255,255,255,0.10); border-radius: 22px; padding: 18px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);">
-            <div style="font-size: 13px; font-weight: 800; letter-spacing:.08em; text-transform: uppercase; color:#9CC8FF; margin-bottom:8px;">Magalu</div>
+            <div style="font-size: 13px; font-weight: 800; letter-spacing:.08em; text-transform: uppercase; color:#9CC8FF; margin-bottom:8px;">MagaluLOG</div>
             <div style="font-size: 26px; font-weight: 900; line-height:1.0; color:#FFFFFF; margin-bottom:8px;">Gestão Logística</div>
             <div style="font-size: 13px; color:rgba(255,255,255,0.72);">Operação, equipe e performance em uma única visão.</div>
-            <div style="height: 8px; margin-top:14px; border-radius: 999px; background: linear-gradient(90deg, #0086FF, #00D2FF, #FF8A3D, #FF4D6D); background-size:300% 300%; animation: magaluGlow 7s linear infinite;"></div>
+            <div style="height: 8px; margin-top:14px; border-radius: 999px; background: linear-gradient(90deg, #0086FF, #00D2FF, #FF8A3D, #FF4D6D); background-size:300% 300%; animation: MagaluLOGGlow 7s linear infinite;"></div>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -679,7 +679,7 @@ elif pagina_selecionada == "Registro Absenteísmo":
     
     try:
         df_equipe = carregar_equipe()
-        st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+        st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
         data_chamada = st.date_input("Data", date.today())
         busca = st.text_input("Buscar Colaborador", placeholder="ID ou Nome...")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -692,7 +692,7 @@ elif pagina_selecionada == "Registro Absenteísmo":
         df_filtrado['OCORRÊNCIA'] = "PRESENTE" 
         opcoes_ocorrencia = ["PRESENTE", "FALTA", "DSR", "BH", "LICENÇA", "ATESTADO", "FÉRIAS"]
 
-        st.markdown('<div class="magalu-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
+        st.markdown('<div class="MagaluLOG-ribbon">Registro da Equipe</div>', unsafe_allow_html=True)
         
         df_filtrado['ID'] = df_filtrado['ID'].astype(str).str.replace('\.0$', '', regex=True)
 
@@ -862,19 +862,19 @@ elif pagina_selecionada == "Gestão de Docas":
             t_badges, h_badges = [], []
             if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("ECOM")
-                h_badges.append("<span style='background:#E0F2FE; color:#0284C7; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #BAE6FD;'><span class='icon-magalu' style='font-size:11px;'>shopping_cart</span> ECOM</span>")
+                h_badges.append("<span style='background:#E0F2FE; color:#0284C7; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #BAE6FD;'><span class='icon-MagaluLOG' style='font-size:11px;'>shopping_cart</span> ECOM</span>")
             if str(row.get('FULL', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("FULL")
-                h_badges.append("<span style='background:#FAE8FF; color:#C026D3; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #F0ABFC;'><span class='icon-magalu' style='font-size:11px;'>inventory_2</span> FULL</span>")
+                h_badges.append("<span style='background:#FAE8FF; color:#C026D3; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #F0ABFC;'><span class='icon-MagaluLOG' style='font-size:11px;'>inventory_2</span> FULL</span>")
             if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("CARREG")
-                h_badges.append("<span style='background:#FFEDD5; color:#EA580C; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDBA74;'><span class='icon-magalu' style='font-size:11px;'>upload</span> CARREG</span>")
+                h_badges.append("<span style='background:#FFEDD5; color:#EA580C; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDBA74;'><span class='icon-MagaluLOG' style='font-size:11px;'>upload</span> CARREG</span>")
             if str(row.get('DESCARGA', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("DESC")
-                h_badges.append("<span style='background:#DCFCE7; color:#16A34A; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #86EFAC;'><span class='icon-magalu' style='font-size:11px;'>download</span> DESC</span>")
+                h_badges.append("<span style='background:#DCFCE7; color:#16A34A; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #86EFAC;'><span class='icon-MagaluLOG' style='font-size:11px;'>download</span> DESC</span>")
             if str(row.get('ENSINAR', '')).upper() in ['TRUE', '1', 'SIM']:
                 t_badges.append("MESTRE")
-                h_badges.append("<span style='background:#FEF9C3; color:#CA8A04; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDE047;'><span class='icon-magalu' style='font-size:11px;'>star</span> MESTRE</span>")
+                h_badges.append("<span style='background:#FEF9C3; color:#CA8A04; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:6px; border:1px solid #FDE047;'><span class='icon-MagaluLOG' style='font-size:11px;'>star</span> MESTRE</span>")
             if t_badges:
                 dict_skills_text[nome_matriz] = " | ".join(t_badges)
                 dict_skills_html[nome_matriz] = "".join(h_badges)
@@ -974,7 +974,7 @@ elif pagina_selecionada == "Gestão de Docas":
     # --- POP-UP: START NA CARGA ---
     @st.dialog("START na Carga (Alocar Equipe)")
     def popup_start_carga(doca_sel, agenda_sel, conferente_sel):
-        st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'><span class='icon-magalu'>pin_drop</span> Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; <span class='icon-magalu'>tag</span> Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; <span class='icon-magalu'>badge</span> Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'><span class='icon-MagaluLOG'>pin_drop</span> Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; <span class='icon-MagaluLOG'>tag</span> Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; <span class='icon-MagaluLOG'>badge</span> Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
         equipe_sel = st.multiselect("Selecione os colaboradores para iniciar:", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
         
         conflitos = {}
@@ -989,7 +989,7 @@ elif pagina_selecionada == "Gestão de Docas":
         bloqueio_ergonomico = False
         
         if fadigados:
-            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h.</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-MagaluLOG'>warning</span> ALERTA ERGONÔMICO (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h.</span></div>", unsafe_allow_html=True)
             ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação.", key="chk_fadiga_popup")
             if not ciente: bloqueio_ergonomico = True
                 
@@ -1124,7 +1124,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
                     meta_minutos = 60
                     if not aux_row.empty:
-                        pagto_str = "<span class='icon-magalu' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-magalu' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
+                        pagto_str = "<span class='icon-MagaluLOG' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-MagaluLOG' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
                         valor_desc = aux_row.get('R$ DESCARGA', '-')
                         if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                         linha_val = aux_row.get('LINHA', aux_row.get('CATEGORIA', '-'))
@@ -1143,11 +1143,11 @@ elif pagina_selecionada == "Gestão de Docas":
                     
                     if restante_min >= 0:
                         h, m = int(restante_min // 60), int(restante_min % 60)
-                        cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-magalu' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
+                        cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-MagaluLOG' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
                     else:
                         atraso = abs(restante_min)
                         h, m = int(atraso // 60), int(atraso % 60)
-                        cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-magalu' style='font-size:12px;'>warning</span> Atraso -{h:02d}h{m:02d}m"
+                        cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-MagaluLOG' style='font-size:12px;'>warning</span> Atraso -{h:02d}h{m:02d}m"
 
                     html_equipe_cards = renderizar_equipe_html(row['AUXILIARES'])
                     auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
@@ -1165,7 +1165,7 @@ elif pagina_selecionada == "Gestão de Docas":
                         st.markdown(css_hack, unsafe_allow_html=True)
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:{cor_tema};'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
-                        c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-magalu' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
+                        c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-MagaluLOG' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         
                         st.markdown(html_detalhes, unsafe_allow_html=True)
@@ -1266,7 +1266,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     if doca_str.lower() in ['nan', 'none', '']: doca_str = "A Definir"
                     conf_str = str(row[col_conf]).strip() if col_conf and pd.notna(row[col_conf]) else "A Definir"
                     if conf_str.lower() in ['nan', 'none', '']: conf_str = "A Definir"
-                    pagto_str = "<span class='icon-magalu' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-magalu' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
+                    pagto_str = "<span class='icon-MagaluLOG' style='font-size:12px; color:#16A34A;'>check_circle</span> Sim" if str(row.get('PAGAMENTO', '')).upper() == 'TRUE' else "<span class='icon-MagaluLOG' style='font-size:12px; color:#EA580C;'>schedule</span> Pendente"
                     valor_desc = row.get('R$ DESCARGA', '-')
                     if str(valor_desc).replace('.','',1).isdigit(): valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
                     linha_val = row.get('LINHA', row.get('CATEGORIA', '-'))
@@ -1275,7 +1275,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     
                     meta_minutos = 60
                     limite_str, hora_max_str = "", "-"
-                    txt_timer_pend, cor_timer_pend, bg_timer_pend = "<span class='icon-magalu' style='font-size:12px;'>schedule</span> Aguardando...", "#F59E0B", "#FEF3C7"
+                    txt_timer_pend, cor_timer_pend, bg_timer_pend = "<span class='icon-MagaluLOG' style='font-size:12px;'>schedule</span> Aguardando...", "#F59E0B", "#FEF3C7"
                     try:
                         col_meta = next((c for c in df_aux.columns if 'META' in str(c).upper()), None)
                         if col_meta and pd.notna(row[col_meta]): meta_minutos = int(float(str(row[col_meta]).replace(',', '.')))
@@ -1296,17 +1296,17 @@ elif pagina_selecionada == "Gestão de Docas":
                             diff_min = (hora_max_inicio - agora_dt).total_seconds() / 60
                             if diff_min >= 0:
                                 h, m = int(diff_min // 60), int(diff_min % 60)
-                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#00C853", "#E6F9EC", f"<span class='icon-magalu' style='font-size:12px;'>check_circle</span> Sobra {h:02d}h{m:02d}m p/ Iniciar"
+                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#00C853", "#E6F9EC", f"<span class='icon-MagaluLOG' style='font-size:12px;'>check_circle</span> Sobra {h:02d}h{m:02d}m p/ Iniciar"
                             else:
                                 atraso = abs(diff_min)
                                 h, m = int(atraso // 60), int(atraso % 60)
-                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"<span class='icon-magalu' style='font-size:12px;'>error</span> ATRASADO HÁ {h:02d}h{m:02d}m"
+                                cor_timer_pend, bg_timer_pend, txt_timer_pend = "#DC2626", "#FEF2F2", f"<span class='icon-MagaluLOG' style='font-size:12px;'>error</span> ATRASADO HÁ {h:02d}h{m:02d}m"
                     except: pass
                     
                     status_chegada = str(row.get('STATUS_CHEGADA_RAW', '')).upper()
                     
                     if "EXPEDIÇÃO" in tipo_op and "AGUARD" in status_chegada:
-                        txt_timer_pend = "<span class='icon-magalu' style='font-size:12px;'>local_shipping</span> AGUARDANDO VEÍCULO"
+                        txt_timer_pend = "<span class='icon-MagaluLOG' style='font-size:12px;'>local_shipping</span> AGUARDANDO VEÍCULO"
                         cor_timer_pend = "#64748B" 
                         bg_timer_pend = "#F1F5F9"  
                     
@@ -1338,7 +1338,7 @@ elif pagina_selecionada == "Gestão de Docas":
 """, unsafe_allow_html=True)
                         
                         c_eq_pend, c_btn_pend = st.columns([7, 3])
-                        c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-magalu" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
+                        c_eq_pend.markdown(f"""<div style='font-size: 12px; color: #DC2626; background-color: #FEF2F2; padding: 8px; border-radius: 8px; border: 1px solid #FECACA;'><span class="icon-MagaluLOG" style="font-size:14px; vertical-align:text-bottom;">person_off</span> <b>Equipe:</b> <span style="font-weight:900;">PENDENTE ALOCAÇÃO</span></div>""", unsafe_allow_html=True)
                         
                         with c_btn_pend:
                             if st.button("Adicionar Equipe", key=f"btn_add_{index}", use_container_width=True): 
@@ -1350,7 +1350,7 @@ elif pagina_selecionada == "Gestão de Docas":
     with aba3:
         try:
             with st.container(border=True):
-                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-magalu">edit_location</span> Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
+                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-MagaluLOG">edit_location</span> Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
                 lista_agendas = []
                 if not df_aux.empty: lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
                 opcoes_agenda = [""] + lista_agendas + ["DIGITAR OUTRA AGENDA..."]
@@ -1389,7 +1389,7 @@ elif pagina_selecionada == "Gestão de Docas":
                 bloqueio_ergonomico = False
                 
                 if fadigados:
-                    st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-magalu'>warning</span> ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-MagaluLOG'>warning</span> ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
                     ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação na carga pesada.", key="chk_fadiga_aba3")
                     if not ciente: bloqueio_ergonomico = True
 
@@ -1416,7 +1416,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             df, df_full = tratar_dados(df_raw)
 
         # --- Filtros ---
-        st.sidebar.markdown('<div class="magalu-ribbon" style="left: 0; font-size: 12px;">Parâmetros de Data</div>', unsafe_allow_html=True)
+        st.sidebar.markdown('<div class="MagaluLOG-ribbon" style="left: 0; font-size: 12px;">Parâmetros de Data</div>', unsafe_allow_html=True)
         hoje = datetime.date.today()
         d_min = df['DATA AGENDADA'].min().date() if not df.empty else datetime.date(2025, 1, 1)
         d_max_limite = max(hoje, datetime.date(2026, 12, 31))
@@ -1478,7 +1478,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             col_t1, col_t2 = st.columns(2)
             
             with col_t1:
-                st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>emoji_events</span> Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #334155;'><span class='icon-MagaluLOG'>emoji_events</span> Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
                 if not rec.empty:
                     top_rec = rec.groupby('FORNECEDOR/SELLER').agg(
                         Cargas=('VALOR_REAL', 'count'),
@@ -1501,7 +1501,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                     )
             
             with col_t2:
-                st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>warning</span> Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #334155;'><span class='icon-MagaluLOG'>warning</span> Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
                 if not aus.empty:
                     top_aus = aus.groupby('FORNECEDOR/SELLER').agg(
                         Faltas=('VALOR_PERDIDO', 'count'),
@@ -1524,8 +1524,8 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                     )
 
             # --- Gráfico de Barras e Linha ---
-            st.markdown('<div class="magalu-card" style="margin-top: 15px;">', unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #334155;'><span class='icon-magalu'>stacked_bar_chart</span> Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
+            st.markdown('<div class="MagaluLOG-card" style="margin-top: 15px;">', unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #334155;'><span class='icon-MagaluLOG'>stacked_bar_chart</span> Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
             
             ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(
                 ARRECADADO=('VALOR_REAL', 'sum'), 
@@ -1591,7 +1591,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
         lista_funcionarios.sort()
         
         with st.container(border=True):
-            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-magalu">calendar_month</span> Novo Alinhamento</h4>', unsafe_allow_html=True)
+            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-MagaluLOG">calendar_month</span> Novo Alinhamento</h4>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
@@ -1820,9 +1820,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             col_g1, col_g2 = st.columns(2)
 
                             with col_g1:
-                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                 st.markdown(
-                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>schedule</span> Tempo Médio por Categoria</h4>",
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MagaluLOG'>schedule</span> Tempo Médio por Categoria</h4>",
                                     unsafe_allow_html=True
                                 )
 
@@ -1855,9 +1855,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g2:
-                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                 st.markdown(
-                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>pie_chart</span> Motivos de Atraso</h4>",
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MagaluLOG'>pie_chart</span> Motivos de Atraso</h4>",
                                     unsafe_allow_html=True
                                 )
 
@@ -1897,9 +1897,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             col_g3, col_g4 = st.columns(2)
 
                             with col_g3:
-                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                 st.markdown(
-                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>inventory_2</span> Média de Peças/Hora por Categoria</h4>",
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MagaluLOG'>inventory_2</span> Média de Peças/Hora por Categoria</h4>",
                                     unsafe_allow_html=True
                                 )
 
@@ -1931,9 +1931,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g4:
-                                st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                 st.markdown(
-                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-magalu'>deployed_code</span> Média de m³/Hora por Categoria</h4>",
+                                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MagaluLOG'>deployed_code</span> Média de m³/Hora por Categoria</h4>",
                                     unsafe_allow_html=True
                                 )
 
@@ -1966,7 +1966,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                         with aba_equipe:
                             st.markdown(
-                                "<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>",
+                                "<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-MagaluLOG'>emoji_events</span> Performance Individual por Categoria</h4>",
                                 unsafe_allow_html=True
                             )
 
@@ -2007,9 +2007,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 c_rank1, c_rank2 = st.columns([6, 4])
 
                                 with c_rank1:
-                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                    st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                     st.markdown(
-                                        f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>",
+                                        f"<h5 style='color:#334155;'><span class='icon-MagaluLOG'>leaderboard</span> Ranking de Velocidade - {cat_sel}</h5>",
                                         unsafe_allow_html=True
                                     )
 
@@ -2047,9 +2047,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     st.markdown('</div>', unsafe_allow_html=True)
 
                                 with c_rank2:
-                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
+                                    st.markdown('<div class="MagaluLOG-card">', unsafe_allow_html=True)
                                     st.markdown(
-                                        "<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>",
+                                        "<h5 style='color:#334155;'><span class='icon-MagaluLOG'>grid_on</span> Matriz de Participação</h5>",
                                         unsafe_allow_html=True
                                     )
                                     st.dataframe(
