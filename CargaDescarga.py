@@ -1713,6 +1713,77 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
+
+                        with col_g2:
+                st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                st.markdown(
+                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>table_chart</span> Agendas Cobradas por Categoria</h4>",
+                    unsafe_allow_html=True
+                )
+
+                if not rec.empty:
+                    df_cat_agendas = (
+                        rec.groupby('CATEGORIA', as_index=False)
+                        .agg(
+                            AGENDAS=('AGENDA WMS', 'nunique'),
+                            VALOR=('VALOR_CONSIDERADO', 'sum')
+                        )
+                        .sort_values(['VALOR', 'AGENDAS'], ascending=[False, False])
+                    )
+
+                    total_agendas_cobradas = df_cat_agendas['AGENDAS'].sum()
+                    total_valor_cobrado = df_cat_agendas['VALOR'].sum()
+
+                    c_top1, c_top2 = st.columns(2)
+                    with c_top1:
+                        st.markdown(
+                            f"""
+                            <div style="
+                                background:#F8FAFC;
+                                border:1px solid #E2E8F0;
+                                border-radius:12px;
+                                padding:12px 14px;
+                                margin-bottom:12px;
+                            ">
+                                <div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Total de Agendas</div>
+                                <div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_cobradas}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    with c_top2:
+                        st.markdown(
+                            f"""
+                            <div style="
+                                background:#F8FAFC;
+                                border:1px solid #E2E8F0;
+                                border-radius:12px;
+                                padding:12px 14px;
+                                margin-bottom:12px;
+                            ">
+                                <div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor Cobrado</div>
+                                <div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_cobrado)}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+                    st.dataframe(
+                        df_cat_agendas,
+                        column_config={
+                            'CATEGORIA': st.column_config.TextColumn("Categoria", width="large"),
+                            'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
+                            'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
+                        },
+                        hide_index=True,
+                        use_container_width=True,
+                        height=360
+                    )
+                else:
+                    st.info("Sem agendas cobradas no período para exibir por categoria.")
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
             # --------------------------------------------
             # Evolução mensal
             # --------------------------------------------
