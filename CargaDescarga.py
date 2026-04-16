@@ -491,15 +491,25 @@ def formatar_moeda_br(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def tratar_dados(df_h):
+    # --------------------------------------------------
+    # BLINDAGEM: remove colunas duplicadas da planilha
+    # --------------------------------------------------
     df_h = df_h.loc[:, ~pd.Index(df_h.columns).duplicated()].copy()
+
     df_h['STATUS'] = df_h['STATUS'].astype(str).str.strip().str.upper()
     df_h['AGENDA WMS'] = df_h['AGENDA WMS'].astype(str).str.strip().str.upper()
     df_h['DATA AGENDA'] = df_h['DATA AGENDA'].astype(str).str.strip()
     df_h['DATA AGENDADA'] = pd.to_datetime(df_h['DATA AGENDA'], dayfirst=True, errors='coerce')
     df_h = df_h.dropna(subset=['DATA AGENDADA']).copy()
-    
-    df_h['PRIORIDADE_STATUS'] = df_h['STATUS'].apply(lambda x: 1 if x == 'OK' else (0 if x == 'AUSENTE' else -1))
-    df_h = df_h.sort_values(by=['AGENDA WMS', 'PRIORIDADE_STATUS', 'DATA AGENDADA'], ascending=[True, False, False])
+
+    df_h['PRIORIDADE_STATUS'] = df_h['STATUS'].apply(
+        lambda x: 1 if x == 'OK' else (0 if x == 'AUSENTE' else -1)
+    )
+    df_h = df_h.sort_values(
+        by=['AGENDA WMS', 'PRIORIDADE_STATUS', 'DATA AGENDADA'],
+        ascending=[True, False, False]
+    )
+
     mask_wms_valido = ~df_h['AGENDA WMS'].isin(['', '-', 'NAN', 'NONE'])
     df_com_wms = df_h[mask_wms_valido].drop_duplicates(subset=['AGENDA WMS'], keep='first')
     df_sem_wms = df_h[~mask_wms_valido]
@@ -507,7 +517,10 @@ def tratar_dados(df_h):
 
     df_h['ANO'] = df_h['DATA AGENDADA'].dt.year.astype('Int64')
     df_h['MES_ORDENACAO'] = df_h['DATA AGENDADA'].dt.to_period('M')
-    meses_pt = {1:'Jan', 2:'Fev', 3:'Mar', 4:'Abr', 5:'Mai', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Set', 10:'Out', 11:'Nov', 12:'Dez'}
+    meses_pt = {
+        1:'Jan', 2:'Fev', 3:'Mar', 4:'Abr', 5:'Mai', 6:'Jun',
+        7:'Jul', 8:'Ago', 9:'Set', 10:'Out', 11:'Nov', 12:'Dez'
+    }
     df_h['MES_NOME'] = df_h['DATA AGENDADA'].dt.month.map(meses_pt) + "/" + df_h['ANO'].astype(str)
 
     def limpar_moeda(valor):
@@ -541,12 +554,14 @@ def tratar_dados(df_h):
 
     df_h = df_h[~df_h['FORNECEDOR/SELLER'].apply(eh_interno)]
 
-    # separação FULL x 1P
+    # --------------------------------------------------
+    # Separa 1P x FULL
+    # --------------------------------------------------
     mask_full = df_h['LINHA'].str.contains('FULL', na=False) | df_h['CATEGORIA'].str.contains('FULL', na=False)
     df_full = df_h[mask_full].copy()
     df_main = df_h[~mask_full].copy()
 
-    # manter só linhas/categorias relevantes no 1P com base em cargas monetizadas
+    # Mantém somente linhas/categorias relevantes no 1P
     pag_l = df_main[df_main['VALOR_REAL'] > 0]['LINHA'].unique()
     pag_c = df_main[df_main['VALOR_REAL'] > 0]['CATEGORIA'].unique()
     df_main = df_main[
@@ -554,31 +569,31 @@ def tratar_dados(df_h):
         (df_main['CATEGORIA'].isin([c for c in pag_c if c != '']))
     ].copy()
 
-    # base de médias monetárias (somente OK com valor)
+    # Médias monetárias baseadas em cargas OK do 1P
     df_ok = df_main[(df_main['STATUS'] == 'OK') & (df_main['VALOR_REAL'] > 0)]
     m_linha = df_ok.groupby('LINHA')['VALOR_REAL'].mean().to_dict()
     m_cat = df_ok.groupby('CATEGORIA')['VALOR_REAL'].mean().to_dict()
 
-    # -----------------------------
+    # --------------------------------------------------
     # 1P
-    # -----------------------------
+    # --------------------------------------------------
     df_main['TIPO_RECEITA'] = '1P'
     df_main['VALOR_CONSIDERADO'] = df_main['VALOR_REAL']
 
     df_main['VALOR_PERDIDO'] = 0.0
     mask_aus = df_main['STATUS'] == 'AUSENTE'
     df_main.loc[mask_aus, 'VALOR_PERDIDO'] = df_main.loc[mask_aus, 'LINHA'].map(m_linha)
+
     mask_zero = mask_aus & (df_main['VALOR_PERDIDO'].isna() | (df_main['VALOR_PERDIDO'] == 0))
     df_main.loc[mask_zero, 'VALOR_PERDIDO'] = df_main.loc[mask_zero, 'CATEGORIA'].map(m_cat)
     df_main['VALOR_PERDIDO'] = df_main['VALOR_PERDIDO'].fillna(0).round(2)
 
-    # -----------------------------
+    # --------------------------------------------------
     # FULL
-    # -----------------------------
+    # --------------------------------------------------
     df_full['TIPO_RECEITA'] = 'FULL'
     df_full['VALOR_PERDIDO'] = 0.0
 
-    # FULL também terá valor considerado
     df_full['VALOR_CONSIDERADO'] = df_full['VALOR_REAL']
 
     mask_full_zero = df_full['VALOR_CONSIDERADO'].isna() | (df_full['VALOR_CONSIDERADO'] == 0)
@@ -590,8 +605,12 @@ def tratar_dados(df_h):
     df_full.loc[df_full['CATEGORIA'] == 'DIVERSOS', 'VALOR_CONSIDERADO'] = 350.00
     df_full['VALOR_CONSIDERADO'] = df_full['VALOR_CONSIDERADO'].fillna(500.00).round(2)
 
-    # manter compatibilidade com qualquer uso anterior
+    # Compatibilidade com qualquer uso anterior
     df_full['VALOR_ESTIMADO'] = df_full['VALOR_CONSIDERADO']
+
+    # Blindagem final
+    df_main = df_main.loc[:, ~pd.Index(df_main.columns).duplicated()].copy()
+    df_full = df_full.loc[:, ~pd.Index(df_full.columns).duplicated()].copy()
 
     return df_main, df_full
 
@@ -1447,7 +1466,7 @@ elif pagina_selecionada == "Gestão de Docas":
                                 st.rerun()
         except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
 # ==========================================================
-# MÓDULO 3: FINANCEIRO E DRE
+# MÓDULO 5: FINANCEIRO (DIRETORIA)
 # ==========================================================
 elif pagina_selecionada == "Financeiro (Diretoria)":
     try:
@@ -1455,17 +1474,17 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             df_raw = carregar_dados_financeiros()
             df, df_full = tratar_dados(df_raw)
 
-        # -----------------------------
+        # --------------------------------------------
         # Filtros
-        # -----------------------------
+        # --------------------------------------------
         st.sidebar.markdown('<div class="MAGALOG-ribbon" style="left: 0; font-size: 12px;">Parâmetros Financeiros</div>', unsafe_allow_html=True)
 
         hoje = datetime.date.today()
 
         datas_base = []
-        if not df.empty:
+        if not df.empty and 'DATA AGENDADA' in df.columns:
             datas_base.append(df['DATA AGENDADA'].min().date())
-        if not df_full.empty:
+        if not df_full.empty and 'DATA AGENDADA' in df_full.columns:
             datas_base.append(df_full['DATA AGENDADA'].min().date())
 
         d_min = min(datas_base) if datas_base else datetime.date(2025, 1, 1)
@@ -1489,11 +1508,13 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             ["Ambos", "Apenas 1P", "Apenas FULL"]
         )
 
-        # -----------------------------
+        # --------------------------------------------
         # Filtro por data
-        # -----------------------------
+        # --------------------------------------------
         df_main_f = df.copy()
         df_full_f = df_full.copy()
+
+        # Blindagem contra colunas duplicadas
         df_main_f = df_main_f.loc[:, ~pd.Index(df_main_f.columns).duplicated()].copy()
         df_full_f = df_full_f.loc[:, ~pd.Index(df_full_f.columns).duplicated()].copy()
 
@@ -1511,15 +1532,17 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             )
             df_full_f = df_full_f[mask_data_full].copy()
 
-        # -----------------------------
+        # --------------------------------------------
         # Aplicação do filtro de visão
-        # -----------------------------
+        # --------------------------------------------
         if filtro_visao == "Apenas 1P":
-    df_visao = df_main_f.copy()
-elif filtro_visao == "Apenas FULL":
-    df_visao = df_full_f.copy()
-else:
-    df_visao = pd.concat([df_main_f, df_full_f], ignore_index=True, sort=False)
+            df_visao = df_main_f.copy()
+        elif filtro_visao == "Apenas FULL":
+            df_visao = df_full_f.copy()
+        else:
+            df_visao = pd.concat([df_main_f, df_full_f], ignore_index=True, sort=False)
+
+        df_visao = df_visao.loc[:, ~pd.Index(df_visao.columns).duplicated()].copy()
 
         render_hero(
             'Visão Oficial de Faturamento',
@@ -1534,21 +1557,21 @@ else:
             rec = df_visao[df_visao['STATUS'] == 'OK'].copy()
             aus = df_visao[df_visao['STATUS'] == 'AUSENTE'].copy()
 
-            total_r = rec['VALOR_CONSIDERADO'].sum()
-            total_p = aus['VALOR_PERDIDO'].sum() if 'VALOR_PERDIDO' in aus.columns else 0
+            total_r = rec['VALOR_CONSIDERADO'].sum() if not rec.empty else 0
+            total_p = aus['VALOR_PERDIDO'].sum() if ('VALOR_PERDIDO' in aus.columns and not aus.empty) else 0
             tkt_carga = rec['VALOR_CONSIDERADO'].mean() if not rec.empty else 0
 
-            dias_unicos = rec['DATA AGENDADA'].dt.date.nunique()
+            dias_unicos = rec['DATA AGENDADA'].dt.date.nunique() if not rec.empty else 0
             tkt_dia = total_r / dias_unicos if dias_unicos > 0 else 0
 
-            meses_unicos = rec['MES_ORDENACAO'].nunique()
+            meses_unicos = rec['MES_ORDENACAO'].nunique() if not rec.empty else 0
             tkt_mes = total_r / meses_unicos if meses_unicos > 0 else 0
 
             qtd_agendas = rec['AGENDA WMS'].nunique() if not rec.empty else 0
 
-            # -----------------------------
+            # --------------------------------------------
             # KPIs
-            # -----------------------------
+            # --------------------------------------------
             col1, col2, col3, col4, col5 = st.columns(5)
 
             def render_kpi(titulo, valor, subtitulo, cor_hex):
@@ -1587,21 +1610,24 @@ else:
                     unsafe_allow_html=True
                 )
 
-            # -----------------------------
+            # --------------------------------------------
             # Mix 1P x FULL
-            # -----------------------------
-            df_mix = pd.concat([df_main_f, df_full_f], ignore_index=True)
+            # --------------------------------------------
+            df_mix = pd.concat([df_main_f, df_full_f], ignore_index=True, sort=False)
+            df_mix = df_mix.loc[:, ~pd.Index(df_mix.columns).duplicated()].copy()
             df_mix = df_mix[df_mix['STATUS'] == 'OK'].copy()
 
-            mix_receita = (
-                df_mix.groupby('TIPO_RECEITA')['VALOR_CONSIDERADO']
-                .sum()
-                .reset_index()
-            ) if not df_mix.empty else pd.DataFrame(columns=['TIPO_RECEITA', 'VALOR_CONSIDERADO'])
+            if not df_mix.empty:
+                mix_receita = (
+                    df_mix.groupby('TIPO_RECEITA', as_index=False)['VALOR_CONSIDERADO']
+                    .sum()
+                )
+            else:
+                mix_receita = pd.DataFrame(columns=['TIPO_RECEITA', 'VALOR_CONSIDERADO'])
 
-            # -----------------------------
-            # Bloco superior: pizza + ranking categorias
-            # -----------------------------
+            # --------------------------------------------
+            # Pizza + Receita por Categoria
+            # --------------------------------------------
             col_g1, col_g2 = st.columns(2)
 
             with col_g1:
@@ -1654,9 +1680,8 @@ else:
 
                 if not rec.empty:
                     cat_rec = (
-                        rec.groupby('CATEGORIA')['VALOR_CONSIDERADO']
+                        rec.groupby('CATEGORIA', as_index=False)['VALOR_CONSIDERADO']
                         .sum()
-                        .reset_index()
                         .sort_values('VALOR_CONSIDERADO', ascending=True)
                         .tail(10)
                     )
@@ -1686,9 +1711,9 @@ else:
                     st.info("Sem receita confirmada para exibir por categoria.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # -----------------------------
-            # Evolução mensal arrecadado x perda
-            # -----------------------------
+            # --------------------------------------------
+            # Evolução mensal
+            # --------------------------------------------
             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
             st.markdown(
                 "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>monitoring</span> Evolução Mensal de Receita e Perdas</h4>",
@@ -1696,15 +1721,15 @@ else:
             )
 
             ev_arrec = (
-                rec.groupby(['MES_ORDENACAO', 'MES_NOME'])['VALOR_CONSIDERADO']
+                rec.groupby(['MES_ORDENACAO', 'MES_NOME'], as_index=False)['VALOR_CONSIDERADO']
                 .sum()
-                .reset_index(name='ARRECADADO')
+                .rename(columns={'VALOR_CONSIDERADO': 'ARRECADADO'})
             ) if not rec.empty else pd.DataFrame(columns=['MES_ORDENACAO', 'MES_NOME', 'ARRECADADO'])
 
             ev_perda = (
-                aus.groupby(['MES_ORDENACAO', 'MES_NOME'])['VALOR_PERDIDO']
+                aus.groupby(['MES_ORDENACAO', 'MES_NOME'], as_index=False)['VALOR_PERDIDO']
                 .sum()
-                .reset_index(name='PERDIDO')
+                .rename(columns={'VALOR_PERDIDO': 'PERDIDO'})
             ) if not aus.empty else pd.DataFrame(columns=['MES_ORDENACAO', 'MES_NOME', 'PERDIDO'])
 
             ev_mes = pd.merge(
@@ -1730,7 +1755,6 @@ else:
                         marker_color='#0086FF',
                         text=text_arrecadado,
                         textposition='auto',
-                        textfont=dict(size=11, color='#FFFFFF', weight='bold'),
                         hovertemplate="%{x}<br>Faturado: %{text}<extra></extra>"
                     ),
                     secondary_y=False
@@ -1746,7 +1770,6 @@ else:
                         marker=dict(size=8),
                         text=text_perdido,
                         textposition='top center',
-                        textfont=dict(size=11, color='#FF3366', weight='bold'),
                         hovertemplate="%{x}<br>Perdido: %{text}<extra></extra>"
                     ),
                     secondary_y=True
@@ -1758,7 +1781,6 @@ else:
                     margin=dict(t=30, b=10, l=0, r=0),
                     legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
                 )
-
                 fig.update_yaxes(showgrid=False, secondary_y=False)
                 fig.update_yaxes(showgrid=False, secondary_y=True)
 
@@ -1768,30 +1790,32 @@ else:
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # -----------------------------
-            # FULL detalhado
-            # -----------------------------
+            # --------------------------------------------
+            # Tabela detalhada
+            # --------------------------------------------
             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
             st.markdown(
                 "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>inventory_2</span> Detalhamento Financeiro por Tipo</h4>",
                 unsafe_allow_html=True
             )
 
-            df_detalhe = df_visao.copy()
-            df_detalhe = df_detalhe[
-                [
-                    'DATA AGENDADA',
-                    'AGENDA WMS',
-                    'FORNECEDOR/SELLER',
-                    'CATEGORIA',
-                    'LINHA',
-                    'TIPO_RECEITA',
-                    'STATUS',
-                    'VALOR_CONSIDERADO'
-                ]
-            ].copy()
+            df_visao = df_visao.loc[:, ~pd.Index(df_visao.columns).duplicated()].copy()
 
-            df_detalhe = df_detalhe.sort_values('DATA AGENDADA', ascending=False)
+            colunas_detalhe = [
+                'DATA AGENDADA',
+                'AGENDA WMS',
+                'FORNECEDOR/SELLER',
+                'CATEGORIA',
+                'LINHA',
+                'TIPO_RECEITA',
+                'STATUS',
+                'VALOR_CONSIDERADO'
+            ]
+            colunas_detalhe = [c for c in colunas_detalhe if c in df_visao.columns]
+
+            df_detalhe = df_visao[colunas_detalhe].copy()
+            if 'DATA AGENDADA' in df_detalhe.columns:
+                df_detalhe = df_detalhe.sort_values('DATA AGENDADA', ascending=False)
 
             st.dataframe(
                 df_detalhe,
