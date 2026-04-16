@@ -491,6 +491,7 @@ def formatar_moeda_br(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def tratar_dados(df_h):
+    df_h = df_h.loc[:, ~pd.Index(df_h.columns).duplicated()].copy()
     df_h['STATUS'] = df_h['STATUS'].astype(str).str.strip().str.upper()
     df_h['AGENDA WMS'] = df_h['AGENDA WMS'].astype(str).str.strip().str.upper()
     df_h['DATA AGENDA'] = df_h['DATA AGENDA'].astype(str).str.strip()
@@ -1493,6 +1494,8 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
         # -----------------------------
         df_main_f = df.copy()
         df_full_f = df_full.copy()
+        df_main_f = df_main_f.loc[:, ~pd.Index(df_main_f.columns).duplicated()].copy()
+        df_full_f = df_full_f.loc[:, ~pd.Index(df_full_f.columns).duplicated()].copy()
 
         if not df_main_f.empty:
             mask_data_main = (
@@ -1512,11 +1515,11 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
         # Aplicação do filtro de visão
         # -----------------------------
         if filtro_visao == "Apenas 1P":
-            df_visao = df_main_f.copy()
-        elif filtro_visao == "Apenas FULL":
-            df_visao = df_full_f.copy()
-        else:
-            df_visao = pd.concat([df_main_f, df_full_f], ignore_index=True)
+    df_visao = df_main_f.copy()
+elif filtro_visao == "Apenas FULL":
+    df_visao = df_full_f.copy()
+else:
+    df_visao = pd.concat([df_main_f, df_full_f], ignore_index=True, sort=False)
 
         render_hero(
             'Visão Oficial de Faturamento',
