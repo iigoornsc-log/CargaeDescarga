@@ -1714,7 +1714,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                 st.markdown('</div>', unsafe_allow_html=True)
 
 
-                        with col_g2:
+            with col_g2:
                 st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
                 st.markdown(
                     "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>table_chart</span> Agendas Cobradas por Categoria</h4>",
