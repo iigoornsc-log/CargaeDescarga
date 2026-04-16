@@ -510,14 +510,21 @@ def tratar_dados(df_h):
     df_h['MES_NOME'] = df_h['DATA AGENDADA'].dt.month.map(meses_pt) + "/" + df_h['ANO'].astype(str)
 
     def limpar_moeda(valor):
-        if pd.isna(valor) or str(valor).strip() == '': return 0.0
+        if pd.isna(valor) or str(valor).strip() == '':
+            return 0.0
         v = str(valor).upper().replace('R$', '').replace(' ', '').strip()
-        if v in ['', '-', 'OK', 'NAOÉCOBRADO']: return 0.0
-        if '.' in v and ',' in v: v = v.replace('.', '').replace(',', '.')
-        elif '.' in v: v = v.replace('.', '')
-        elif ',' in v: v = v.replace(',', '.')
-        try: return round(float(v), 2)
-        except ValueError: return 0.0
+        if v in ['', '-', 'OK', 'NAOÉCOBRADO']:
+            return 0.0
+        if '.' in v and ',' in v:
+            v = v.replace('.', '').replace(',', '.')
+        elif '.' in v:
+            v = v.replace('.', '')
+        elif ',' in v:
+            v = v.replace(',', '.')
+        try:
+            return round(float(v), 2)
+        except ValueError:
+            return 0.0
 
     df_h['VALOR_REAL'] = df_h['VALOR'].apply(limpar_moeda) if 'VALOR' in df_h.columns else 0.0
     df_h['LINHA'] = df_h['LINHA'].astype(str).str.strip().str.upper()
@@ -525,22 +532,37 @@ def tratar_dados(df_h):
     df_h['CATEGORIA'] = df_h['CATEGORIA'].astype(str).str.strip().str.upper()
 
     def eh_interno(forn):
-        if forn.startswith(('MAGAZINE', 'FILIAL')): return True
-        if re.match(r'^C[D\d]', forn): return True 
+        if forn.startswith(('MAGAZINE', 'FILIAL')):
+            return True
+        if re.match(r'^C[D\d]', forn):
+            return True
         return False
+
     df_h = df_h[~df_h['FORNECEDOR/SELLER'].apply(eh_interno)]
 
+    # separação FULL x 1P
     mask_full = df_h['LINHA'].str.contains('FULL', na=False) | df_h['CATEGORIA'].str.contains('FULL', na=False)
     df_full = df_h[mask_full].copy()
     df_main = df_h[~mask_full].copy()
 
+    # manter só linhas/categorias relevantes no 1P com base em cargas monetizadas
     pag_l = df_main[df_main['VALOR_REAL'] > 0]['LINHA'].unique()
     pag_c = df_main[df_main['VALOR_REAL'] > 0]['CATEGORIA'].unique()
-    df_main = df_main[(df_main['LINHA'].isin([l for l in pag_l if l != ''])) | (df_main['CATEGORIA'].isin([c for c in pag_c if c != '']))].copy()
+    df_main = df_main[
+        (df_main['LINHA'].isin([l for l in pag_l if l != ''])) |
+        (df_main['CATEGORIA'].isin([c for c in pag_c if c != '']))
+    ].copy()
 
+    # base de médias monetárias (somente OK com valor)
     df_ok = df_main[(df_main['STATUS'] == 'OK') & (df_main['VALOR_REAL'] > 0)]
     m_linha = df_ok.groupby('LINHA')['VALOR_REAL'].mean().to_dict()
     m_cat = df_ok.groupby('CATEGORIA')['VALOR_REAL'].mean().to_dict()
+
+    # -----------------------------
+    # 1P
+    # -----------------------------
+    df_main['TIPO_RECEITA'] = '1P'
+    df_main['VALOR_CONSIDERADO'] = df_main['VALOR_REAL']
 
     df_main['VALOR_PERDIDO'] = 0.0
     mask_aus = df_main['STATUS'] == 'AUSENTE'
@@ -549,9 +571,26 @@ def tratar_dados(df_h):
     df_main.loc[mask_zero, 'VALOR_PERDIDO'] = df_main.loc[mask_zero, 'CATEGORIA'].map(m_cat)
     df_main['VALOR_PERDIDO'] = df_main['VALOR_PERDIDO'].fillna(0).round(2)
 
-    df_full['VALOR_ESTIMADO'] = df_full['CATEGORIA'].map(m_cat)
-    df_full.loc[df_full['CATEGORIA'] == 'DIVERSOS', 'VALOR_ESTIMADO'] = 350.00
-    df_full['VALOR_ESTIMADO'] = df_full['VALOR_ESTIMADO'].fillna(500.00).round(2)
+    # -----------------------------
+    # FULL
+    # -----------------------------
+    df_full['TIPO_RECEITA'] = 'FULL'
+    df_full['VALOR_PERDIDO'] = 0.0
+
+    # FULL também terá valor considerado
+    df_full['VALOR_CONSIDERADO'] = df_full['VALOR_REAL']
+
+    mask_full_zero = df_full['VALOR_CONSIDERADO'].isna() | (df_full['VALOR_CONSIDERADO'] == 0)
+    df_full.loc[mask_full_zero, 'VALOR_CONSIDERADO'] = df_full.loc[mask_full_zero, 'LINHA'].map(m_linha)
+
+    mask_full_zero = df_full['VALOR_CONSIDERADO'].isna() | (df_full['VALOR_CONSIDERADO'] == 0)
+    df_full.loc[mask_full_zero, 'VALOR_CONSIDERADO'] = df_full.loc[mask_full_zero, 'CATEGORIA'].map(m_cat)
+
+    df_full.loc[df_full['CATEGORIA'] == 'DIVERSOS', 'VALOR_CONSIDERADO'] = 350.00
+    df_full['VALOR_CONSIDERADO'] = df_full['VALOR_CONSIDERADO'].fillna(500.00).round(2)
+
+    # manter compatibilidade com qualquer uso anterior
+    df_full['VALOR_ESTIMADO'] = df_full['VALOR_CONSIDERADO']
 
     return df_main, df_full
 
@@ -1415,164 +1454,359 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             df_raw = carregar_dados_financeiros()
             df, df_full = tratar_dados(df_raw)
 
-        # --- Filtros ---
-        st.sidebar.markdown('<div class="MAGALOG-ribbon" style="left: 0; font-size: 12px;">Parâmetros de Data</div>', unsafe_allow_html=True)
+        # -----------------------------
+        # Filtros
+        # -----------------------------
+        st.sidebar.markdown('<div class="MAGALOG-ribbon" style="left: 0; font-size: 12px;">Parâmetros Financeiros</div>', unsafe_allow_html=True)
+
         hoje = datetime.date.today()
-        d_min = df['DATA AGENDADA'].min().date() if not df.empty else datetime.date(2025, 1, 1)
+
+        datas_base = []
+        if not df.empty:
+            datas_base.append(df['DATA AGENDADA'].min().date())
+        if not df_full.empty:
+            datas_base.append(df_full['DATA AGENDADA'].min().date())
+
+        d_min = min(datas_base) if datas_base else datetime.date(2025, 1, 1)
         d_max_limite = max(hoje, datetime.date(2026, 12, 31))
-        
-        selecao = st.sidebar.date_input("Selecione o Período", value=(d_min, hoje), min_value=d_min, max_value=d_max_limite)
+
+        selecao = st.sidebar.date_input(
+            "Selecione o Período",
+            value=(d_min, hoje),
+            min_value=d_min,
+            max_value=d_max_limite
+        )
+
         if isinstance(selecao, tuple) and len(selecao) == 2:
             data_ini, data_fim = selecao
         else:
             data_ini = selecao[0] if isinstance(selecao, (tuple, list)) else selecao
             data_fim = data_ini
 
-        mask_data_main = (df['DATA AGENDADA'].dt.date >= data_ini) & (df['DATA AGENDADA'].dt.date <= data_fim)
-        df_f = df[mask_data_main].copy()
+        filtro_visao = st.sidebar.radio(
+            "Tipo de Receita",
+            ["Ambos", "Apenas 1P", "Apenas FULL"]
+        )
 
-        render_hero('Visão Oficial de Faturamento', f'Período analisado: {data_ini.strftime("%d/%m/%Y")} até {data_fim.strftime("%d/%m/%Y")}. Leitura executiva de receita, perdas e ticket médio.', 'Financeiro • Diretoria')
+        # -----------------------------
+        # Filtro por data
+        # -----------------------------
+        df_main_f = df.copy()
+        df_full_f = df_full.copy()
 
-        if not df_f.empty:
-            rec = df_f[df_f['STATUS'] == 'OK']
-            aus = df_f[df_f['STATUS'] == 'AUSENTE']
-            
-            # --- Indicadores Principais ---
-            total_r = rec['VALOR_REAL'].sum()
-            total_p = aus['VALOR_PERDIDO'].sum()
-            tkt_carga = rec['VALOR_REAL'].mean() if not rec.empty else 0
-            
+        if not df_main_f.empty:
+            mask_data_main = (
+                (df_main_f['DATA AGENDADA'].dt.date >= data_ini) &
+                (df_main_f['DATA AGENDADA'].dt.date <= data_fim)
+            )
+            df_main_f = df_main_f[mask_data_main].copy()
+
+        if not df_full_f.empty:
+            mask_data_full = (
+                (df_full_f['DATA AGENDADA'].dt.date >= data_ini) &
+                (df_full_f['DATA AGENDADA'].dt.date <= data_fim)
+            )
+            df_full_f = df_full_f[mask_data_full].copy()
+
+        # -----------------------------
+        # Aplicação do filtro de visão
+        # -----------------------------
+        if filtro_visao == "Apenas 1P":
+            df_visao = df_main_f.copy()
+        elif filtro_visao == "Apenas FULL":
+            df_visao = df_full_f.copy()
+        else:
+            df_visao = pd.concat([df_main_f, df_full_f], ignore_index=True)
+
+        render_hero(
+            'Visão Oficial de Faturamento',
+            f'Período analisado: {data_ini.strftime("%d/%m/%Y")} até {data_fim.strftime("%d/%m/%Y")}. '
+            f'Leitura executiva de receita, perdas, ticket médio e participação FULL.',
+            f'Financeiro • {filtro_visao}'
+        )
+
+        if df_visao.empty:
+            st.warning("Não há dados financeiros para o período/filtro selecionado.")
+        else:
+            rec = df_visao[df_visao['STATUS'] == 'OK'].copy()
+            aus = df_visao[df_visao['STATUS'] == 'AUSENTE'].copy()
+
+            total_r = rec['VALOR_CONSIDERADO'].sum()
+            total_p = aus['VALOR_PERDIDO'].sum() if 'VALOR_PERDIDO' in aus.columns else 0
+            tkt_carga = rec['VALOR_CONSIDERADO'].mean() if not rec.empty else 0
+
             dias_unicos = rec['DATA AGENDADA'].dt.date.nunique()
             tkt_dia = total_r / dias_unicos if dias_unicos > 0 else 0
-            
+
             meses_unicos = rec['MES_ORDENACAO'].nunique()
             tkt_mes = total_r / meses_unicos if meses_unicos > 0 else 0
 
-            # --- 5 KPIs no Topo (Design Premium Corporativo) ---
+            qtd_agendas = rec['AGENDA WMS'].nunique() if not rec.empty else 0
+
+            # -----------------------------
+            # KPIs
+            # -----------------------------
             col1, col2, col3, col4, col5 = st.columns(5)
-            
+
             def render_kpi(titulo, valor, subtitulo, cor_hex):
                 return f"""
                 <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative; overflow: hidden; margin-bottom: 20px;">
-                    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background-color: {cor_hex};"></div>
-                    <div style="padding-left: 10px;">
-                        <div style="font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">{titulo}</div>
-                        <div style="font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2;">{valor}</div>
-                        <div style="font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 4px;">{subtitulo}</div>
-                    </div>
+                    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: {cor_hex};"></div>
+                    <div style="color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px;">{titulo}</div>
+                    <div style="color: #0F172A; font-size: 26px; font-weight: 900; line-height: 1.1; margin-bottom: 6px;">{valor}</div>
+                    <div style="color: #94A3B8; font-size: 12px;">{subtitulo}</div>
                 </div>
                 """
 
-            with col1: 
-                st.markdown(render_kpi("Arrecadação", formatar_moeda_br(total_r), "Faturamento Bruto", "#00C853"), unsafe_allow_html=True)
-            with col2: 
-                st.markdown(render_kpi("Perdas (No-Show)", formatar_moeda_br(total_p), "Custo de Oportunidade", "#EF4444"), unsafe_allow_html=True)
-            with col3: 
-                st.markdown(render_kpi("Ticket / Carga", formatar_moeda_br(tkt_carga), "Média por Veículo", "#0086FF"), unsafe_allow_html=True)
-            with col4: 
-                st.markdown(render_kpi("Ticket / Dia", formatar_moeda_br(tkt_dia), "Média Diária", "#8B5CF6"), unsafe_allow_html=True)
-            with col5: 
-                st.markdown(render_kpi("Ticket / Mês", formatar_moeda_br(tkt_mes), "Projeção Mensal", "#6366F1"), unsafe_allow_html=True)
+            with col1:
+                st.markdown(
+                    render_kpi("Receita Total", formatar_moeda_br(total_r), "Cargas com status OK", "#0086FF"),
+                    unsafe_allow_html=True
+                )
+            with col2:
+                st.markdown(
+                    render_kpi("Perda por Ausência", formatar_moeda_br(total_p), "Estimativa financeira das ausências", "#FF3366"),
+                    unsafe_allow_html=True
+                )
+            with col3:
+                st.markdown(
+                    render_kpi("Ticket por Carga", formatar_moeda_br(tkt_carga), f"{qtd_agendas} agendas faturadas", "#00C853"),
+                    unsafe_allow_html=True
+                )
+            with col4:
+                st.markdown(
+                    render_kpi("Ticket por Dia", formatar_moeda_br(tkt_dia), f"{dias_unicos} dias com faturamento", "#F59E0B"),
+                    unsafe_allow_html=True
+                )
+            with col5:
+                st.markdown(
+                    render_kpi("Ticket por Mês", formatar_moeda_br(tkt_mes), f"{meses_unicos} meses no período", "#8B5CF6"),
+                    unsafe_allow_html=True
+                )
 
-            # --- Tabelas Lado a Lado ---
-            col_t1, col_t2 = st.columns(2)
-            
-            with col_t1:
-                st.markdown("<h4 style='color: #334155;'><span class='icon-MAGALOG'>emoji_events</span> Top 10 Arrecadação por Fornecedor</h4>", unsafe_allow_html=True)
+            # -----------------------------
+            # Mix 1P x FULL
+            # -----------------------------
+            df_mix = pd.concat([df_main_f, df_full_f], ignore_index=True)
+            df_mix = df_mix[df_mix['STATUS'] == 'OK'].copy()
+
+            mix_receita = (
+                df_mix.groupby('TIPO_RECEITA')['VALOR_CONSIDERADO']
+                .sum()
+                .reset_index()
+            ) if not df_mix.empty else pd.DataFrame(columns=['TIPO_RECEITA', 'VALOR_CONSIDERADO'])
+
+            # -----------------------------
+            # Bloco superior: pizza + ranking categorias
+            # -----------------------------
+            col_g1, col_g2 = st.columns(2)
+
+            with col_g1:
+                st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                st.markdown(
+                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>pie_chart</span> Participação da Receita</h4>",
+                    unsafe_allow_html=True
+                )
+
+                if not mix_receita.empty and mix_receita['VALOR_CONSIDERADO'].sum() > 0:
+                    fig_pizza = px.pie(
+                        mix_receita,
+                        values='VALOR_CONSIDERADO',
+                        names='TIPO_RECEITA',
+                        hole=0.55,
+                        color='TIPO_RECEITA',
+                        color_discrete_map={
+                            '1P': '#0086FF',
+                            'FULL': '#A855F7'
+                        }
+                    )
+                    fig_pizza.update_traces(
+                        textposition='inside',
+                        textinfo='percent+label'
+                    )
+                    fig_pizza.update_layout(
+                        margin=dict(l=0, r=0, t=20, b=0),
+                        height=360,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=-0.15,
+                            xanchor="center",
+                            x=0.5
+                        ),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)'
+                    )
+                    st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
+                else:
+                    st.info("Sem receita suficiente para montar a participação entre 1P e FULL.")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with col_g2:
+                st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                st.markdown(
+                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>bar_chart</span> Receita por Categoria</h4>",
+                    unsafe_allow_html=True
+                )
+
                 if not rec.empty:
-                    top_rec = rec.groupby('FORNECEDOR/SELLER').agg(
-                        Cargas=('VALOR_REAL', 'count'),
-                        Ticket_Medio=('VALOR_REAL', 'mean'),
-                        Total_Arrecadado=('VALOR_REAL', 'sum')
-                    ).reset_index().sort_values('Total_Arrecadado', ascending=False).head(10)
-                    
-                    top_rec['% da Oper.'] = (top_rec['Total_Arrecadado'] / total_r) * 100
-                    
-                    st.dataframe(
-                        top_rec,
-                        column_config={
-                            "FORNECEDOR/SELLER": "Fornecedor",
-                            "Cargas": st.column_config.NumberColumn("Cargas"),
-                            "Ticket_Medio": st.column_config.NumberColumn("Ticket Médio", format="R$ %.2f"),
-                            "Total_Arrecadado": st.column_config.NumberColumn("Total Arrecadado", format="R$ %.2f"),
-                            "% da Oper.": st.column_config.ProgressColumn("% da Oper.", format="%.1f%%", min_value=0, max_value=100)
-                        },
-                        hide_index=True, use_container_width=True
-                    )
-            
-            with col_t2:
-                st.markdown("<h4 style='color: #334155;'><span class='icon-MAGALOG'>warning</span> Top 10 Perdas por No-Show</h4>", unsafe_allow_html=True)
-                if not aus.empty:
-                    top_aus = aus.groupby('FORNECEDOR/SELLER').agg(
-                        Faltas=('VALOR_PERDIDO', 'count'),
-                        Ticket=('VALOR_PERDIDO', 'mean'),
-                        Prejuizo=('VALOR_PERDIDO', 'sum')
-                    ).reset_index().sort_values('Prejuizo', ascending=False).head(10)
-                    
-                    top_aus['% Perda'] = (top_aus['Prejuizo'] / total_p) * 100 if total_p > 0 else 0
-                    
-                    st.dataframe(
-                        top_aus,
-                        column_config={
-                            "FORNECEDOR/SELLER": "Fornecedor",
-                            "Faltas": st.column_config.NumberColumn("Faltas"),
-                            "Ticket": st.column_config.NumberColumn("Ticket", format="R$ %.2f"),
-                            "Prejuizo": st.column_config.NumberColumn("Prejuízo", format="R$ %.2f"),
-                            "% Perda": st.column_config.ProgressColumn("% Perda", format="%.1f%%", min_value=0, max_value=100)
-                        },
-                        hide_index=True, use_container_width=True
+                    cat_rec = (
+                        rec.groupby('CATEGORIA')['VALOR_CONSIDERADO']
+                        .sum()
+                        .reset_index()
+                        .sort_values('VALOR_CONSIDERADO', ascending=True)
+                        .tail(10)
                     )
 
-            # --- Gráfico de Barras e Linha ---
-            st.markdown('<div class="MAGALOG-card" style="margin-top: 15px;">', unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #334155;'><span class='icon-MAGALOG'>stacked_bar_chart</span> Evolução de Arrecadação x Perdas</h4>", unsafe_allow_html=True)
-            
-            ev_mes = df_f.groupby(['MES_ORDENACAO', 'MES_NOME']).agg(
-                ARRECADADO=('VALOR_REAL', 'sum'), 
-                PERDIDO=('VALOR_PERDIDO', 'sum')
-            ).reset_index().sort_values('MES_ORDENACAO')
-            
+                    fig_cat = px.bar(
+                        cat_rec,
+                        x='VALOR_CONSIDERADO',
+                        y='CATEGORIA',
+                        orientation='h',
+                        text='VALOR_CONSIDERADO',
+                        color_discrete_sequence=['#0086FF']
+                    )
+                    fig_cat.update_traces(
+                        texttemplate='R$ %{text:,.0f}',
+                        textposition='outside'
+                    )
+                    fig_cat.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        xaxis_title=None,
+                        yaxis_title=None,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        height=360
+                    )
+                    st.plotly_chart(fig_cat, use_container_width=True, config={'displayModeBar': False})
+                else:
+                    st.info("Sem receita confirmada para exibir por categoria.")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # -----------------------------
+            # Evolução mensal arrecadado x perda
+            # -----------------------------
+            st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+            st.markdown(
+                "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>monitoring</span> Evolução Mensal de Receita e Perdas</h4>",
+                unsafe_allow_html=True
+            )
+
+            ev_arrec = (
+                rec.groupby(['MES_ORDENACAO', 'MES_NOME'])['VALOR_CONSIDERADO']
+                .sum()
+                .reset_index(name='ARRECADADO')
+            ) if not rec.empty else pd.DataFrame(columns=['MES_ORDENACAO', 'MES_NOME', 'ARRECADADO'])
+
+            ev_perda = (
+                aus.groupby(['MES_ORDENACAO', 'MES_NOME'])['VALOR_PERDIDO']
+                .sum()
+                .reset_index(name='PERDIDO')
+            ) if not aus.empty else pd.DataFrame(columns=['MES_ORDENACAO', 'MES_NOME', 'PERDIDO'])
+
+            ev_mes = pd.merge(
+                ev_arrec,
+                ev_perda,
+                on=['MES_ORDENACAO', 'MES_NOME'],
+                how='outer'
+            ).fillna(0)
+
             if not ev_mes.empty:
-                text_arrecadado = [formatar_moeda_br(v) for v in ev_mes['ARRECADADO']]
-                text_perdido = [formatar_moeda_br(v) for v in ev_mes['PERDIDO']]
+                ev_mes = ev_mes.sort_values('MES_ORDENACAO')
+
+                text_arrecadado = ev_mes['ARRECADADO'].apply(formatar_moeda_br)
+                text_perdido = ev_mes['PERDIDO'].apply(formatar_moeda_br)
 
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
-                
-                fig.add_trace(go.Bar(
-                    x=ev_mes['MES_NOME'], 
-                    y=ev_mes['ARRECADADO'], 
-                    name="Faturado (R$)", 
-                    marker_color='#0086FF', 
-                    text=text_arrecadado,
-                    textposition='auto', 
-                    textfont=dict(size=11, color='#FFFFFF', weight='bold'),
-                    hovertemplate="%{x}<br>Faturado: %{text}<extra></extra>"
-                ), secondary_y=False)
-                
-                fig.add_trace(go.Scatter(
-                    x=ev_mes['MES_NOME'], 
-                    y=ev_mes['PERDIDO'], 
-                    name="Perda por No-Show (R$)", 
-                    mode='lines+markers+text', 
-                    line=dict(color='#FF3366', width=4), 
-                    marker=dict(size=8), 
-                    text=text_perdido,
-                    textposition='top center', 
-                    textfont=dict(size=11, color='#FF3366', weight='bold'),
-                    hovertemplate="%{x}<br>Perdido: %{text}<extra></extra>"
-                ), secondary_y=True)
-                
+
+                fig.add_trace(
+                    go.Bar(
+                        x=ev_mes['MES_NOME'],
+                        y=ev_mes['ARRECADADO'],
+                        name="Faturado (R$)",
+                        marker_color='#0086FF',
+                        text=text_arrecadado,
+                        textposition='auto',
+                        textfont=dict(size=11, color='#FFFFFF', weight='bold'),
+                        hovertemplate="%{x}<br>Faturado: %{text}<extra></extra>"
+                    ),
+                    secondary_y=False
+                )
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=ev_mes['MES_NOME'],
+                        y=ev_mes['PERDIDO'],
+                        name="Perda por No-Show (R$)",
+                        mode='lines+markers+text',
+                        line=dict(color='#FF3366', width=4),
+                        marker=dict(size=8),
+                        text=text_perdido,
+                        textposition='top center',
+                        textfont=dict(size=11, color='#FF3366', weight='bold'),
+                        hovertemplate="%{x}<br>Perdido: %{text}<extra></extra>"
+                    ),
+                    secondary_y=True
+                )
+
                 fig.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
                     margin=dict(t=30, b=10, l=0, r=0),
                     legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
                 )
-                
+
                 fig.update_yaxes(showgrid=False, secondary_y=False)
                 fig.update_yaxes(showgrid=False, secondary_y=True)
-                
+
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            else:
+                st.info("Sem dados suficientes para evolução mensal no período.")
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # -----------------------------
+            # FULL detalhado
+            # -----------------------------
+            st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+            st.markdown(
+                "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>inventory_2</span> Detalhamento Financeiro por Tipo</h4>",
+                unsafe_allow_html=True
+            )
+
+            df_detalhe = df_visao.copy()
+            df_detalhe = df_detalhe[
+                [
+                    'DATA AGENDADA',
+                    'AGENDA WMS',
+                    'FORNECEDOR/SELLER',
+                    'CATEGORIA',
+                    'LINHA',
+                    'TIPO_RECEITA',
+                    'STATUS',
+                    'VALOR_CONSIDERADO'
+                ]
+            ].copy()
+
+            df_detalhe = df_detalhe.sort_values('DATA AGENDADA', ascending=False)
+
+            st.dataframe(
+                df_detalhe,
+                column_config={
+                    'DATA AGENDADA': st.column_config.DateColumn("Data"),
+                    'AGENDA WMS': "Agenda",
+                    'FORNECEDOR/SELLER': "Fornecedor / Seller",
+                    'CATEGORIA': "Categoria",
+                    'LINHA': "Linha",
+                    'TIPO_RECEITA': "Tipo",
+                    'STATUS': "Status",
+                    'VALOR_CONSIDERADO': st.column_config.NumberColumn("Valor Considerado", format="R$ %.2f")
+                },
+                hide_index=True,
+                use_container_width=True,
+                height=420
+            )
+
             st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
