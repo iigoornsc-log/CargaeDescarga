@@ -1466,7 +1466,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             with col1: 
                 st.markdown(render_kpi("Arrecadação", formatar_moeda_br(total_r), "Faturamento Bruto", "#00C853"), unsafe_allow_html=True)
             with col2: 
-                st.markdown(render_kpi("Perdas (Ausentes)", formatar_moeda_br(total_p), "Custo de Oportunidade", "#EF4444"), unsafe_allow_html=True)
+                st.markdown(render_kpi("Perdas (No-Show)", formatar_moeda_br(total_p), "Custo de Oportunidade", "#EF4444"), unsafe_allow_html=True)
             with col3: 
                 st.markdown(render_kpi("Ticket / Carga", formatar_moeda_br(tkt_carga), "Média por Veículo", "#0086FF"), unsafe_allow_html=True)
             with col4: 
