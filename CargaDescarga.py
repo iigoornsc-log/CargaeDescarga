@@ -1631,85 +1631,91 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             col_g1, col_g2 = st.columns(2)
 
             with col_g1:
-                st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+    st.markdown(
+        "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>pie_chart</span> Participação da Receita</h4>",
+        unsafe_allow_html=True
+    )
+
+    if not mix_receita.empty and mix_receita['VALOR_CONSIDERADO'].sum() > 0:
+        mix_receita = mix_receita.copy()
+        total_mix = mix_receita['VALOR_CONSIDERADO'].sum()
+        mix_receita['PERCENTUAL'] = (mix_receita['VALOR_CONSIDERADO'] / total_mix * 100).round(1)
+        mix_receita['VALOR_FORMATADO'] = mix_receita['VALOR_CONSIDERADO'].apply(formatar_moeda_br)
+        mix_receita['LABEL_EXEC'] = mix_receita.apply(
+            lambda x: f"{x['PERCENTUAL']:.1f}% • {x['TIPO_RECEITA']} • {x['VALOR_FORMATADO']}",
+            axis=1
+        )
+
+        c_pizza, c_legenda = st.columns([1.4, 1])
+
+        with c_pizza:
+            fig_pizza = px.pie(
+                mix_receita,
+                values='VALOR_CONSIDERADO',
+                names='TIPO_RECEITA',
+                hole=0.55,
+                color='TIPO_RECEITA',
+                color_discrete_map={
+                    '1P': '#0086FF',
+                    'FULL': '#A855F7'
+                }
+            )
+
+            fig_pizza.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                customdata=mix_receita[['VALOR_FORMATADO', 'PERCENTUAL']],
+                hovertemplate="<b>%{label}</b><br>Participação: %{customdata[1]:.1f}%<br>Receita: %{customdata[0]}<extra></extra>"
+            )
+
+            fig_pizza.update_layout(
+                margin=dict(l=0, r=0, t=20, b=0),
+                height=360,
+                showlegend=False,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+
+            st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
+
+        with c_legenda:
+            st.markdown("<div style='padding-top: 18px;'></div>", unsafe_allow_html=True)
+
+            cores = {
+                '1P': '#0086FF',
+                'FULL': '#A855F7'
+            }
+
+            for _, row in mix_receita.sort_values('VALOR_CONSIDERADO', ascending=False).iterrows():
+                cor = cores.get(row['TIPO_RECEITA'], '#64748B')
                 st.markdown(
-                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>pie_chart</span> Participação da Receita</h4>",
+                    f"""
+                    <div style="
+                        border: 1px solid #E2E8F0;
+                        border-left: 6px solid {cor};
+                        border-radius: 12px;
+                        padding: 14px 14px 12px 14px;
+                        margin-bottom: 12px;
+                        background: #FFFFFF;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+                    ">
+                        <div style="font-size: 12px; color: #64748B; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;">
+                            {row['TIPO_RECEITA']}
+                        </div>
+                        <div style="font-size: 24px; font-weight: 900; color: #0F172A; line-height: 1.1; margin: 4px 0;">
+                            {row['PERCENTUAL']:.1f}%
+                        </div>
+                        <div style="font-size: 14px; color: #334155; font-weight: 700;">
+                            {row['VALOR_FORMATADO']}
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True
                 )
-
-                if not mix_receita.empty and mix_receita['VALOR_CONSIDERADO'].sum() > 0:
-                    fig_pizza = px.pie(
-                        mix_receita,
-                        values='VALOR_CONSIDERADO',
-                        names='TIPO_RECEITA',
-                        hole=0.55,
-                        color='TIPO_RECEITA',
-                        color_discrete_map={
-                            '1P': '#0086FF',
-                            'FULL': '#A855F7'
-                        }
-                    )
-                    fig_pizza.update_traces(
-                        textposition='inside',
-                        textinfo='percent+label'
-                    )
-                    fig_pizza.update_layout(
-                        margin=dict(l=0, r=0, t=20, b=0),
-                        height=360,
-                        legend=dict(
-                            orientation="h",
-                            yanchor="bottom",
-                            y=-0.15,
-                            xanchor="center",
-                            x=0.5
-                        ),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)'
-                    )
-                    st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
-                else:
-                    st.info("Sem receita suficiente para montar a participação entre 1P e FULL.")
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with col_g2:
-                st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
-                st.markdown(
-                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>bar_chart</span> Receita por Categoria</h4>",
-                    unsafe_allow_html=True
-                )
-
-                if not rec.empty:
-                    cat_rec = (
-                        rec.groupby('CATEGORIA', as_index=False)['VALOR_CONSIDERADO']
-                        .sum()
-                        .sort_values('VALOR_CONSIDERADO', ascending=True)
-                        .tail(10)
-                    )
-
-                    fig_cat = px.bar(
-                        cat_rec,
-                        x='VALOR_CONSIDERADO',
-                        y='CATEGORIA',
-                        orientation='h',
-                        text='VALOR_CONSIDERADO',
-                        color_discrete_sequence=['#0086FF']
-                    )
-                    fig_cat.update_traces(
-                        texttemplate='R$ %{text:,.0f}',
-                        textposition='outside'
-                    )
-                    fig_cat.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        xaxis_title=None,
-                        yaxis_title=None,
-                        margin=dict(l=0, r=0, t=0, b=0),
-                        height=360
-                    )
-                    st.plotly_chart(fig_cat, use_container_width=True, config={'displayModeBar': False})
-                else:
-                    st.info("Sem receita confirmada para exibir por categoria.")
-                st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.info("Sem receita suficiente para montar a participação entre 1P e FULL.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
             # --------------------------------------------
             # Evolução mensal
