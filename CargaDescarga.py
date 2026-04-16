@@ -1630,7 +1630,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             # --------------------------------------------
             col_g1, col_g2 = st.columns(2)
 
-            with col_g1:
+with col_g1:
     st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
     st.markdown(
         "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>pie_chart</span> Participação da Receita</h4>",
