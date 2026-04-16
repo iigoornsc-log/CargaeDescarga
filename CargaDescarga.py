@@ -675,7 +675,7 @@ if pagina_selecionada == "Visão Geral":
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
 elif pagina_selecionada == "Registro Absenteísmo":
-    render_hero('Lançamento de Ausências', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
+    render_hero('Lançamento de No-Shows', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
@@ -1501,7 +1501,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                     )
             
             with col_t2:
-                st.markdown("<h4 style='color: #334155;'><span class='icon-MagaluLOG'>warning</span> Top 10 Perdas por ausência</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #334155;'><span class='icon-MagaluLOG'>warning</span> Top 10 Perdas por No-Show</h4>", unsafe_allow_html=True)
                 if not aus.empty:
                     top_aus = aus.groupby('FORNECEDOR/SELLER').agg(
                         Faltas=('VALOR_PERDIDO', 'count'),
@@ -1552,7 +1552,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                 fig.add_trace(go.Scatter(
                     x=ev_mes['MES_NOME'], 
                     y=ev_mes['PERDIDO'], 
-                    name="Perda por Ausência (R$)", 
+                    name="Perda por No-Show (R$)", 
                     mode='lines+markers+text', 
                     line=dict(color='#FF3366', width=4), 
                     marker=dict(size=8), 
