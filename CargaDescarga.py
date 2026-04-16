@@ -734,7 +734,7 @@ if pagina_selecionada == "Visão Geral":
 # MÓDULO 1: ABSENTEÍSMO
 # ==========================================================
 elif pagina_selecionada == "Registro Absenteísmo":
-    render_hero('Lançamento de No-Shows', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
+    render_hero('Lançamento de Absenteísmos', 'Controle diário da presença da equipe com busca rápida, status padronizado e gravação direta na base.', 'Módulo operacional')
     
     try:
         df_equipe = carregar_equipe()
@@ -1591,7 +1591,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                 )
             with col2:
                 st.markdown(
-                    render_kpi("Perda por Ausência", formatar_moeda_br(total_p), "Estimativa financeira das ausências", "#FF3366"),
+                    render_kpi("Perda por No-show", formatar_moeda_br(total_p), "Estimativa financeira das ausências", "#FF3366"),
                     unsafe_allow_html=True
                 )
             with col3:
