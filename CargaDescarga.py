@@ -2000,25 +2000,35 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
                 # -----------------------------
-                # Padronização e detecção de colunas
+                # Padronização e definição fixa das colunas
                 # -----------------------------
-                colunas_upper = {c: str(c).upper().strip() for c in df_fin.columns}
-                df_fin = df_fin.rename(columns=colunas_upper)
+                df_fin = df_fin.copy()
+                df_fin.columns = [str(c).upper().strip() for c in df_fin.columns]
 
-                col_data = next((c for c in df_fin.columns if 'DATA' in c), None)
-                col_agenda = next((c for c in df_fin.columns if 'AGENDA' in c), None)
-                col_tempo = next((c for c in df_fin.columns if 'TEMPO' in c), None)
-                col_just = next((c for c in df_fin.columns if 'JUSTIFICATIVA' in c), None)
-                col_cat = next((c for c in df_fin.columns if 'CATEGORIA' in c or 'LINHA' in c), None)
-                col_aux = next((c for c in df_fin.columns if 'NOME' in c or 'PESSOA' in c), None)
-                col_pecas = next((c for c in df_fin.columns if 'PEÇA' in c or 'PECAS' in c), None)
-                col_m3 = next((c for c in df_fin.columns if 'M3' in c or 'M³' in c), None)
+                col_data = 'DATA'
+                col_doca = 'DOCA'
+                col_agenda = 'AGENDA'
+                col_conferente = 'CONFERENTE'
+                col_auxiliares = 'AUXILIARES'
+                col_aux = 'NOME'
+                col_inicio = 'INICIO'
+                col_fim = 'FIM'
+                col_tempo = 'TEMPO'
+                col_just = 'JUSTIFICATIVA ATRASO'
+                col_cat = 'CATEGORIA'
+                col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
+                col_metros = 'METROS' if 'METROS' in df_fin.columns else None
+                col_m3 = 'M³' if 'M³' in df_fin.columns else 'M3'
 
-                colunas_obrigatorias = [col_data, col_agenda, col_tempo, col_just, col_cat, col_aux]
-                if any(c is None for c in colunas_obrigatorias):
+                colunas_obrigatorias = [
+                    col_data, col_agenda, col_tempo, col_just, col_cat,
+                    col_aux, col_pecas, col_m3
+                ]
+                colunas_faltantes = [c for c in colunas_obrigatorias if c not in df_fin.columns]
+
+                if colunas_faltantes:
                     st.error(
-                        "Não foi possível identificar automaticamente todas as colunas obrigatórias da base "
-                        "(DATA, AGENDA, TEMPO, JUSTIFICATIVA, CATEGORIA e NOME/PESSOA)."
+                        f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}"
                     )
                 else:
                     # -----------------------------
@@ -2026,8 +2036,11 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     # -----------------------------
                     def tempo_para_minutos(t_str):
                         try:
-                            h, m = map(int, str(t_str).split(':'))
-                            return h * 60 + m
+                            partes = str(t_str).strip().split(':')
+                            if len(partes) == 2:
+                                h, m = map(int, partes)
+                                return h * 60 + m
+                            return 0
                         except:
                             return 0
 
@@ -2047,13 +2060,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         if texto == "" or texto.upper() in ["NAN", "NONE", "-"]:
                             return 0.0
 
-                        try:
-                            if hasattr(valor, "item"):
-                                valor = valor.item()
-                                return float(valor)
-                        except:
-                            pass
-
                         texto = texto.replace("R$", "").replace(" ", "")
 
                         if "." in texto and "," in texto:
@@ -2069,33 +2075,27 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     # -----------------------------
                     # Preparação da base
                     # -----------------------------
-                    df_fin = df_fin.copy()
                     df_fin[col_data] = pd.to_datetime(df_fin[col_data], dayfirst=True, errors='coerce')
-                    df_fin = df_fin.dropna(subset=[col_data])
+                    df_fin = df_fin.dropna(subset=[col_data]).copy()
 
                     df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
                     df_fin = df_fin[df_fin['MINUTOS'] > 0].copy()
                     df_fin['HORAS'] = df_fin['MINUTOS'] / 60
 
-                    if col_pecas:
-                        df_fin[col_pecas] = pd.to_numeric(df_fin[col_pecas], errors='coerce').fillna(0)
-                    else:
-                        df_fin['PECAS_FALLBACK'] = 0
-                        col_pecas = 'PECAS_FALLBACK'
+                    df_fin[col_pecas] = df_fin[col_pecas].apply(normalizar_numero_br)
+                    df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
 
-                    if col_m3:
-                        df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
-                    else:
-                        df_fin['M3_FALLBACK'] = 0.0
-                        col_m3 = 'M3_FALLBACK'
-
+                    # -----------------------------
                     # Filtros principais
+                    # -----------------------------
                     c_filtro1, c_filtro2 = st.columns(2)
+
                     with c_filtro1:
                         data_ini = st.date_input(
                             "Data inicial",
                             value=df_fin[col_data].min().date()
                         )
+
                     with c_filtro2:
                         data_fim = st.date_input(
                             "Data final",
@@ -2113,8 +2113,37 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     else:
                         # -----------------------------
                         # Base única por agenda (visão macro)
+                        # 1 agenda = 1 carga
                         # -----------------------------
-                        df_agendas_unicas = df_fin.sort_values(col_data).drop_duplicates(subset=[col_agenda]).copy()
+                        agg_agenda = {
+                            col_data: 'first',
+                            col_cat: 'first',
+                            col_just: 'first',
+                            col_pecas: 'max',
+                            col_m3: 'max',
+                            'MINUTOS': 'max',
+                            'HORAS': 'max'
+                        }
+
+                        if col_doca in df_fin.columns:
+                            agg_agenda[col_doca] = 'first'
+                        if col_conferente in df_fin.columns:
+                            agg_agenda[col_conferente] = 'first'
+                        if col_auxiliares in df_fin.columns:
+                            agg_agenda[col_auxiliares] = 'first'
+                        if col_inicio in df_fin.columns:
+                            agg_agenda[col_inicio] = 'first'
+                        if col_fim in df_fin.columns:
+                            agg_agenda[col_fim] = 'first'
+                        if col_metros and col_metros in df_fin.columns:
+                            agg_agenda[col_metros] = 'max'
+
+                        df_agendas_unicas = (
+                            df_fin.sort_values(col_data)
+                            .groupby(col_agenda, as_index=False)
+                            .agg(agg_agenda)
+                            .copy()
+                        )
 
                         df_agendas_unicas['PECAS_HORA_TOTAL'] = (
                             df_agendas_unicas[col_pecas] / df_agendas_unicas['HORAS'].replace(0, pd.NA)
@@ -2163,6 +2192,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                         with aba_macro:
+                            # KPIs
                             c1, c2, c3, c4, c5 = st.columns(5)
 
                             with c1:
@@ -2211,6 +2241,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     unsafe_allow_html=True
                                 )
 
+                            # Gráficos principais
                             col_g1, col_g2 = st.columns(2)
 
                             with col_g1:
@@ -2287,6 +2318,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     st.info("Nenhum atraso registrado no período.")
                                 st.markdown('</div>', unsafe_allow_html=True)
 
+                            # Gráficos extras
                             col_g3, col_g4 = st.columns(2)
 
                             with col_g3:
@@ -2371,7 +2403,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                             df_operadores = df_fin.copy()
                             if cat_sel != "Todas as Categorias":
-                                df_operadores = df_operadores[df_operadores[col_cat] == cat_sel]
+                                df_operadores = df_operadores[df_operadores[col_cat] == cat_sel].copy()
 
                             if not df_operadores.empty:
                                 df_rank = (
