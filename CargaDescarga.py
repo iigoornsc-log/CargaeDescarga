@@ -2165,7 +2165,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
-                                st.markdown('<div class="magalu-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalu">schedule</span> Tempo Médio por Categoria</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio por Categoria</h4>', unsafe_allow_html=True)
                                 df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
                                 df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
                                 fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
@@ -2175,7 +2175,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g2:
-                                st.markdown('<div class="magalu-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalu">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
@@ -2199,7 +2199,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             df_prod_cat['MEDIA_M3_HORA'] = (df_prod_cat['SOMA_M3'] / df_prod_cat['SOMA_HORAS']).fillna(0)
 
                             with col_g3:
-                                st.markdown('<div class="magalu-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalu">inventory_2</span> Média de Peças/Hora por Categoria</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">inventory_2</span> Média de Peças/Hora por Categoria</h4>', unsafe_allow_html=True)
                                 df_pecas_cat = df_prod_cat.sort_values('MEDIA_PECAS_HORA')
                                 fig3 = px.bar(df_pecas_cat, x='MEDIA_PECAS_HORA', y=col_cat, orientation='h', text='MEDIA_PECAS_HORA', color_discrete_sequence=['#0EA5E9'])
                                 fig3.update_traces(texttemplate='%{text:.1f}', textposition='outside')
@@ -2208,7 +2208,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g4:
-                                st.markdown('<div class="magalu-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalu">deployed_code</span> Média de m³/Hora por Categoria</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">deployed_code</span> Média de m³/Hora por Categoria</h4>', unsafe_allow_html=True)
                                 df_m3_cat = df_prod_cat.sort_values('MEDIA_M3_HORA')
                                 fig4 = px.bar(df_m3_cat, x='MEDIA_M3_HORA', y=col_cat, orientation='h', text='MEDIA_M3_HORA', color_discrete_sequence=['#14B8A6'])
                                 fig4.update_traces(texttemplate='%{text:.2f}', textposition='outside')
@@ -2217,7 +2217,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                         with aba_equipe:
-                            st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-magalu'>emoji_events</span> Performance Individual por Categoria</h4>", unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #0086FF; margin-bottom: 20px;'><span class='icon-MAGALOG'>emoji_events</span> Performance Individual por Categoria</h4>", unsafe_allow_html=True)
 
                             categorias_lista = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
                             cat_sel = st.selectbox("Selecione a Categoria para comparar a equipe:", ["Todas as Categorias"] + categorias_lista)
@@ -2256,8 +2256,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 c_rank1, c_rank2 = st.columns([5, 5])
 
                                 with c_rank1:
-                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                                    st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>leaderboard</span> Ranking de Velocidade (Peças/Hora)</h5>", unsafe_allow_html=True)
+                                    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                                    st.markdown(f"<h5 style='color:#334155;'><span class='icon-MAGALOG'>leaderboard</span> Ranking de Velocidade (Peças/Hora)</h5>", unsafe_allow_html=True)
 
                                     fig_rank = px.bar(
                                         df_rank, x='Media_Pecas_Hora', y=col_aux, orientation='h', text='Media_Pecas_Hora',
@@ -2270,8 +2270,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     st.markdown('</div>', unsafe_allow_html=True)
 
                                 with c_rank2:
-                                    st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
-                                    st.markdown(f"<h5 style='color:#334155;'><span class='icon-magalu'>grid_on</span> Matriz de Participação</h5>", unsafe_allow_html=True)
+                                    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                                    st.markdown(f"<h5 style='color:#334155;'><span class='icon-MAGALOG'>grid_on</span> Matriz de Participação</h5>", unsafe_allow_html=True)
                                     df_rank = df_rank.sort_values('Pecas_Descarregadas', ascending=False)
                                     st.dataframe(
                                         df_rank[[col_aux, 'Cargas_Participadas', 'Tempo_Medio', 'Pecas_Descarregadas', 'M3_Descarregados', 'Media_Pecas_Hora', 'Media_M3_Hora']],
