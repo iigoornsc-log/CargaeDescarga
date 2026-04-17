@@ -370,11 +370,31 @@ def gravar_absenteismo(dados_para_gravar):
 def gravar_conclusao_doca(linhas_conclusao, linha_encerramento_log):
     client = conectar_google()
     sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+
+    def normalizar_valor(v):
+        if pd.isna(v):
+            return ""
+        if isinstance(v, (pd.Timestamp, datetime.datetime)):
+            return v.strftime("%d/%m/%Y %H:%M:%S")
+        if isinstance(v, (datetime.date,)):
+            return v.strftime("%d/%m/%Y")
+        if hasattr(v, "item"):  # numpy.int64, numpy.float64, etc.
+            v = v.item()
+        return v
+
+    def normalizar_linha(linha):
+        return [normalizar_valor(x) for x in linha]
+
     try:
+        linhas_conclusao_ok = [normalizar_linha(linha) for linha in linhas_conclusao]
+        linha_encerramento_ok = normalizar_linha(linha_encerramento_log)
+
         ws_final = sh.worksheet("DOCAS_FINALIZADAS")
-        ws_final.append_rows(linhas_conclusao) 
+        ws_final.append_rows(linhas_conclusao_ok)
+
         ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
-        ws_log.append_rows([linha_encerramento_log])
+        ws_log.append_rows([linha_encerramento_ok])
+
         return True
     except Exception as e:
         st.error(f"Erro ao finalizar doca: {e}")
