@@ -2085,6 +2085,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     df_fin[col_pecas] = df_fin[col_pecas].apply(normalizar_numero_br)
                     df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
 
+                    if col_metros and col_metros in df_fin.columns:
+                        df_fin[col_metros] = df_fin[col_metros].apply(normalizar_numero_br)
+
                     # -----------------------------
                     # Filtros principais
                     # -----------------------------
@@ -2112,17 +2115,17 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.warning("Não há dados no período selecionado.")
                     else:
                         # -----------------------------
-                        # Base única por agenda (visão macro)
+                        # BASE CONSOLIDADA POR AGENDA
                         # 1 agenda = 1 carga
                         # -----------------------------
                         agg_agenda = {
                             col_data: 'first',
                             col_cat: 'first',
                             col_just: 'first',
-                            col_pecas: 'max',
-                            col_m3: 'max',
-                            'MINUTOS': 'max',
-                            'HORAS': 'max'
+                            col_pecas: 'first',
+                            col_m3: 'first',
+                            'MINUTOS': 'first',
+                            'HORAS': 'first'
                         }
 
                         if col_doca in df_fin.columns:
@@ -2136,11 +2139,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         if col_fim in df_fin.columns:
                             agg_agenda[col_fim] = 'first'
                         if col_metros and col_metros in df_fin.columns:
-                            agg_agenda[col_metros] = 'max'
+                            agg_agenda[col_metros] = 'first'
 
                         df_agendas_unicas = (
-                            df_fin.sort_values(col_data)
-                            .groupby(col_agenda, as_index=False)
+                            df_fin.groupby(col_agenda, as_index=False)
                             .agg(agg_agenda)
                             .copy()
                         )
@@ -2167,7 +2169,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         media_m3_hora = df_agendas_unicas['M3_HORA_TOTAL'].mean()
 
                         # -----------------------------
-                        # Rateio por auxiliar (visão equipe)
+                        # RATEIO POR AUXILIAR
+                        # visão equipe
                         # -----------------------------
                         df_fin['QTD_AUXILIARES_AGENDA'] = (
                             df_fin.groupby(col_agenda)[col_aux]
@@ -2192,7 +2195,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                         with aba_macro:
-                            # KPIs
                             c1, c2, c3, c4, c5 = st.columns(5)
 
                             with c1:
@@ -2241,7 +2243,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     unsafe_allow_html=True
                                 )
 
-                            # Gráficos principais
                             col_g1, col_g2 = st.columns(2)
 
                             with col_g1:
@@ -2318,7 +2319,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     st.info("Nenhum atraso registrado no período.")
                                 st.markdown('</div>', unsafe_allow_html=True)
 
-                            # Gráficos extras
                             col_g3, col_g4 = st.columns(2)
 
                             with col_g3:
