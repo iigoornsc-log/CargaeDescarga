@@ -2000,31 +2000,41 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
                 # -----------------------------
-                # Padronização e definição fixa das colunas
+                # Padronização das colunas
                 # -----------------------------
                 df_fin = df_fin.copy()
                 df_fin.columns = [str(c).upper().strip() for c in df_fin.columns]
 
+                # -----------------------------
+                # COLUNAS FIXAS DA BASE
+                # -----------------------------
                 col_data = 'DATA'
-                col_doca = 'DOCA'
                 col_agenda = 'AGENDA'
-                col_conferente = 'CONFERENTE'
-                col_auxiliares = 'AUXILIARES'
-                col_aux = 'NOME'
-                col_inicio = 'INICIO'
-                col_fim = 'FIM'
                 col_tempo = 'TEMPO'
                 col_just = 'JUSTIFICATIVA ATRASO'
                 col_cat = 'CATEGORIA'
+                col_aux = 'NOME'
                 col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
-                col_metros = 'METROS' if 'METROS' in df_fin.columns else None
-                col_m3 = 'M³' if 'M³' in df_fin.columns else 'M3'
+
+                # TRAVA DEFINITIVA DO M³:
+                # só aceita M³ ou M3
+                # NÃO usa METROS em nenhum cálculo de m³/h
+                if 'M³' in df_fin.columns:
+                    col_m3 = 'M³'
+                elif 'M3' in df_fin.columns:
+                    col_m3 = 'M3'
+                else:
+                    col_m3 = None
 
                 colunas_obrigatorias = [
-                    col_data, col_agenda, col_tempo, col_just, col_cat,
-                    col_aux, col_pecas, col_m3
+                    col_data, col_agenda, col_tempo, col_just,
+                    col_cat, col_aux, col_pecas
                 ]
+
                 colunas_faltantes = [c for c in colunas_obrigatorias if c not in df_fin.columns]
+
+                if col_m3 is None:
+                    colunas_faltantes.append('M³')
 
                 if colunas_faltantes:
                     st.error(
@@ -2085,9 +2095,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     df_fin[col_pecas] = df_fin[col_pecas].apply(normalizar_numero_br)
                     df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
 
-                    if col_metros and col_metros in df_fin.columns:
-                        df_fin[col_metros] = df_fin[col_metros].apply(normalizar_numero_br)
-
                     # -----------------------------
                     # Filtros principais
                     # -----------------------------
@@ -2115,38 +2122,26 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.warning("Não há dados no período selecionado.")
                     else:
                         # -----------------------------
-                        # BASE CONSOLIDADA POR AGENDA
+                        # BASE MACRO CONSOLIDADA
                         # 1 agenda = 1 carga
                         # -----------------------------
-                        agg_agenda = {
-                            col_data: 'first',
-                            col_cat: 'first',
-                            col_just: 'first',
-                            col_pecas: 'first',
-                            col_m3: 'first',
-                            'MINUTOS': 'first',
-                            'HORAS': 'first'
-                        }
-
-                        if col_doca in df_fin.columns:
-                            agg_agenda[col_doca] = 'first'
-                        if col_conferente in df_fin.columns:
-                            agg_agenda[col_conferente] = 'first'
-                        if col_auxiliares in df_fin.columns:
-                            agg_agenda[col_auxiliares] = 'first'
-                        if col_inicio in df_fin.columns:
-                            agg_agenda[col_inicio] = 'first'
-                        if col_fim in df_fin.columns:
-                            agg_agenda[col_fim] = 'first'
-                        if col_metros and col_metros in df_fin.columns:
-                            agg_agenda[col_metros] = 'first'
-
                         df_agendas_unicas = (
                             df_fin.groupby(col_agenda, as_index=False)
-                            .agg(agg_agenda)
+                            .agg({
+                                col_data: 'first',
+                                col_cat: 'first',
+                                col_just: 'first',
+                                col_pecas: 'first',
+                                col_m3: 'first',
+                                'MINUTOS': 'first',
+                                'HORAS': 'first'
+                            })
                             .copy()
                         )
 
+                        # -----------------------------
+                        # Cálculos macro
+                        # -----------------------------
                         df_agendas_unicas['PECAS_HORA_TOTAL'] = (
                             df_agendas_unicas[col_pecas] / df_agendas_unicas['HORAS'].replace(0, pd.NA)
                         ).fillna(0)
