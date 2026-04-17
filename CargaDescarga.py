@@ -2038,6 +2038,34 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         m = int(mins % 60)
                         return f"{h:02d}h{m:02d}m"
 
+                    def normalizar_numero_br(valor):
+                        if pd.isna(valor):
+                            return 0.0
+
+                        texto = str(valor).strip()
+
+                        if texto == "" or texto.upper() in ["NAN", "NONE", "-"]:
+                            return 0.0
+
+                        try:
+                            if hasattr(valor, "item"):
+                                valor = valor.item()
+                                return float(valor)
+                        except:
+                            pass
+
+                        texto = texto.replace("R$", "").replace(" ", "")
+
+                        if "." in texto and "," in texto:
+                            texto = texto.replace(".", "").replace(",", ".")
+                        elif "," in texto:
+                            texto = texto.replace(",", ".")
+
+                        try:
+                            return float(texto)
+                        except:
+                            return 0.0
+
                     # -----------------------------
                     # Preparação da base
                     # -----------------------------
@@ -2052,13 +2080,13 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     if col_pecas:
                         df_fin[col_pecas] = pd.to_numeric(df_fin[col_pecas], errors='coerce').fillna(0)
                     else:
-                        df_fin['PEÇAS_FALLBACK'] = 0
-                        col_pecas = 'PEÇAS_FALLBACK'
+                        df_fin['PECAS_FALLBACK'] = 0
+                        col_pecas = 'PECAS_FALLBACK'
 
                     if col_m3:
-                        df_fin[col_m3] = pd.to_numeric(df_fin[col_m3], errors='coerce').fillna(0)
+                        df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
                     else:
-                        df_fin['M3_FALLBACK'] = 0
+                        df_fin['M3_FALLBACK'] = 0.0
                         col_m3 = 'M3_FALLBACK'
 
                     # Filtros principais
@@ -2112,12 +2140,19 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         # -----------------------------
                         # Rateio por auxiliar (visão equipe)
                         # -----------------------------
-                        df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
+                        df_fin['QTD_AUXILIARES_AGENDA'] = (
+                            df_fin.groupby(col_agenda)[col_aux]
+                            .transform('nunique')
+                            .replace(0, 1)
+                        )
+
                         df_fin['PECAS_PART'] = df_fin[col_pecas] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin[col_m3] / df_fin['QTD_AUXILIARES_AGENDA']
+
                         df_fin['PECAS_HORA_PART'] = (
                             df_fin['PECAS_PART'] / df_fin['HORAS'].replace(0, pd.NA)
                         ).fillna(0)
+
                         df_fin['M3_HORA_PART'] = (
                             df_fin['M3_PART'] / df_fin['HORAS'].replace(0, pd.NA)
                         ).fillna(0)
@@ -2128,8 +2163,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Desempenho Individual"])
 
                         with aba_macro:
-                            # KPIs
                             c1, c2, c3, c4, c5 = st.columns(5)
+
                             with c1:
                                 st.markdown(
                                     f'<div class="kpi-card" style="border-top: 4px solid #0086FF;">'
@@ -2138,6 +2173,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     f'</div>',
                                     unsafe_allow_html=True
                                 )
+
                             with c2:
                                 st.markdown(
                                     f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};">'
@@ -2147,6 +2183,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     f'</div>',
                                     unsafe_allow_html=True
                                 )
+
                             with c3:
                                 st.markdown(
                                     f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;">'
@@ -2155,6 +2192,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     f'</div>',
                                     unsafe_allow_html=True
                                 )
+
                             with c4:
                                 st.markdown(
                                     f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;">'
@@ -2163,6 +2201,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     f'</div>',
                                     unsafe_allow_html=True
                                 )
+
                             with c5:
                                 st.markdown(
                                     f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;">'
@@ -2172,7 +2211,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     unsafe_allow_html=True
                                 )
 
-                            # Gráficos principais
                             col_g1, col_g2 = st.columns(2)
 
                             with col_g1:
@@ -2249,7 +2287,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     st.info("Nenhum atraso registrado no período.")
                                 st.markdown('</div>', unsafe_allow_html=True)
 
-                            # Gráficos extras de produção por hora
                             col_g3, col_g4 = st.columns(2)
 
                             with col_g3:
@@ -2408,6 +2445,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                         "<h5 style='color:#334155;'><span class='icon-MAGALOG'>grid_on</span> Matriz de Participação</h5>",
                                         unsafe_allow_html=True
                                     )
+
                                     st.dataframe(
                                         df_rank[
                                             [
