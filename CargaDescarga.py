@@ -1150,10 +1150,11 @@ elif pagina_selecionada == "Gestão de Docas":
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Criação das TRÊS abas
-    aba1, aba2, aba3 = st.tabs([
+    aba1, aba2, aba3, aba4 = st.tabs([
         "Visão das Docas (EM PROCESSO)", 
         "Fila de Docas (PENDENTE)", 
-        "Montar Equipes"
+        "Montar Equipes",
+        "Docas Finalizadas"
     ])
 
     # --- ABA 1: EM PROCESSO (Ativas) ---
@@ -1485,6 +1486,410 @@ elif pagina_selecionada == "Gestão de Docas":
                                 carregar_log_produtividade.clear()
                                 st.rerun()
         except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
+
+with aba4:
+    st.markdown('<div class="MAGALOG-ribbon">Performance das Docas Finalizadas</div>', unsafe_allow_html=True)
+
+    df_finalizadas = carregar_docas_finalizadas()
+
+    def encontrar_coluna(df, nomes_possiveis):
+        cols_upper = {str(c).strip().upper(): c for c in df.columns}
+        for nome in nomes_possiveis:
+            if nome.upper() in cols_upper:
+                return cols_upper[nome.upper()]
+        for c in df.columns:
+            c_up = str(c).strip().upper()
+            for nome in nomes_possiveis:
+                if nome.upper() in c_up:
+                    return c
+        return None
+
+    def parse_datahora(valor):
+        if pd.isna(valor) or str(valor).strip() == "":
+            return pd.NaT
+        try:
+            return pd.to_datetime(valor, format="%d/%m/%Y %H:%M:%S", errors="coerce")
+        except:
+            return pd.to_datetime(valor, dayfirst=True, errors="coerce")
+
+    def parse_numero(valor):
+        if pd.isna(valor) or str(valor).strip() == "":
+            return 0.0
+        try:
+            if hasattr(valor, "item"):
+                valor = valor.item()
+            texto = str(valor).strip().replace(".", "").replace(",", ".")
+            return float(texto)
+        except:
+            return 0.0
+
+    def formatar_minutos(mins):
+        if pd.isna(mins):
+            return "-"
+        mins = int(round(float(mins)))
+        sinal = "-" if mins < 0 else ""
+        mins_abs = abs(mins)
+        h = mins_abs // 60
+        m = mins_abs % 60
+        if h > 0:
+            return f"{sinal}{h}h {m}min"
+        return f"{sinal}{m}min"
+
+    def classificar_status(desvio_min):
+        if pd.isna(desvio_min):
+            return "SEM META"
+        if desvio_min <= -1:
+            return "ADIANTADA"
+        elif desvio_min <= 5:
+            return "NO PRAZO"
+        return "ATRASADA"
+
+    def cor_status(status):
+        mapa = {
+            "ADIANTADA": ("#DCFCE7", "#166534"),
+            "NO PRAZO": ("#DBEAFE", "#1D4ED8"),
+            "ATRASADA": ("#FEE2E2", "#B91C1C"),
+            "SEM META": ("#F1F5F9", "#475569"),
+        }
+        return mapa.get(status, ("#F1F5F9", "#475569"))
+
+    if df_finalizadas.empty:
+        st.info("Nenhuma doca finalizada encontrada na base.")
+    else:
+        df_finalizadas = df_finalizadas.copy()
+        df_finalizadas.columns = [str(c).strip() for c in df_finalizadas.columns]
+
+        col_inicio = encontrar_coluna(df_finalizadas, ["INICIO", "DATA_INICIO", "INÍCIO"])
+        col_fim = encontrar_coluna(df_finalizadas, ["FIM", "DATA_FIM", "FINALIZADO_EM", "DATA_FINAL"])
+        col_doca = encontrar_coluna(df_finalizadas, ["DOCA"])
+        col_agenda = encontrar_coluna(df_finalizadas, ["AGENDA", "AGENDA WMS"])
+        col_conferente = encontrar_coluna(df_finalizadas, ["CONFERENTE", "LIDER", "LÍDER"])
+        col_categoria = encontrar_coluna(df_finalizadas, ["CATEGORIA", "LINHA"])
+        col_meta = encontrar_coluna(df_finalizadas, ["META", "META_MIN", "META MIN", "TEMPO_META"])
+        col_justificativa = encontrar_coluna(df_finalizadas, ["JUSTIFICATIVA", "JUSTIFICATIVA ATRASO", "MOTIVO"])
+        col_pecas = encontrar_coluna(df_finalizadas, ["PEÇAS", "PECAS", "QTD PEÇAS", "QUANTIDADE PEÇAS"])
+        col_m3 = encontrar_coluna(df_finalizadas, ["M3", "M³", "VOLUME", "CUBAGEM"])
+        col_nome = encontrar_coluna(df_finalizadas, ["NOME", "OPERADOR", "AUXILIAR", "COLABORADOR"])
+
+        # blindagem mínima
+        if not col_doca:
+            st.warning("Não encontrei a coluna de DOCA na aba DOCAS_FINALIZADAS.")
+        else:
+            # datas
+            if col_inicio:
+                df_finalizadas["INICIO_DT"] = df_finalizadas[col_inicio].apply(parse_datahora)
+            else:
+                df_finalizadas["INICIO_DT"] = pd.NaT
+
+            if col_fim:
+                df_finalizadas["FIM_DT"] = df_finalizadas[col_fim].apply(parse_datahora)
+            else:
+                # fallback: se não existir FIM, tenta usar a própria coluna de início como referência de fechamento
+                df_finalizadas["FIM_DT"] = df_finalizadas["INICIO_DT"]
+
+            # números
+            if col_meta:
+                df_finalizadas["META_MINUTOS"] = df_finalizadas[col_meta].apply(parse_numero)
+            else:
+                df_finalizadas["META_MINUTOS"] = 0
+
+            if col_pecas:
+                df_finalizadas["PECAS_NUM"] = df_finalizadas[col_pecas].apply(parse_numero)
+            else:
+                df_finalizadas["PECAS_NUM"] = 0
+
+            if col_m3:
+                df_finalizadas["M3_NUM"] = df_finalizadas[col_m3].apply(parse_numero)
+            else:
+                df_finalizadas["M3_NUM"] = 0
+
+            # normalização de texto
+            df_finalizadas["DOCA_TXT"] = df_finalizadas[col_doca].astype(str).str.strip()
+
+            if col_agenda:
+                df_finalizadas["AGENDA_TXT"] = df_finalizadas[col_agenda].astype(str).str.strip()
+            else:
+                df_finalizadas["AGENDA_TXT"] = "-"
+
+            if col_conferente:
+                df_finalizadas["CONFERENTE_TXT"] = df_finalizadas[col_conferente].astype(str).str.strip()
+            else:
+                df_finalizadas["CONFERENTE_TXT"] = "-"
+
+            if col_categoria:
+                df_finalizadas["CATEGORIA_TXT"] = df_finalizadas[col_categoria].astype(str).str.strip()
+            else:
+                df_finalizadas["CATEGORIA_TXT"] = "NÃO INFORMADA"
+
+            if col_justificativa:
+                df_finalizadas["JUSTIFICATIVA_TXT"] = df_finalizadas[col_justificativa].astype(str).str.strip()
+            else:
+                df_finalizadas["JUSTIFICATIVA_TXT"] = ""
+
+            if col_nome:
+                df_finalizadas["OPERADOR_TXT"] = df_finalizadas[col_nome].astype(str).str.strip()
+            else:
+                df_finalizadas["OPERADOR_TXT"] = ""
+
+            # tempo real
+            df_finalizadas["TEMPO_REAL_MIN"] = (
+                (df_finalizadas["FIM_DT"] - df_finalizadas["INICIO_DT"]).dt.total_seconds() / 60
+            )
+
+            # se não houver data fim válida, deixa 0 para não quebrar
+            df_finalizadas["TEMPO_REAL_MIN"] = df_finalizadas["TEMPO_REAL_MIN"].fillna(0)
+
+            # agrupamento por operação finalizada
+            chaves_group = ["DOCA_TXT", "AGENDA_TXT", "CONFERENTE_TXT", "CATEGORIA_TXT", "JUSTIFICATIVA_TXT"]
+
+            agg_dict = {
+                "INICIO_DT": "min",
+                "FIM_DT": "max",
+                "TEMPO_REAL_MIN": "max",
+                "META_MINUTOS": "max",
+                "PECAS_NUM": "max",
+                "M3_NUM": "max",
+            }
+
+            if "OPERADOR_TXT" in df_finalizadas.columns:
+                agg_dict["OPERADOR_TXT"] = lambda x: ", ".join(sorted({str(v).strip() for v in x if str(v).strip() not in ["", "nan", "None"]}))
+
+            df_perf = df_finalizadas.groupby(chaves_group, dropna=False).agg(agg_dict).reset_index()
+
+            df_perf["DESVIO_MIN"] = df_perf["TEMPO_REAL_MIN"] - df_perf["META_MINUTOS"]
+            df_perf["STATUS_FINAL"] = df_perf["DESVIO_MIN"].apply(classificar_status)
+
+            df_perf["TEMPO_REAL_FMT"] = df_perf["TEMPO_REAL_MIN"].apply(formatar_minutos)
+            df_perf["META_FMT"] = df_perf["META_MINUTOS"].apply(formatar_minutos)
+            df_perf["DESVIO_FMT"] = df_perf["DESVIO_MIN"].apply(
+                lambda x: f"{formatar_minutos(abs(x))} antes" if pd.notna(x) and x < 0
+                else (f"{formatar_minutos(x)} de atraso" if pd.notna(x) and x > 5
+                else "Dentro da meta")
+            )
+
+            df_perf["DATA_FINAL"] = df_perf["FIM_DT"].dt.strftime("%d/%m/%Y")
+            df_perf["HORA_FINAL"] = df_perf["FIM_DT"].dt.strftime("%H:%M")
+
+            # -----------------------------------------
+            # FILTROS
+            # -----------------------------------------
+            with st.container(border=True):
+                f1, f2, f3, f4 = st.columns(4)
+
+                with f1:
+                    opcoes_status = ["Todos"] + sorted(df_perf["STATUS_FINAL"].dropna().unique().tolist())
+                    filtro_status_final = st.selectbox("Status da Finalização", opcoes_status, key="flt_status_final")
+
+                with f2:
+                    opcoes_categoria = ["Todas"] + sorted(df_perf["CATEGORIA_TXT"].dropna().unique().tolist())
+                    filtro_categoria_final = st.selectbox("Categoria", opcoes_categoria, key="flt_cat_final")
+
+                with f3:
+                    opcoes_conf = ["Todos"] + sorted(df_perf["CONFERENTE_TXT"].dropna().unique().tolist())
+                    filtro_conferente_final = st.selectbox("Conferente", opcoes_conf, key="flt_conf_final")
+
+                with f4:
+                    busca_final = st.text_input("Buscar Doca / Agenda", placeholder="Ex: 61 ou 51901", key="busca_finalizadas")
+
+            df_filtrado_final = df_perf.copy()
+
+            if filtro_status_final != "Todos":
+                df_filtrado_final = df_filtrado_final[df_filtrado_final["STATUS_FINAL"] == filtro_status_final]
+
+            if filtro_categoria_final != "Todas":
+                df_filtrado_final = df_filtrado_final[df_filtrado_final["CATEGORIA_TXT"] == filtro_categoria_final]
+
+            if filtro_conferente_final != "Todos":
+                df_filtrado_final = df_filtrado_final[df_filtrado_final["CONFERENTE_TXT"] == filtro_conferente_final]
+
+            if busca_final:
+                busca_final_up = busca_final.strip().upper()
+                df_filtrado_final = df_filtrado_final[
+                    df_filtrado_final["DOCA_TXT"].astype(str).str.upper().str.contains(busca_final_up, na=False) |
+                    df_filtrado_final["AGENDA_TXT"].astype(str).str.upper().str.contains(busca_final_up, na=False)
+                ]
+
+            # -----------------------------------------
+            # KPIs
+            # -----------------------------------------
+            total_finalizadas = len(df_filtrado_final)
+            qtd_adiantadas = int((df_filtrado_final["STATUS_FINAL"] == "ADIANTADA").sum())
+            qtd_no_prazo = int((df_filtrado_final["STATUS_FINAL"] == "NO PRAZO").sum())
+            qtd_atrasadas = int((df_filtrado_final["STATUS_FINAL"] == "ATRASADA").sum())
+            tempo_medio = df_filtrado_final["TEMPO_REAL_MIN"].mean() if total_finalizadas > 0 else 0
+
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-title">FINALIZADAS</div>
+                        <div class="kpi-value">{total_finalizadas}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-title">ANTES DA META</div>
+                        <div class="kpi-value">{qtd_adiantadas}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            with c3:
+                st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-title">NO PRAZO</div>
+                        <div class="kpi-value">{qtd_no_prazo}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            with c4:
+                st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-title">COM ATRASO</div>
+                        <div class="kpi-value">{qtd_atrasadas}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            c5, c6, c7 = st.columns(3)
+
+            melhor_registro = df_filtrado_final.sort_values("DESVIO_MIN", ascending=True).head(1)
+            pior_registro = df_filtrado_final.sort_values("DESVIO_MIN", ascending=False).head(1)
+
+            with c5:
+                st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-title">TEMPO MÉDIO</div>
+                        <div class="kpi-value">{formatar_minutos(tempo_medio)}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with c6:
+                if not melhor_registro.empty and pd.notna(melhor_registro.iloc[0]["DESVIO_MIN"]):
+                    melhor_txt = formatar_minutos(abs(melhor_registro.iloc[0]["DESVIO_MIN"]))
+                    st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-title">MELHOR FECHAMENTO</div>
+                            <div class="kpi-value">{melhor_txt}</div>
+                            <div class="MAGALOG-mini-desc">antes da meta • Doca {melhor_registro.iloc[0]['DOCA_TXT']}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-title">MELHOR FECHAMENTO</div>
+                            <div class="kpi-value">-</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+            with c7:
+                if not pior_registro.empty and pd.notna(pior_registro.iloc[0]["DESVIO_MIN"]):
+                    pior_txt = formatar_minutos(pior_registro.iloc[0]["DESVIO_MIN"])
+                    st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-title">MAIOR ATRASO</div>
+                            <div class="kpi-value">{pior_txt}</div>
+                            <div class="MAGALOG-mini-desc">acima da meta • Doca {pior_registro.iloc[0]['DOCA_TXT']}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-title">MAIOR ATRASO</div>
+                            <div class="kpi-value">-</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # -----------------------------------------
+            # RANKINGS
+            # -----------------------------------------
+            r1, r2 = st.columns(2)
+
+            with r1:
+                st.markdown("#### 🟢 Top 5 melhores finalizações")
+                top_melhores = df_filtrado_final.sort_values("DESVIO_MIN", ascending=True).head(5).copy()
+
+                if top_melhores.empty:
+                    st.info("Sem dados para ranking.")
+                else:
+                    for _, row in top_melhores.iterrows():
+                        bg, cor = cor_status(row["STATUS_FINAL"])
+                        st.markdown(f"""
+                            <div style="background:{bg}; border:1px solid #E2E8F0; border-left:6px solid {cor};
+                                        padding:14px; border-radius:12px; margin-bottom:10px;">
+                                <div style="font-size:16px; font-weight:800; color:#0F172A;">Doca {row['DOCA_TXT']} • Agenda {row['AGENDA_TXT']}</div>
+                                <div style="font-size:13px; color:#334155; margin-top:4px;"><b>Categoria:</b> {row['CATEGORIA_TXT']} &nbsp;|&nbsp; <b>Líder:</b> {row['CONFERENTE_TXT']}</div>
+                                <div style="font-size:13px; color:{cor}; font-weight:800; margin-top:6px;">{row['DESVIO_FMT']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+            with r2:
+                st.markdown("#### 🔴 Top 5 maiores atrasos")
+                top_atrasos = df_filtrado_final.sort_values("DESVIO_MIN", ascending=False).head(5).copy()
+
+                if top_atrasos.empty:
+                    st.info("Sem dados para ranking.")
+                else:
+                    for _, row in top_atrasos.iterrows():
+                        bg, cor = cor_status(row["STATUS_FINAL"])
+                        st.markdown(f"""
+                            <div style="background:{bg}; border:1px solid #E2E8F0; border-left:6px solid {cor};
+                                        padding:14px; border-radius:12px; margin-bottom:10px;">
+                                <div style="font-size:16px; font-weight:800; color:#0F172A;">Doca {row['DOCA_TXT']} • Agenda {row['AGENDA_TXT']}</div>
+                                <div style="font-size:13px; color:#334155; margin-top:4px;"><b>Categoria:</b> {row['CATEGORIA_TXT']} &nbsp;|&nbsp; <b>Líder:</b> {row['CONFERENTE_TXT']}</div>
+                                <div style="font-size:13px; color:{cor}; font-weight:800; margin-top:6px;">{row['DESVIO_FMT']}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # -----------------------------------------
+            # TABELA ANALÍTICA
+            # -----------------------------------------
+            st.markdown("#### 📋 Detalhamento das docas finalizadas")
+
+            df_tabela = df_filtrado_final.copy()
+
+            df_tabela["STATUS_BADGE"] = df_tabela["STATUS_FINAL"].apply(
+                lambda s: f"🟢 {s}" if s == "ADIANTADA"
+                else (f"🔵 {s}" if s == "NO PRAZO"
+                else (f"🔴 {s}" if s == "ATRASADA" else f"⚪ {s}"))
+            )
+
+            tabela_final = df_tabela[[
+                "DATA_FINAL",
+                "HORA_FINAL",
+                "DOCA_TXT",
+                "AGENDA_TXT",
+                "CATEGORIA_TXT",
+                "CONFERENTE_TXT",
+                "PECAS_NUM",
+                "M3_NUM",
+                "TEMPO_REAL_FMT",
+                "META_FMT",
+                "DESVIO_FMT",
+                "STATUS_BADGE",
+                "JUSTIFICATIVA_TXT"
+            ]].rename(columns={
+                "DATA_FINAL": "Data",
+                "HORA_FINAL": "Hora",
+                "DOCA_TXT": "Doca",
+                "AGENDA_TXT": "Agenda",
+                "CATEGORIA_TXT": "Categoria",
+                "CONFERENTE_TXT": "Conferente",
+                "PECAS_NUM": "Peças",
+                "M3_NUM": "M³",
+                "TEMPO_REAL_FMT": "Tempo Real",
+                "META_FMT": "Meta",
+                "DESVIO_FMT": "Resultado",
+                "STATUS_BADGE": "Status",
+                "JUSTIFICATIVA_TXT": "Justificativa"
+            })
+
+            st.dataframe(
+                tabela_final.sort_values(by=["Data", "Hora"], ascending=[False, False]),
+                use_container_width=True,
+                hide_index=True
+            )
 # ==========================================================
 # MÓDULO 5: FINANCEIRO (DIRETORIA)
 # ==========================================================
