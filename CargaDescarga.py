@@ -330,12 +330,17 @@ def carregar_matriz():
 
 @st.cache_data(ttl=60)
 def carregar_docas_finalizadas():
+    # A SOLUÇÃO DEFINITIVA DO M³ AQUI: Lê como string pura sem o Google sumir com a vírgula!
     for tentativa in range(3):
         try:
             client = conectar_google()
             sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
             ws = sh.worksheet("DOCAS_FINALIZADAS") 
-            df = pd.DataFrame(ws.get_all_records())
+            dados = ws.get_all_values()
+            if len(dados) > 1:
+                df = pd.DataFrame(dados[1:], columns=dados[0])
+            else:
+                df = pd.DataFrame(columns=dados[0] if dados else [])
             return df
         except Exception as e:
             if tentativa == 2: return pd.DataFrame()
@@ -1983,7 +1988,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V3)
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
@@ -2016,7 +2021,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 col_aux = 'NOME'
                 col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
 
-                # TRAVA DEFINITIVA DO M³ (Muito bem aplicada!)
+                # TRAVA DEFINITIVA DO M³:
                 if 'M³' in df_fin.columns:
                     col_m3 = 'M³'
                 elif 'M3' in df_fin.columns:
@@ -2035,9 +2040,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     colunas_faltantes.append('M³')
 
                 if colunas_faltantes:
-                    st.error(
-                        f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}"
-                    )
+                    st.error(f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
                 else:
                     # -----------------------------
                     # Funções auxiliares
@@ -2081,8 +2084,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     df_fin = df_fin[df_fin['MINUTOS'] > 0].copy()
                     df_fin['HORAS'] = df_fin['MINUTOS'] / 60
 
-                    df_fin[col_pecas] = df_fin[col_pecas].apply(normalizar_numero_br)
-                    df_fin[col_m3] = df_fin[col_m3].apply(normalizar_numero_br)
+                    df_fin['VAL_PECAS'] = df_fin[col_pecas].apply(normalizar_numero_br)
+                    df_fin['VAL_M3'] = df_fin[col_m3].apply(normalizar_numero_br)
 
                     # -----------------------------
                     # Filtros principais
@@ -2100,7 +2103,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.warning("Não há dados no período selecionado.")
                     else:
                         # -----------------------------
-                        # BASE MACRO CONSOLIDADA
+                        # BASE MACRO CONSOLIDADA (1 agenda = 1 carga)
                         # -----------------------------
                         df_agendas_unicas = (
                             df_fin.groupby(col_agenda, as_index=False)
@@ -2108,37 +2111,39 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 col_data: 'first',
                                 col_cat: 'first',
                                 col_just: 'first',
-                                col_pecas: 'first',
-                                col_m3: 'first',
+                                'VAL_PECAS': 'first',
+                                'VAL_M3': 'first',
                                 'MINUTOS': 'first',
                                 'HORAS': 'first'
                             }).copy()
                         )
 
                         # -----------------------------
-                        # Cálculos Macro (MATEMÁTICA CORRIGIDA)
+                        # Cálculos Macro (AGRUPAMENTO CORRETO)
                         # -----------------------------
                         total_cargas = df_agendas_unicas[col_agenda].nunique()
                         tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                         
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
-                        total_pecas_geral = df_agendas_unicas[col_pecas].sum()
-                        total_m3_geral = df_agendas_unicas[col_m3].sum()
+                        total_pecas_geral = df_agendas_unicas['VAL_PECAS'].sum()
+                        total_m3_geral = df_agendas_unicas['VAL_M3'].sum()
                         
-                        # Média global = (Soma do que fez) / (Soma do tempo gasto)
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
 
-                        qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
+                        qtd_no_prazo = df_agendas_unicas[
+                            df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)
+                        ].shape[0]
+
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
                         # -----------------------------
-                        # RATEIO POR AUXILIAR
+                        # RATEIO POR AUXILIAR (Visão Equipe)
                         # -----------------------------
                         df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
-                        df_fin['PECAS_PART'] = df_fin[col_pecas] / df_fin['QTD_AUXILIARES_AGENDA']
-                        df_fin['M3_PART'] = df_fin[col_m3] / df_fin['QTD_AUXILIARES_AGENDA']
+                        df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
+                        df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
 
                         # -----------------------------
                         # Abas internas
@@ -2184,10 +2189,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                             col_g3, col_g4 = st.columns(2)
                             
-                            # CÁLCULO AGRUPADO PARA GRÁFICOS (Fim da Média das Médias!)
+                            # CÁLCULO AGRUPADO PARA GRÁFICOS
                             df_prod_cat = df_agendas_unicas.groupby(col_cat).agg(
-                                SOMA_PECAS=(col_pecas, 'sum'),
-                                SOMA_M3=(col_m3, 'sum'),
+                                SOMA_PECAS=('VAL_PECAS', 'sum'),
+                                SOMA_M3=('VAL_M3', 'sum'),
                                 SOMA_HORAS=('HORAS', 'sum')
                             ).reset_index()
                             df_prod_cat['MEDIA_PECAS_HORA'] = (df_prod_cat['SOMA_PECAS'] / df_prod_cat['SOMA_HORAS']).fillna(0)
@@ -2222,7 +2227,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 df_operadores = df_operadores[df_operadores[col_cat] == cat_sel].copy()
 
                             if not df_operadores.empty:
-                                # RANKING ABSOLUTO: Soma tudo e divide as horas
+                                # RANKING ABSOLUTO INDIVIDUAL
                                 df_rank = (
                                     df_operadores.groupby(col_aux)
                                     .agg(
@@ -2286,4 +2291,4 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.info("Sem dados suficientes para esta categoria.")
 
     except Exception as e:
-        st.error(f"Erro no módulo de Produtividade: {e}")
+        st.error(f"Erro no processamento de produtividade: {e}")
