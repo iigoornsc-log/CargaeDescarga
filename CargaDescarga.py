@@ -2247,7 +2247,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             # --- BLOCO 3: GRÁFICOS DE CATEGORIA ---
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
-                                st.markdown('<div class="MAGALOG-card"><h4 style='color: #334155; margin-bottom: 15px;'><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>', unsafe_allow_html=True)
+                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>""", unsafe_allow_html=True)
                                 df_cat_plot = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
                                 df_cat_plot['TEXTO_TEMPO'] = df_cat_plot['MINUTOS'].apply(minutos_para_texto)
                                 fig1 = px.bar(df_cat_plot, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#8B5CF6'])
@@ -2257,7 +2257,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g2:
-                                st.markdown('<div class="MAGALOG-card"><h4 style='color: #334155; margin-bottom: 15px;'><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
+                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
