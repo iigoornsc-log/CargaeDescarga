@@ -967,11 +967,42 @@ elif pagina_selecionada == "Gestão de Docas":
         lista_p = [x.strip() for x in str(string_pessoas).split(',')]
         html_final = ""
         for p in lista_p:
-            # Ignora a marcação de pausa para não renderizar card quebrado
             if "PAUSADO" in p: continue
             habilidades = dict_skills_html.get(p, "")
             html_final += f"<div style='background:#FFFFFF; border:1px solid #CBD5E1; padding:6px 10px; border-radius:8px; display:inline-block; margin:4px 6px 4px 0px; font-size:12px; color:#1E293B; box-shadow:0 2px 4px rgba(0,0,0,0.02);'><b>{p}</b>{habilidades}</div>"
         return html_final
+
+    # --- FUNÇÃO INTELIGENTE DE CALCULAR TEMPO ATIVO (LENDO O LOG) ---
+    def calcular_tempo_real_ativo(agenda, df_log_completo, hora_ref):
+        df_ag = df_log_completo[df_log_completo['AGENDA'].astype(str).str.strip() == str(agenda).strip()].copy()
+        if df_ag.empty: return 0, hora_ref
+        
+        df_ag['DATA_HORA_DT'] = pd.to_datetime(df_ag['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+        df_ag = df_ag.sort_values('DATA_HORA_DT')
+        
+        inicio_real = df_ag['DATA_HORA_DT'].iloc[0]
+        eventos = df_ag[['DATA_HORA_DT', 'AUXILIARES']].drop_duplicates(subset=['DATA_HORA_DT'])
+        
+        tempo_pausa_segundos = 0
+        pausa_start = None
+        
+        for _, row_ev in eventos.iterrows():
+            aux_str = str(row_ev['AUXILIARES']).upper()
+            is_pausa = "PAUSADO" in aux_str
+            is_fim = "ENCERRADO" in aux_str
+            
+            if is_pausa and pausa_start is None:
+                pausa_start = row_ev['DATA_HORA_DT']
+            elif not is_pausa and not is_fim and pausa_start is not None:
+                tempo_pausa_segundos += (row_ev['DATA_HORA_DT'] - pausa_start).total_seconds()
+                pausa_start = None
+                
+        if pausa_start is not None:
+            tempo_pausa_segundos += (hora_ref - pausa_start).total_seconds()
+            
+        tempo_total = (hora_ref - inicio_real).total_seconds()
+        tempo_ativo = max(0, tempo_total - tempo_pausa_segundos)
+        return tempo_ativo, inicio_real
 
     lista_auxiliares = []
     mapa_pessoas = {}
@@ -1058,10 +1089,13 @@ elif pagina_selecionada == "Gestão de Docas":
             return False
 
     @st.dialog("START na Carga (Alocar Equipe)")
-    def popup_start_carga(doca_sel, agenda_sel, conferente_sel, is_retomada=False):
+    def popup_start_carga(doca_sel, agenda_sel, conferente_sel, is_retomada=False, equipe_padrao=None):
+        if equipe_padrao is None: equipe_padrao = []
+        equipe_padrao_valida = [x for x in equipe_padrao if x in lista_auxiliares]
+        
         titulo = "Retomar" if is_retomada else "Iniciar"
         st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'><span class='icon-MAGALOG'>pin_drop</span> Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; <span class='icon-MAGALOG'>tag</span> Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; <span class='icon-MAGALOG'>badge</span> Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
-        equipe_sel = st.multiselect(f"Selecione os colaboradores para {titulo}:", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
+        equipe_sel = st.multiselect(f"Selecione os colaboradores para {titulo}:", options=lista_auxiliares, default=equipe_padrao_valida, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
         
         conflitos = {}
         for pessoa in equipe_sel:
@@ -1095,7 +1129,7 @@ elif pagina_selecionada == "Gestão de Docas":
     # --- POP-UP NOVO: PAUSAR OPERAÇÃO ---
     @st.dialog("Pausar Operação")
     def popup_pausar_operacao(doca_sel, agenda_sel, conferente_sel):
-        st.warning("Ao pausar a operação, o tempo deixará de ser contado temporariamente.")
+        st.warning("Ao pausar a operação, o cronômetro desta doca deixará de contar. Apenas o tempo ativo real comporá o SLA.")
         motivos_pausa = [
             "Horário de Refeição (Almoço/Janta)",
             "Troca de Turno",
@@ -1236,18 +1270,21 @@ elif pagina_selecionada == "Gestão de Docas":
                             if col_meta and pd.notna(aux_row[col_meta]): meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
                         except: pass
 
-                    # Lógica de Identificação de Pausa
+                    # Lógica de Identificação de Pausa e Cálculo Real
                     auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
                     is_pausado = any("PAUSADO" in p.upper() for p in auxiliares_lista)
+                    
+                    tempo_ativo_seg, inicio_real_dt = calcular_tempo_real_ativo(agenda_str, df_log, agora_dt)
+                    decorrido_min = tempo_ativo_seg / 60
+                    restante_min = meta_minutos - decorrido_min
 
                     if is_pausado:
-                        cor_timer, bg_timer, txt_timer = "#B45309", "#FEF3C7", f"<span class='icon-MAGALOG' style='font-size:12px;'>pause_circle</span> OPERAÇÃO PAUSADA"
+                        h_p, m_p = int(abs(restante_min) // 60), int(abs(restante_min) % 60)
+                        if restante_min >= 0:
+                            cor_timer, bg_timer, txt_timer = "#B45309", "#FEF3C7", f"<span class='icon-MAGALOG' style='font-size:12px;'>pause_circle</span> Pausado (Resta {h_p:02d}h{m_p:02d}m)"
+                        else:
+                            cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-MAGALOG' style='font-size:12px;'>pause_circle</span> Pausado (Atraso {h_p:02d}h{m_p:02d}m)"
                     else:
-                        inicio_dt = row['DATA_HORA_DT']
-                        if pd.isna(inicio_dt): inicio_dt = agora_dt
-                        decorrido_min = (agora_dt - inicio_dt).total_seconds() / 60
-                        restante_min = meta_minutos - decorrido_min
-                        
                         if restante_min >= 0:
                             h, m = int(restante_min // 60), int(restante_min % 60)
                             cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-MAGALOG' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
@@ -1260,7 +1297,7 @@ elif pagina_selecionada == "Gestão de Docas":
 
                     with st.container(border=True):
                         if is_pausado:
-                            cor_tema = "#F59E0B" # Laranja de Pausa
+                            cor_tema = "#F59E0B"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(245,158,11,0.15) !important; background-color: #FFFBEB !important; }}</style><div class='card-proc-{index}'></div>"
                         elif "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
@@ -1278,7 +1315,7 @@ elif pagina_selecionada == "Gestão de Docas":
                         if is_pausado:
                             c_time.markdown(f"<div style='text-align:right;'><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer}</div></div>", unsafe_allow_html=True)
                         else:
-                            c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-MAGALOG' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
+                            c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-MAGALOG' style='font-size:11px;'>watch_later</span> Início Real: {inicio_real_dt.strftime('%H:%M')}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
                         
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
                         st.markdown(html_detalhes, unsafe_allow_html=True)
@@ -1287,20 +1324,26 @@ elif pagina_selecionada == "Gestão de Docas":
                             motivo = next((p for p in auxiliares_lista if "PAUSADO" in p.upper()), "PAUSADO")
                             st.markdown(f"<div style='background-color: #FEF3C7; padding: 12px; border-radius: 8px; border: 1px dashed #F59E0B; margin-bottom: 15px;'><div style='font-size: 13px; font-weight: 800; color: #B45309;'>Status: {motivo}</div></div>", unsafe_allow_html=True)
                             
-                            if st.button("▶️ Retomar Operação", key=f"btn_ret_{row['DOCA']}_{index}", use_container_width=True, type="primary"):
-                                popup_start_carga(row['DOCA'], row['AGENDA'], row['CONFERENTE'], is_retomada=True)
+                            # Recupera equipe antes da pausa para sugerir no pop-up
+                            log_agenda = df_log[df_log['AGENDA'].astype(str).str.strip() == agenda_str]
+                            pessoas_antes_pausa = log_agenda[~log_agenda['AUXILIARES'].astype(str).str.upper().str.contains('PAUSADO|ENCERRADO', regex=True)]['AUXILIARES'].unique().tolist()
+                            
+                            if st.button("Retomar Operação", key=f"btn_ret_{row['DOCA']}_{index}", use_container_width=True, type="primary"):
+                                popup_start_carga(row['DOCA'], row['AGENDA'], row['CONFERENTE'], is_retomada=True, equipe_padrao=pessoas_antes_pausa)
                         else:
                             st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                             
                             c_eq, c_btn1, c_btn2 = st.columns([4, 3, 3])
                             with c_btn1:
-                                if st.button("⏸️ Pausar", key=f"btn_pse_{row['DOCA']}_{index}", use_container_width=True):
+                                if st.button("Pausar", key=f"btn_pse_{row['DOCA']}_{index}", use_container_width=True):
                                     popup_pausar_operacao(row['DOCA'], row['AGENDA'], row['CONFERENTE'])
                             with c_btn2:
                                 if st.button("Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                     clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                                    duracao_final = clique_dt - row['DATA_HORA_DT']
-                                    total_minutos_final = int(duracao_final.total_seconds() / 60)
+                                    
+                                    # CÁLCULO DE TEMPO REAL DE DESCARGA PARA GRAVAR NA PLANILHA
+                                    tempo_ativo_segundos, inicio_real = calcular_tempo_real_ativo(agenda_str, df_log, clique_dt)
+                                    total_minutos_final = int(tempo_ativo_segundos // 60)
                                     horas, mins = total_minutos_final // 60, total_minutos_final % 60
                                     tempo_str = f"{horas:02d}:{mins:02d}"
                                     
@@ -1310,7 +1353,7 @@ elif pagina_selecionada == "Gestão de Docas":
                                     
                                     linhas_conclusao_multiplas = []
                                     for pessoa in auxiliares_lista:
-                                        linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
+                                        linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, inicio_real.strftime("%d/%m/%Y %H:%M:%S"), clique_dt.strftime("%H:%M:%S"), tempo_str])
                                     
                                     linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
                                     
@@ -1527,7 +1570,6 @@ elif pagina_selecionada == "Gestão de Docas":
                                 carregar_log_produtividade.clear()
                                 st.rerun()
         except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
-
 # ==========================================================
 # MÓDULO 5: FINANCEIRO (DIRETORIA)
 # ==========================================================
