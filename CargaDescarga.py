@@ -2216,18 +2216,18 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     # Pódio e Rebaixamento
                                     if pos == 1:
                                         css_class = "lb-gold"
-                                        icon = "<span class='icon-magalu' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
+                                        icon = "<span class='icon-magalog' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
                                     elif pos == 2:
                                         css_class = "lb-silver"
-                                        icon = "<span class='icon-magalu' style='color:#64748B; font-size: 20px;'>military_tech</span>"
+                                        icon = "<span class='icon-magalog' style='color:#64748B; font-size: 20px;'>military_tech</span>"
                                     elif pos == 3:
                                         css_class = "lb-bronze"
-                                        icon = "<span class='icon-magalu' style='color:#92400E; font-size: 20px;'>military_tech</span>"
+                                        icon = "<span class='icon-magalog' style='color:#92400E; font-size: 20px;'>military_tech</span>"
                                     elif pos >= total_ops - 2 and total_ops >= 6: # Só mostra rebaixamento se tiver mais de 5 pessoas
                                         css_class = "lb-danger"
-                                        icon = "<span class='icon-magalu' style='color:#DC2626; font-size: 20px;'>warning</span>"
+                                        icon = "<span class='icon-magalog' style='color:#DC2626; font-size: 20px;'>warning</span>"
                                     else:
-                                        icon = "<span class='icon-magalu' style='color:#94A3B8; font-size: 20px;'>person</span>"
+                                        icon = "<span class='icon-magalog' style='color:#94A3B8; font-size: 20px;'>person</span>"
 
                                     nome = row[col_aux]
                                     cargas = int(row['Cargas_Participadas'])
