@@ -2208,7 +2208,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                             # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
-                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças (Barras) vs m³ (Linha)</h4>", unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Acompanhamento diário peças x m³ </h4>", unsafe_allow_html=True)
                             
                             df_daily = (
                                 df_agendas_unicas.groupby(col_data)
