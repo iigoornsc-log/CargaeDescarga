@@ -2018,54 +2018,6 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
         st.error(f"Erro no módulo financeiro: {e}")
         
 # ==========================================================
-# MÓDULO EXTRA: REGISTRO DE ALINHAMENTO
-# ==========================================================
-elif pagina_selecionada == "Registro de Alinhamento":
-    render_hero('Registro de Alinhamento', 'Planeje folgas, DSR, banco de horas e férias em uma experiência mais clara e executiva.', 'Planejamento de equipe')
-
-    try:
-        df_equipe = carregar_equipe()
-        lista_funcionarios = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
-        lista_funcionarios = [str(nome).strip() for nome in lista_funcionarios if str(nome).strip() != '']
-        lista_funcionarios.sort()
-        
-        with st.container(border=True):
-            st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-MAGALOG">calendar_month</span> Novo Alinhamento</h4>', unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                nome_sel = st.selectbox("Selecione o Colaborador", options=[""] + lista_funcionarios)
-                motivo_sel = st.selectbox("Motivo do Alinhamento", options=["DSR", "BH", "FÉRIAS", "OUTROS"])
-            
-            with col2:
-                data_sel = st.date_input("Data do Alinhamento (Folga)", format="DD/MM/YYYY")
-                
-                motivo_outro = ""
-                if motivo_sel == "OUTROS":
-                    motivo_outro = st.text_input("Descreva o motivo (Obrigatório):", placeholder="Ex: Licença paternidade, Folga prêmio...")
-                    
-            st.markdown('<br>', unsafe_allow_html=True)
-            
-            if st.button("Gravar Alinhamento", use_container_width=True, type="primary"):
-                if not nome_sel:
-                    st.warning("Selecione o colaborador.")
-                elif motivo_sel == "OUTROS" and not motivo_outro.strip():
-                    st.warning("Como você selecionou 'OUTROS', por favor descreva o motivo na caixa de texto.")
-                else:
-                    motivo_final = motivo_outro.strip().upper() if motivo_sel == "OUTROS" else motivo_sel
-                    data_folga_str = data_sel.strftime("%d/%m/%Y")
-                    data_registro_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y %H:%M:%S")
-                    
-                    linha_gravar = [data_registro_str, nome_sel, data_folga_str, motivo_final]
-                    
-                    with st.spinner("Registrando no sistema..."):
-                        if gravar_alinhamento(linha_gravar):
-                            st.success(f"Sucesso! Alinhamento de {nome_sel} para o dia {data_folga_str} ({motivo_final}) registrado!")
-                            
-    except Exception as e:
-        st.error(f"Erro no módulo de Alinhamento: {e}")
-
-# ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
@@ -2198,7 +2150,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
 
+                        # AQUI ESTÁ O NOVO CÁLCULO DE FORA DO PRAZO E NO PRAZO
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
+                        qtd_fora_prazo = total_cargas - qtd_no_prazo
+                        
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
@@ -2211,7 +2166,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
-                            with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
+                            
+                            # O NOVO CARD DE SLA AQUI:
+                            with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{qtd_no_prazo} no prazo | {qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
+                            
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
                             with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
                             with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
@@ -2246,7 +2204,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
-                                    fig2 = px.pie(df_motivos, values='count', names=col_just, hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
+                                    df_motivos.columns = ['Motivo', 'Qtd']
+                                    fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
                                     fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
                                     st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
                                 else: st.info("Nenhum atraso no período.")
@@ -2277,6 +2236,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             .lb-tooltip .lb-tooltiptext { visibility: hidden; width: 240px; background-color: #0F172A; color: #F8FAFC; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 999; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s, bottom 0.3s; font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: normal; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #334155; }
                             .lb-tooltip .lb-tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #334155 transparent transparent transparent; }
                             .lb-tooltip:hover .lb-tooltiptext { visibility: visible; opacity: 1; bottom: 150%; }
+                            .lb-tooltip:hover .icon-MAGALOG { color: #0086FF; }
                             </style>
                             """, unsafe_allow_html=True)
 
@@ -2311,13 +2271,19 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 elif metric_sel == "m³ / Hora": df_rank_data = df_rank_data.sort_values('M3_H', ascending=False).reset_index(drop=True)
                                 else: df_rank_data = df_rank_data.sort_values('MINUTOS', ascending=True).reset_index(drop=True)
                                 
-                                html_lb = "<div class='lb-wrapper'><div class='lb-header'><div>POS</div><div>OPERADOR</div>"
+                                df_rank_data['Tempo_Medio'] = df_rank_data['MINUTOS'].apply(minutos_para_texto)
+
+                                html_lb = "<div class='lb-wrapper'>"
+                                
+                                html_lb += "<div class='lb-header'>"
+                                html_lb += "<div>POS</div><div>OPERADOR</div>"
                                 html_lb += "<div>CARGAS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Total de agendas participadas.</div></div></div>"
                                 html_lb += "<div>T. MÉDIO <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Média de tempo gasto por carga.</div></div></div>"
                                 html_lb += "<div>PÇS TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Volume total rateado pela equipe.</div></div></div>"
                                 html_lb += "<div>M³ TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>m³ total rateado pela equipe.</div></div></div>"
                                 html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: Peças ÷ Horas.</div></div></div>"
-                                html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: m³ ÷ Horas.</div></div></div></div>"
+                                html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: m³ ÷ Horas.</div></div></div>"
+                                html_lb += "</div>"
 
                                 total_ops = len(df_rank_data)
                                 for idx, row_r in df_rank_data.iterrows():
@@ -2329,7 +2295,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     html_lb += f"<div class='lb-rank'>{pos_r}º</div>"
                                     html_lb += f"<div class='lb-name'><span class='icon-MAGALOG' style='font-size:20px;'>{ic_r}</span> {row_r[col_aux]}</div>"
                                     html_lb += f"<div class='lb-stat'>{int(row_r[col_agenda])}</div>"
-                                    html_lb += f"<div class='lb-stat'>{minutos_para_texto(row_r['MINUTOS'])}</div>"
+                                    html_lb += f"<div class='lb-stat'>{row_r['Tempo_Medio']}</div>"
                                     html_lb += f"<div class='lb-stat'>{row_r['PECAS_PART']:.1f}</div>"
                                     html_lb += f"<div class='lb-stat'>{row_r['M3_PART']:.2f}</div>"
                                     html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{row_r['PECAS_H']:.1f} pç/h</span></div>"
@@ -2340,4 +2306,4 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             else: st.info("Sem dados para esta categoria.")
 
     except Exception as e:
-        st.error(f"Erro no processamento de produtividade: {e}")
+        st.error(f"Erro no módulo de Produtividade: {e}")
