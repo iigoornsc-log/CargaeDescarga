@@ -2156,27 +2156,38 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.warning("Não há dados no período selecionado.")
                     else:
                         # --- BASE MACRO CONSOLIDADA (1 agenda = 1 carga) ---
+                        # Garantimos que a DOCA esteja na agregação
+                        col_doca_final = next((c for c in df_fin.columns if 'DOCA' in c), None)
+                        
                         df_agendas_unicas = (
                             df_fin.groupby(col_agenda, as_index=False)
                             .agg({
                                 col_data: 'first', col_cat: 'first', col_just: 'first',
                                 'VAL_PECAS': 'first', 'VAL_M3': 'first', 'MINUTOS': 'first', 'HORAS': 'first',
-                                **({col_tipo: 'first'} if col_tipo else {})
+                                col_doca_final: 'first'
                             }).copy()
                         )
 
-                        # DECLARA O TOTAL DE CARGAS PRIMEIRO (AQUI ESTAVA O ERRO)
                         total_cargas = df_agendas_unicas.shape[0]
 
-                        # --- CÁLCULO RECEBIMENTO X EXPEDIÇÃO ---
-                        if col_tipo:
-                            qtd_rec = df_agendas_unicas[df_agendas_unicas[col_tipo].astype(str).str.contains('REC', case=False, na=False)].shape[0]
-                            qtd_exp = df_agendas_unicas[df_agendas_unicas[col_tipo].astype(str).str.contains('EXP', case=False, na=False)].shape[0]
-                        else:
-                            # Caso não tenha coluna de tipo, tentamos deduzir pela categoria
-                            qtd_rec = df_agendas_unicas[df_agendas_unicas[col_cat].astype(str).str.contains('REC', case=False, na=False)].shape[0]
-                            qtd_exp = total_cargas - qtd_rec # Agora ele sabe o que é total_cargas!
+                        # --- LÓGICA DE CLASSIFICAÇÃO POR DOCA (SOLUÇÃO DEFINITIVA) ---
+                        def classificar_operacao(doca_val):
+                            try:
+                                # Extrai apenas os números da doca (ex: "Doca 60" vira 60)
+                                num_doca = int(re.sub(r'\D', '', str(doca_val)))
+                                if 58 <= num_doca <= 90:
+                                    return "RECEBIMENTO"
+                                else:
+                                    return "EXPEDIÇÃO"
+                            except:
+                                return "EXPEDIÇÃO" # Caso não tenha número, assume expedição
 
+                        df_agendas_unicas['OPERACAO_CALC'] = df_agendas_unicas[col_doca_final].apply(classificar_operacao)
+                        
+                        qtd_rec = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "RECEBIMENTO"].shape[0]
+                        qtd_exp = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "EXPEDIÇÃO"].shape[0]
+
+                        # --- CONTINUAÇÃO DOS CÁLCULOS ---
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
                         tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                         
