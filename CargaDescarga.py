@@ -1990,7 +1990,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
 # ==========================================================
 # MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V4 - LEADERBOARD)
 # ==========================================================
-elif pagina_selecionada == ":material/monitoring: Produtividade (NS & Equipe)":
+elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
         'Produtividade & Nível de Serviço',
         'Acompanhe SLA, tempo de ciclo, produção por hora e performance individual com leitura mais corporativa.',
