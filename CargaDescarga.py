@@ -1988,7 +1988,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V4 - LEADERBOARD)
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V4 - LEADERBOARD E CSS CORRETO)
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
@@ -2100,7 +2100,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
 
-                        aba_macro, aba_equipe = st.tabs([":material/dashboard: Visão Macro & NS", ":material/emoji_events: Placar de Líderes (Equipe)"])
+                        aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
 
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
@@ -2112,7 +2112,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
-                                st.markdown('<div class="magalog-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalog">schedule</span> Tempo Médio por Categoria</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio por Categoria</h4>', unsafe_allow_html=True)
                                 df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
                                 df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
                                 fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
@@ -2122,7 +2122,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g2:
-                                st.markdown('<div class="magalog-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-magalog">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
@@ -2162,7 +2162,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             </style>
                             """, unsafe_allow_html=True)
 
-                            st.markdown("<h4 style='color: #0086FF;'><span class='icon-magalog'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #0086FF;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
                             
                             c_filt1, c_filt2 = st.columns([3, 7])
                             with c_filt1:
@@ -2191,7 +2191,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 df_rank['Media_Pecas_Hora'] = (df_rank['Pecas_Descarregadas'] / df_rank['Horas_Totais']).fillna(0)
                                 df_rank['Media_M3_Hora'] = (df_rank['M3_Descarregados'] / df_rank['Horas_Totais']).fillna(0)
 
-                                # Lógica de Ordenação dinâmica baseada na escolha do usuário
                                 if metric_sel == "Peças / Hora":
                                     df_rank = df_rank.sort_values('Media_Pecas_Hora', ascending=False).reset_index(drop=True)
                                 elif metric_sel == "m³ / Hora":
@@ -2201,7 +2200,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 
                                 df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
 
-                                # Construção do HTML do Leaderboard
                                 html_lb = "<div class='lb-wrapper'>"
                                 html_lb += "<div class='lb-header'>"
                                 html_lb += "<div>POS</div><div>OPERADOR</div><div>CARGAS</div><div>T. MÉDIO</div>"
@@ -2213,21 +2211,20 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     pos = i + 1
                                     css_class = ""
                                     
-                                    # Pódio e Rebaixamento
                                     if pos == 1:
                                         css_class = "lb-gold"
-                                        icon = "<span class='icon-magalog' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
+                                        icon = "<span class='icon-MAGALOG' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
                                     elif pos == 2:
                                         css_class = "lb-silver"
-                                        icon = "<span class='icon-magalog' style='color:#64748B; font-size: 20px;'>military_tech</span>"
+                                        icon = "<span class='icon-MAGALOG' style='color:#64748B; font-size: 20px;'>military_tech</span>"
                                     elif pos == 3:
                                         css_class = "lb-bronze"
-                                        icon = "<span class='icon-magalog' style='color:#92400E; font-size: 20px;'>military_tech</span>"
-                                    elif pos >= total_ops - 2 and total_ops >= 6: # Só mostra rebaixamento se tiver mais de 5 pessoas
+                                        icon = "<span class='icon-MAGALOG' style='color:#92400E; font-size: 20px;'>military_tech</span>"
+                                    elif pos >= total_ops - 2 and total_ops >= 6:
                                         css_class = "lb-danger"
-                                        icon = "<span class='icon-magalog' style='color:#DC2626; font-size: 20px;'>warning</span>"
+                                        icon = "<span class='icon-MAGALOG' style='color:#DC2626; font-size: 20px;'>warning</span>"
                                     else:
-                                        icon = "<span class='icon-magalog' style='color:#94A3B8; font-size: 20px;'>person</span>"
+                                        icon = "<span class='icon-MAGALOG' style='color:#94A3B8; font-size: 20px;'>person</span>"
 
                                     nome = row[col_aux]
                                     cargas = int(row['Cargas_Participadas'])
@@ -2237,7 +2234,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     pecas_h = f"{row['Media_Pecas_Hora']:.1f}"
                                     m3_h = f"{row['Media_M3_Hora']:.2f}"
 
-                                    # Aqui é onde estava o erro: encadeamos direto sem dar "Tabs" invisíveis!
                                     html_lb += f"<div class='lb-row {css_class}'>"
                                     html_lb += f"<div class='lb-rank'>{pos}º</div>"
                                     html_lb += f"<div class='lb-name'>{icon} {nome}</div>"
