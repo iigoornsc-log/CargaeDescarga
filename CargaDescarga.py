@@ -2203,12 +2203,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                                 # Construção do HTML do Leaderboard
                                 html_lb = "<div class='lb-wrapper'>"
-                                html_lb += """
-                                <div class='lb-header'>
-                                    <div>POS</div><div>OPERADOR</div><div>CARGAS</div><div>T. MÉDIO</div>
-                                    <div>PÇS TOTAIS</div><div>M³ TOTAIS</div><div>PEÇAS / H</div><div>M³ / H</div>
-                                </div>
-                                """
+                                html_lb += "<div class='lb-header'>"
+                                html_lb += "<div>POS</div><div>OPERADOR</div><div>CARGAS</div><div>T. MÉDIO</div>"
+                                html_lb += "<div>PÇS TOTAIS</div><div>M³ TOTAIS</div><div>PEÇAS / H</div><div>M³ / H</div>"
+                                html_lb += "</div>"
 
                                 total_ops = len(df_rank)
                                 for i, row in df_rank.iterrows():
@@ -2218,18 +2216,18 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     # Pódio e Rebaixamento
                                     if pos == 1:
                                         css_class = "lb-gold"
-                                        icon = "<span class='icon-magalog' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
+                                        icon = "<span class='icon-magalu' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
                                     elif pos == 2:
                                         css_class = "lb-silver"
-                                        icon = "<span class='icon-magalog' style='color:#64748B; font-size: 20px;'>military_tech</span>"
+                                        icon = "<span class='icon-magalu' style='color:#64748B; font-size: 20px;'>military_tech</span>"
                                     elif pos == 3:
                                         css_class = "lb-bronze"
-                                        icon = "<span class='icon-magalog' style='color:#92400E; font-size: 20px;'>military_tech</span>"
+                                        icon = "<span class='icon-magalu' style='color:#92400E; font-size: 20px;'>military_tech</span>"
                                     elif pos >= total_ops - 2 and total_ops >= 6: # Só mostra rebaixamento se tiver mais de 5 pessoas
                                         css_class = "lb-danger"
-                                        icon = "<span class='icon-magalog' style='color:#DC2626; font-size: 20px;'>warning</span>"
+                                        icon = "<span class='icon-magalu' style='color:#DC2626; font-size: 20px;'>warning</span>"
                                     else:
-                                        icon = "<span class='icon-magalog' style='color:#94A3B8; font-size: 20px;'>person</span>"
+                                        icon = "<span class='icon-magalu' style='color:#94A3B8; font-size: 20px;'>person</span>"
 
                                     nome = row[col_aux]
                                     cargas = int(row['Cargas_Participadas'])
@@ -2239,18 +2237,18 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     pecas_h = f"{row['Media_Pecas_Hora']:.1f}"
                                     m3_h = f"{row['Media_M3_Hora']:.2f}"
 
-                                    html_lb += f"""
-                                    <div class='lb-row {css_class}'>
-                                        <div class='lb-rank'>{pos}º</div>
-                                        <div class='lb-name'>{icon} {nome}</div>
-                                        <div class='lb-stat'>{cargas}</div>
-                                        <div class='lb-stat'>{tempo}</div>
-                                        <div class='lb-stat'>{pecas_t}</div>
-                                        <div class='lb-stat'>{m3_t}</div>
-                                        <div class='lb-stat'><span class='lb-highlight'>{pecas_h} pç/h</span></div>
-                                        <div class='lb-stat'><span class='lb-highlight'>{m3_h} m³/h</span></div>
-                                    </div>
-                                    """
+                                    # Aqui é onde estava o erro: encadeamos direto sem dar "Tabs" invisíveis!
+                                    html_lb += f"<div class='lb-row {css_class}'>"
+                                    html_lb += f"<div class='lb-rank'>{pos}º</div>"
+                                    html_lb += f"<div class='lb-name'>{icon} {nome}</div>"
+                                    html_lb += f"<div class='lb-stat'>{cargas}</div>"
+                                    html_lb += f"<div class='lb-stat'>{tempo}</div>"
+                                    html_lb += f"<div class='lb-stat'>{pecas_t}</div>"
+                                    html_lb += f"<div class='lb-stat'>{m3_t}</div>"
+                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{pecas_h} pç/h</span></div>"
+                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{m3_h} m³/h</span></div>"
+                                    html_lb += "</div>"
+                                    
                                 html_lb += "</div>"
                                 
                                 st.markdown(html_lb, unsafe_allow_html=True)
