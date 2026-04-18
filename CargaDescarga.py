@@ -822,7 +822,7 @@ elif pagina_selecionada == "Registro Absenteísmo":
 # MÓDULO 2: GESTÃO DE DOCAS E PRODUTIVIDADE
 # ==========================================================
 elif pagina_selecionada == "Gestão de Docas":
-    render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.')
+    render_hero('Gestão de Docas', 'Controle unificado de recebimento e expedição com leitura premium, foco em prioridade e ações rápidas.', 'Plataforma Operacional')
     
     df_log = carregar_log_produtividade()
     df_matriz = carregar_matriz()
@@ -858,7 +858,6 @@ elif pagina_selecionada == "Gestão de Docas":
             return "AGUARDANDO"
             
         df_aux_exp['STATUS_CALC'] = df_aux_exp.apply(checar_se_foi_embora, axis=1)
-
         df_aux_exp = df_aux_exp[df_aux_exp['STATUS_CALC'] != 'LIBERADO'].copy()
 
         if not df_aux_exp.empty:
@@ -968,6 +967,8 @@ elif pagina_selecionada == "Gestão de Docas":
         lista_p = [x.strip() for x in str(string_pessoas).split(',')]
         html_final = ""
         for p in lista_p:
+            # Ignora a marcação de pausa para não renderizar card quebrado
+            if "PAUSADO" in p: continue
             habilidades = dict_skills_html.get(p, "")
             html_final += f"<div style='background:#FFFFFF; border:1px solid #CBD5E1; padding:6px 10px; border-radius:8px; display:inline-block; margin:4px 6px 4px 0px; font-size:12px; color:#1E293B; box-shadow:0 2px 4px rgba(0,0,0,0.02);'><b>{p}</b>{habilidades}</div>"
         return html_final
@@ -993,7 +994,6 @@ elif pagina_selecionada == "Gestão de Docas":
             info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
             for p in eq_atual: mapa_pessoas[p] = doca_atual
 
-    # --- LÓGICA DE AUDITORIA DE FADIGA ERGONÔMICA (SST) ---
     def checar_fadiga(equipe, agenda, df_log_full, df_auxiliar):
         if not equipe or df_log_full.empty: return []
         palavras_pesadas = ['MADEIRA', 'PESADO', 'ELETRO PESADO']
@@ -1020,8 +1020,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     if fez_pesado: fadigados.append(pessoa)
         return fadigados
 
-    # --- FUNÇÃO GRAVADORA MASTER (Salva Categoria no Log) ---
-    def processar_gravacao_doca_v2(doca_n, agenda_n, conferente_n, equipe_n, conflitos_n, info_docas_n):
+    def processar_gravacao_doca_v2(doca_n, agenda_n, conferente_n, equipe_n, conflitos_n, info_docas_n, is_pausa=False, motivo_pausa=""):
         agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
         agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
         linhas_para_gravar = []
@@ -1031,7 +1030,7 @@ elif pagina_selecionada == "Gestão de Docas":
             match_atual = df_aux[df_aux['AGENDA WMS'] == str(agenda_n).strip()]
             if not match_atual.empty: cat_atual = str(match_atual.iloc[0].get('LINHA', match_atual.iloc[0].get('CATEGORIA', ''))).upper()
 
-        if conflitos_n:
+        if conflitos_n and not is_pausa:
             for pessoa, doca_antiga in conflitos_n.items():
                 if doca_antiga in info_docas_n:
                     agenda_antiga = info_docas_n[doca_antiga]['agenda']
@@ -1042,8 +1041,11 @@ elif pagina_selecionada == "Gestão de Docas":
                         if not match_ant.empty: cat_antiga = str(match_ant.iloc[0].get('LINHA', match_ant.iloc[0].get('CATEGORIA', ''))).upper()
                     linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, "ENCERRADO", cat_antiga])
 
-        for pessoa in equipe_n:
-            linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), pessoa, cat_atual])
+        if is_pausa:
+            linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), f"PAUSADO - {motivo_pausa}", cat_atual])
+        else:
+            for pessoa in equipe_n:
+                linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), pessoa, cat_atual])
 
         try:
             client = conectar_google()
@@ -1055,11 +1057,11 @@ elif pagina_selecionada == "Gestão de Docas":
             st.error(f"Erro ao gravar: {e}")
             return False
 
-    # --- POP-UP: START NA CARGA ---
     @st.dialog("START na Carga (Alocar Equipe)")
-    def popup_start_carga(doca_sel, agenda_sel, conferente_sel):
+    def popup_start_carga(doca_sel, agenda_sel, conferente_sel, is_retomada=False):
+        titulo = "Retomar" if is_retomada else "Iniciar"
         st.markdown(f"<div style='font-size:14px; margin-bottom:15px;'><span class='icon-MAGALOG'>pin_drop</span> Doca: <b>{doca_sel}</b> &nbsp;|&nbsp; <span class='icon-MAGALOG'>tag</span> Agenda: <b>{agenda_sel}</b> &nbsp;|&nbsp; <span class='icon-MAGALOG'>badge</span> Líder: <b>{conferente_sel}</b></div>", unsafe_allow_html=True)
-        equipe_sel = st.multiselect("Selecione os colaboradores para iniciar:", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
+        equipe_sel = st.multiselect(f"Selecione os colaboradores para {titulo}:", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
         
         conflitos = {}
         for pessoa in equipe_sel:
@@ -1078,19 +1080,41 @@ elif pagina_selecionada == "Gestão de Docas":
             if not ciente: bloqueio_ergonomico = True
                 
         st.markdown('<br>', unsafe_allow_html=True)
-        if st.button("Confirmar Start", type="primary", use_container_width=True):
+        if st.button(f"Confirmar {titulo}", type="primary", use_container_width=True):
             if not doca_sel or doca_sel == "A Definir": st.error("Esta carga precisa ter uma Doca informada antes de iniciar!")
             elif not equipe_sel: st.error("Selecione a equipe!")
             elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
             else:
-                with st.spinner("Iniciando operação..."):
+                with st.spinner(f"{titulo} operação..."):
                     sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
                     if sucesso:
-                        st.success("Carga iniciada!")
+                        st.success(f"Carga {titulo.lower()}!")
                         carregar_log_produtividade.clear()
                         st.rerun()
 
-    # --- POP-UP: GERENCIAR OPERADOR (TRANSFERIR/RETIRAR) ---
+    # --- POP-UP NOVO: PAUSAR OPERAÇÃO ---
+    @st.dialog("Pausar Operação")
+    def popup_pausar_operacao(doca_sel, agenda_sel, conferente_sel):
+        st.warning("Ao pausar a operação, o tempo deixará de ser contado temporariamente.")
+        motivos_pausa = [
+            "Horário de Refeição (Almoço/Janta)",
+            "Troca de Turno",
+            "Falta de Energia / Sistema",
+            "Problema na Carga / Avaria",
+            "Falta de Paletes / Insumos",
+            "Reunião / Rito",
+            "Outros"
+        ]
+        motivo_sel = st.selectbox("Motivo da Pausa:", motivos_pausa)
+        
+        if st.button("Confirmar Pausa", use_container_width=True):
+            with st.spinner("Pausando operação..."):
+                sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, [], {}, info_docas, is_pausa=True, motivo_pausa=motivo_sel)
+                if sucesso:
+                    st.success("Operação Pausada com sucesso!")
+                    carregar_log_produtividade.clear()
+                    st.rerun()
+
     @st.dialog("Gerenciar Operador da Doca")
     def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
         doca_origem_str = str(doca_origem).strip()
@@ -1144,7 +1168,6 @@ elif pagina_selecionada == "Gestão de Docas":
                     st.rerun()
                 except Exception as e: st.error(f"Erro ao gravar: {e}")
 
-    # --- FILTROS GLOBAIS DE OPERAÇÃO ---
     st.markdown("<br>", unsafe_allow_html=True)
     with st.container(border=True):
         c_f1, c_f2 = st.columns(2)
@@ -1154,15 +1177,8 @@ elif pagina_selecionada == "Gestão de Docas":
             filtro_doca = st.text_input("Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Criação das TRÊS abas
-    aba1, aba2, aba3, aba4 = st.tabs([
-        "Visão das Docas (EM PROCESSO)", 
-        "Fila de Docas (PENDENTE)", 
-        "Montar Equipes",
-        "Docas Finalizadas"
-    ])
+    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
 
-    # --- ABA 1: EM PROCESSO (Ativas) ---
     with aba1:
         if not df_log.empty:
             agendas_logadas = df_log['AGENDA'].astype(str).str.strip().unique().tolist()
@@ -1172,7 +1188,6 @@ elif pagina_selecionada == "Gestão de Docas":
             
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             
-            # --- ALGORITMO DE ORDENAÇÃO (SLA) ---
             def calc_urgencia_processo(row):
                 try:
                     agenda_str = str(row['AGENDA']).strip()
@@ -1185,7 +1200,7 @@ elif pagina_selecionada == "Gestão de Docas":
                     inicio_dt = row['DATA_HORA_DT']
                     if pd.isna(inicio_dt): inicio_dt = agora_dt
                     return meta_minutos - ((agora_dt - inicio_dt).total_seconds() / 60)
-                except: return 99999 # Joga pro final se der erro
+                except: return 99999 
 
             df_ativos['URGENCIA'] = df_ativos.apply(calc_urgencia_processo, axis=1)
             df_ativos = df_ativos.sort_values('URGENCIA', ascending=True)
@@ -1221,75 +1236,99 @@ elif pagina_selecionada == "Gestão de Docas":
                             if col_meta and pd.notna(aux_row[col_meta]): meta_minutos = int(float(str(aux_row[col_meta]).replace(',', '.')))
                         except: pass
 
-                    inicio_dt = row['DATA_HORA_DT']
-                    if pd.isna(inicio_dt): inicio_dt = agora_dt
-                    decorrido_min = (agora_dt - inicio_dt).total_seconds() / 60
-                    restante_min = meta_minutos - decorrido_min
-                    
-                    if restante_min >= 0:
-                        h, m = int(restante_min // 60), int(restante_min % 60)
-                        cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-MAGALOG' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
+                    # Lógica de Identificação de Pausa
+                    auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+                    is_pausado = any("PAUSADO" in p.upper() for p in auxiliares_lista)
+
+                    if is_pausado:
+                        cor_timer, bg_timer, txt_timer = "#B45309", "#FEF3C7", f"<span class='icon-MAGALOG' style='font-size:12px;'>pause_circle</span> OPERAÇÃO PAUSADA"
                     else:
-                        atraso = abs(restante_min)
-                        h, m = int(atraso // 60), int(atraso % 60)
-                        cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-MAGALOG' style='font-size:12px;'>warning</span> Atraso -{h:02d}h{m:02d}m"
+                        inicio_dt = row['DATA_HORA_DT']
+                        if pd.isna(inicio_dt): inicio_dt = agora_dt
+                        decorrido_min = (agora_dt - inicio_dt).total_seconds() / 60
+                        restante_min = meta_minutos - decorrido_min
+                        
+                        if restante_min >= 0:
+                            h, m = int(restante_min // 60), int(restante_min % 60)
+                            cor_timer, bg_timer, txt_timer = "#00C853", "#E6F9EC", f"<span class='icon-MAGALOG' style='font-size:12px;'>hourglass_bottom</span> Resta {h:02d}h{m:02d}m"
+                        else:
+                            atraso = abs(restante_min)
+                            h, m = int(atraso // 60), int(atraso % 60)
+                            cor_timer, bg_timer, txt_timer = "#DC2626", "#FEF2F2", f"<span class='icon-MAGALOG' style='font-size:12px;'>warning</span> Atraso -{h:02d}h{m:02d}m"
 
                     html_equipe_cards = renderizar_equipe_html(row['AUXILIARES'])
-                    auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
 
                     with st.container(border=True):
-                        if "EXPEDIÇÃO" in tipo_op:
+                        if is_pausado:
+                            cor_tema = "#F59E0B" # Laranja de Pausa
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(245,158,11,0.15) !important; background-color: #FFFBEB !important; }}</style><div class='card-proc-{index}'></div>"
+                        elif "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
                             cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            
+                        html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFFFFF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha/Plano:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU/Peds:</b> {info['SKU']} &nbsp;|&nbsp; <b>Volume:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Status WMS:</b> <span style='color:{cor_tema}; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
                         st.markdown(css_hack, unsafe_allow_html=True)
                         c_title, c_time = st.columns([5, 5])
                         c_title.markdown(f"<h4 style='margin:0; color:{cor_tema};'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
-                        c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-MAGALOG' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
+                        
+                        if is_pausado:
+                            c_time.markdown(f"<div style='text-align:right;'><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer}</div></div>", unsafe_allow_html=True)
+                        else:
+                            c_time.markdown(f"<div style='text-align:right;'><div style='font-size:11px; color:#64748B; margin-bottom: 2px;'><span class='icon-MAGALOG' style='font-size:11px;'>watch_later</span> Início: {row['DATA_HORA']}</div><div style='display:inline-block; font-size:12.5px; font-weight:800; color:{cor_timer}; background-color:{bg_timer}; padding:3px 6px; border-radius:4px; border: 1px solid {cor_timer};'>{txt_timer} <span style='font-size:10px; font-weight:normal;'>(Meta: {meta_minutos}m)</span></div></div>", unsafe_allow_html=True)
+                        
                         st.markdown(f"<div style='font-size: 13px; margin: 4px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
-                        
                         st.markdown(html_detalhes, unsafe_allow_html=True)
-                        st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                         
-                        c_eq, c_btn = st.columns([7, 3])
-                        with c_btn:
-                            if st.button("Finalizar Operação", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
-                                clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                                duracao_final = clique_dt - row['DATA_HORA_DT']
-                                total_minutos_final = int(duracao_final.total_seconds() / 60)
-                                horas, mins = total_minutos_final // 60, total_minutos_final % 60
-                                tempo_str = f"{horas:02d}:{mins:02d}"
-                                
-                                cat_final = str(info['LINHA']).upper()
-                                pecas_final = info.get('PEÇAS_BRUTO', 0)
-                                m3_final = info.get('M3_BRUTO', 0)
-                                
-                                linhas_conclusao_multiplas = []
-                                for pessoa in auxiliares_lista:
-                                    linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
-                                
-                                linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
-                                
-                                if restante_min < 0: 
-                                    exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final, pecas_final, m3_final)
-                                else:
-                                    for linha in linhas_conclusao_multiplas: 
-                                        linha.append("No Prazo")
-                                        linha.append(cat_final)
-                                        linha.append(pecas_final)
-                                        linha.append(m3_final)    
-                                        
-                                    with st.spinner("Finalizando..."):
-                                        if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
-                                            st.success("Doca finalizada com sucesso!")
-                                            carregar_log_produtividade.clear()
-                                            st.rerun()
+                        if is_pausado:
+                            motivo = next((p for p in auxiliares_lista if "PAUSADO" in p.upper()), "PAUSADO")
+                            st.markdown(f"<div style='background-color: #FEF3C7; padding: 12px; border-radius: 8px; border: 1px dashed #F59E0B; margin-bottom: 15px;'><div style='font-size: 13px; font-weight: 800; color: #B45309;'>Status: {motivo}</div></div>", unsafe_allow_html=True)
+                            
+                            if st.button("▶️ Retomar Operação", key=f"btn_ret_{row['DOCA']}_{index}", use_container_width=True, type="primary"):
+                                popup_start_carga(row['DOCA'], row['AGENDA'], row['CONFERENTE'], is_retomada=True)
+                        else:
+                            st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
+                            
+                            c_eq, c_btn1, c_btn2 = st.columns([4, 3, 3])
+                            with c_btn1:
+                                if st.button("⏸️ Pausar", key=f"btn_pse_{row['DOCA']}_{index}", use_container_width=True):
+                                    popup_pausar_operacao(row['DOCA'], row['AGENDA'], row['CONFERENTE'])
+                            with c_btn2:
+                                if st.button("Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                                    clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                                    duracao_final = clique_dt - row['DATA_HORA_DT']
+                                    total_minutos_final = int(duracao_final.total_seconds() / 60)
+                                    horas, mins = total_minutos_final // 60, total_minutos_final % 60
+                                    tempo_str = f"{horas:02d}:{mins:02d}"
+                                    
+                                    cat_final = str(info['LINHA']).upper()
+                                    pecas_final = info.get('PEÇAS_BRUTO', 0)
+                                    m3_final = info.get('M3_BRUTO', 0)
+                                    
+                                    linhas_conclusao_multiplas = []
+                                    for pessoa in auxiliares_lista:
+                                        linhas_conclusao_multiplas.append([clique_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), str(row['CONFERENTE']), len(auxiliares_lista), pessoa, row['DATA_HORA'], clique_dt.strftime("%H:%M:%S"), tempo_str])
+                                    
+                                    linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO", cat_final]
+                                    
+                                    if restante_min < 0: 
+                                        exibir_popup_justificativa(linhas_conclusao_multiplas, linha_log_fecha, cat_final, pecas_final, m3_final)
+                                    else:
+                                        for linha in linhas_conclusao_multiplas: 
+                                            linha.append("No Prazo")
+                                            linha.append(cat_final)
+                                            linha.append(pecas_final)
+                                            linha.append(m3_final)    
                                             
+                                        with st.spinner("Finalizando..."):
+                                            if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
+                                                st.success("Doca finalizada com sucesso!")
+                                                carregar_log_produtividade.clear()
+                                                st.rerun()
+                            
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
                             if st.button("Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
                                 popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
@@ -1298,7 +1337,6 @@ elif pagina_selecionada == "Gestão de Docas":
         else:
             st.info("O Log de Operações ainda está vazio.")
 
-    # --- ABA 2: PENDENTES (Fila de Espera) ---
     with aba2:
         if not df_aux.empty:
             df_pendentes = df_aux[~df_aux['AGENDA WMS'].isin(agendas_logadas)].copy()
@@ -1308,7 +1346,6 @@ elif pagina_selecionada == "Gestão de Docas":
             
             agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
             
-            # --- ALGORITMO DE ORDENAÇÃO DE FILA (SLA PENDENTE) ---
             def calc_urgencia_pendente(row):
                 try:
                     meta_minutos = 60
@@ -1431,7 +1468,6 @@ elif pagina_selecionada == "Gestão de Docas":
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
 
-    # --- ABA 3: APONTAR / MOVIMENTAR (FORMULÁRIO MANUAL) ---
     with aba3:
         try:
             with st.container(border=True):
