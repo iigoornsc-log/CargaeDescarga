@@ -1988,7 +1988,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V4 - LEADERBOARD E CSS CORRETO)
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V5 - TOOLTIPS)
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
@@ -2135,11 +2135,12 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                         with aba_equipe:
+                            # --- CSS DO TOOLTIP E DO PLACAR ---
                             st.markdown("""
                             <style>
                             .lb-wrapper { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); backdrop-filter: blur(8px); border-radius: 16px; padding: 25px; margin-top: 15px;}
-                            .lb-header { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr; color: #64748B; font-weight: 800; font-size: 11px; text-transform: uppercase; padding: 0 15px 12px 15px; border-bottom: 2px solid #F1F5F9; margin-bottom: 12px; }
-                            .lb-row { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr; align-items: center; background: #FFFFFF; margin-bottom: 8px; padding: 12px 15px; border-radius: 12px; border: 1px solid #E2E8F0; transition: all 0.2s; border-left: 6px solid transparent;}
+                            .lb-header { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1.2fr 1.2fr 1.2fr 1.2fr; color: #64748B; font-weight: 800; font-size: 11px; text-transform: uppercase; padding: 0 15px 12px 15px; border-bottom: 2px solid #F1F5F9; margin-bottom: 12px; align-items: center;}
+                            .lb-row { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1.2fr 1.2fr 1.2fr 1.2fr; align-items: center; background: #FFFFFF; margin-bottom: 8px; padding: 12px 15px; border-radius: 12px; border: 1px solid #E2E8F0; transition: all 0.2s; border-left: 6px solid transparent;}
                             .lb-row:hover { transform: translateX(4px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
                             
                             .lb-gold { background: linear-gradient(90deg, #FFFBEB 0%, #FFFFFF 30%); border-left-color: #F59E0B; border-color: #FEF3C7;}
@@ -2159,6 +2160,13 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             .lb-highlight { background: #F0F9FF; color: #0284C7; padding: 4px 8px; border-radius: 6px; font-weight: 800; border: 1px solid #BAE6FD; display: inline-block; font-size: 12px;}
                             .lb-danger .lb-highlight { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
                             .lb-gold .lb-highlight { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
+
+                            /* TOOLTIP MÁGICO MAGALU */
+                            .lb-tooltip { position: relative; display: inline-block; cursor: help; color: #94A3B8; margin-left: 4px; vertical-align: middle;}
+                            .lb-tooltip .lb-tooltiptext { visibility: hidden; width: 240px; background-color: #0F172A; color: #F8FAFC; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 999; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s, bottom 0.3s; font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: normal; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #334155; }
+                            .lb-tooltip .lb-tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #334155 transparent transparent transparent; }
+                            .lb-tooltip:hover .lb-tooltiptext { visibility: visible; opacity: 1; bottom: 150%; }
+                            .lb-tooltip:hover .icon-MAGALOG { color: #0086FF; }
                             </style>
                             """, unsafe_allow_html=True)
 
@@ -2201,9 +2209,23 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
 
                                 html_lb = "<div class='lb-wrapper'>"
+                                
+                                # --- HEADER COM TOOLTIPS EXPLICATIVOS ---
                                 html_lb += "<div class='lb-header'>"
-                                html_lb += "<div>POS</div><div>OPERADOR</div><div>CARGAS</div><div>T. MÉDIO</div>"
-                                html_lb += "<div>PÇS TOTAIS</div><div>M³ TOTAIS</div><div>PEÇAS / H</div><div>M³ / H</div>"
+                                html_lb += "<div>POS</div><div>OPERADOR</div>"
+                                
+                                html_lb += "<div>CARGAS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Total de veículos/agendas em que o operador trabalhou.</div></div></div>"
+                                
+                                html_lb += "<div>T. MÉDIO <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Média de tempo gasto por carga (Soma do tempo total ÷ Cargas participadas).</div></div></div>"
+                                
+                                html_lb += "<div>PÇS TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Soma real das peças processadas. O volume total da carga é dividido por todos os membros da doca igualmente.</div></div></div>"
+                                
+                                html_lb += "<div>M³ TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Soma do volume (m³) processado. Rateado pelo tamanho da equipe na doca.</div></div></div>"
+                                
+                                html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Velocidade de Trabalho:<br>Total de Peças processadas rateadas ÷ Total de Horas gastas nas docas.</div></div></div>"
+                                
+                                html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Velocidade de Trabalho:<br>Total de m³ rateado ÷ Total de Horas gastas nas docas.</div></div></div>"
+                                
                                 html_lb += "</div>"
 
                                 total_ops = len(df_rank)
