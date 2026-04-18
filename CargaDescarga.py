@@ -2066,7 +2066,7 @@ elif pagina_selecionada == "Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (V6 - EVOLUÇÃO DIÁRIA & TIPO OP)
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
@@ -2095,9 +2095,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 col_cat = 'CATEGORIA'
                 col_aux = 'NOME'
                 col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
-                
-                # Identifica coluna de Operação se existir
-                col_tipo = next((c for c in df_fin.columns if 'TIPO' in c or 'OPERAÇÃO' in c or 'OPERACAO' in c), None)
+                col_doca_final = next((c for c in df_fin.columns if 'DOCA' in c), None)
 
                 if 'M³' in df_fin.columns: col_m3 = 'M³'
                 elif 'M3' in df_fin.columns: col_m3 = 'M3'
@@ -2108,7 +2106,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 if col_m3 is None: colunas_faltantes.append('M³')
 
                 if colunas_faltantes:
-                    st.error(f"Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
+                    st.error(f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
                 else:
                     def tempo_para_minutos(t_str):
                         try:
@@ -2156,9 +2154,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         st.warning("Não há dados no período selecionado.")
                     else:
                         # --- BASE MACRO CONSOLIDADA (1 agenda = 1 carga) ---
-                        # Garantimos que a DOCA esteja na agregação
-                        col_doca_final = next((c for c in df_fin.columns if 'DOCA' in c), None)
-                        
                         df_agendas_unicas = (
                             df_fin.groupby(col_agenda, as_index=False)
                             .agg({
@@ -2170,35 +2165,30 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                         total_cargas = df_agendas_unicas.shape[0]
 
-                        # --- LÓGICA DE CLASSIFICAÇÃO POR DOCA (SOLUÇÃO DEFINITIVA) ---
+                        # --- LÓGICA DE CLASSIFICAÇÃO POR DOCA ---
                         def classificar_operacao(doca_val):
                             try:
-                                # Extrai apenas os números da doca (ex: "Doca 60" vira 60)
                                 num_doca = int(re.sub(r'\D', '', str(doca_val)))
                                 if 58 <= num_doca <= 90:
                                     return "RECEBIMENTO"
                                 else:
                                     return "EXPEDIÇÃO"
                             except:
-                                return "EXPEDIÇÃO" # Caso não tenha número, assume expedição
+                                return "EXPEDIÇÃO"
 
                         df_agendas_unicas['OPERACAO_CALC'] = df_agendas_unicas[col_doca_final].apply(classificar_operacao)
                         
-                        # --- SEPARAÇÃO PARA DADOS RICOS NOS KPIS ---
                         df_rec = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "RECEBIMENTO"]
                         df_exp = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "EXPEDIÇÃO"]
 
-                        # Contagem e Soma do Recebimento
                         qtd_rec = df_rec.shape[0]
                         pecas_rec = df_rec['VAL_PECAS'].sum()
                         m3_rec = df_rec['VAL_M3'].sum()
 
-                        # Contagem e Soma da Expedição
                         qtd_exp = df_exp.shape[0]
                         pecas_exp = df_exp['VAL_PECAS'].sum()
                         m3_exp = df_exp['VAL_M3'].sum()
 
-                        # --- CONTINUAÇÃO DOS CÁLCULOS GERAIS ---
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
                         tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                         
@@ -2212,74 +2202,34 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
-                        # Rateio Equipe
                         df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
 
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
 
-                       with aba_macro:
-                            # --- BLOCO 1: KPIS PRINCIPAIS ---
+                        with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                             with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
-                            
-                            # KPI Recebimento Enriquecido (Apenas o número limpo agora)
                             with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
-                            
-                            # KPI Expedição Enriquecido (Apenas o número limpo agora)
                             with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
 
-                            # Daqui para baixo continua o BLOCO 2 (Gráfico de Evolução) exatamente como estava...
-
-                            # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
-                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Acompanhamento diário peças x m³ </h4>", unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças (Barras) vs m³ (Linha)</h4>", unsafe_allow_html=True)
                             
-                            df_daily = (
-                                df_agendas_unicas.groupby(col_data)
-                                .agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'})
-                                .reset_index()
-                                .sort_values(col_data)
-                            )
-                            
+                            df_daily = df_agendas_unicas.groupby(col_data).agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'}).reset_index().sort_values(col_data)
                             fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
-                            
-                            # Barras para Peças
-                            fig_daily.add_trace(
-                                go.Bar(
-                                    x=df_daily[col_data], y=df_daily['VAL_PECAS'], 
-                                    name="Total Peças", marker_color='#0086FF', opacity=0.7,
-                                    hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"
-                                ), secondary_y=False
-                            )
-                            
-                            # Linha para M3
-                            fig_daily.add_trace(
-                                go.Scatter(
-                                    x=df_daily[col_data], y=df_daily['VAL_M3'], 
-                                    name="Total m³", line=dict(color='#14B8A6', width=4), mode='lines+markers+text',
-                                    text=df_daily['VAL_M3'].round(1), textposition='top center',
-                                    hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"
-                                ), secondary_y=True
-                            )
-                            
-                            fig_daily.update_layout(
-                                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                margin=dict(l=0, r=0, t=10, b=0), height=400,
-                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                                hovermode="x unified"
-                            )
+                            fig_daily.add_trace(go.Bar(x=df_daily[col_data], y=df_daily['VAL_PECAS'], name="Total Peças", marker_color='#0086FF', opacity=0.7, hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"), secondary_y=False)
+                            fig_daily.add_trace(go.Scatter(x=df_daily[col_data], y=df_daily['VAL_M3'], name="Total m³", line=dict(color='#14B8A6', width=4), mode='lines+markers+text', text=df_daily['VAL_M3'].round(1), textposition='top center', hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"), secondary_y=True)
+                            fig_daily.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=400, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), hovermode="x unified")
                             fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m")
                             fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9')
                             fig_daily.update_yaxes(title_text="Volume m³", secondary_y=True, showgrid=False)
-                            
                             st.plotly_chart(fig_daily, use_container_width=True, config={'displayModeBar': False})
                             st.markdown('</div>', unsafe_allow_html=True)
 
-                            # --- BLOCO 3: GRÁFICOS DE CATEGORIA ---
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>""", unsafe_allow_html=True)
@@ -2303,7 +2253,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                         with aba_equipe:
-                            # --- CSS E PLACAR DE LÍDERES (PRESERVADOS) ---
                             st.markdown("""
                             <style>
                             .lb-wrapper { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); backdrop-filter: blur(8px); border-radius: 16px; padding: 25px; margin-top: 15px;}
@@ -2391,4 +2340,4 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             else: st.info("Sem dados para esta categoria.")
 
     except Exception as e:
-        st.error(f"Erro no módulo de Produtividade: {e}")
+        st.error(f"Erro no processamento de produtividade: {e}")
