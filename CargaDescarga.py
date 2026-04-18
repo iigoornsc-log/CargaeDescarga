@@ -2066,12 +2066,12 @@ elif pagina_selecionada == "Registro de Alinhamento":
         st.error(f"Erro no módulo de Alinhamento: {e}")
 
 # ==========================================================
-# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (ATUALIZADO V5 - TOOLTIPS)
+# MÓDULO 4: PRODUTIVIDADE, NS E DESEMPENHO (V6 - EVOLUÇÃO DIÁRIA & TIPO OP)
 # ==========================================================
 elif pagina_selecionada == "Produtividade (NS & Equipe)":
     render_hero(
         'Produtividade & Nível de Serviço',
-        'Acompanhe SLA, tempo de ciclo, produção por hora e performance individual com leitura mais corporativa.',
+        'Acompanhe SLA, produção por hora, fluxo de agendas e a evolução diária da operação.',
         'Analytics operacional'
     )
 
@@ -2095,6 +2095,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 col_cat = 'CATEGORIA'
                 col_aux = 'NOME'
                 col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
+                
+                # Identifica coluna de Operação se existir
+                col_tipo = next((c for c in df_fin.columns if 'TIPO' in c or 'OPERAÇÃO' in c or 'OPERACAO' in c), None)
 
                 if 'M³' in df_fin.columns: col_m3 = 'M³'
                 elif 'M3' in df_fin.columns: col_m3 = 'M3'
@@ -2105,7 +2108,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 if col_m3 is None: colunas_faltantes.append('M³')
 
                 if colunas_faltantes:
-                    st.error(f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
+                    st.error(f"Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
                 else:
                     def tempo_para_minutos(t_str):
                         try:
@@ -2152,28 +2155,35 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                     if df_fin.empty:
                         st.warning("Não há dados no período selecionado.")
                     else:
+                        # --- BASE MACRO CONSOLIDADA (1 agenda = 1 carga) ---
                         df_agendas_unicas = (
                             df_fin.groupby(col_agenda, as_index=False)
                             .agg({
                                 col_data: 'first', col_cat: 'first', col_just: 'first',
-                                'VAL_PECAS': 'first', 'VAL_M3': 'first', 'MINUTOS': 'first', 'HORAS': 'first'
+                                'VAL_PECAS': 'first', 'VAL_M3': 'first', 'MINUTOS': 'first', 'HORAS': 'first',
+                                **({col_tipo: 'first'} if col_tipo else {})
                             }).copy()
                         )
 
-                        total_cargas = df_agendas_unicas[col_agenda].nunique()
-                        tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
-                        
+                        # --- CÁLCULO RECEBIMENTO X EXPEDIÇÃO ---
+                        if col_tipo:
+                            qtd_rec = df_agendas_unicas[df_agendas_unicas[col_tipo].astype(str).str.contains('REC', case=False, na=False)].shape[0]
+                            qtd_exp = df_agendas_unicas[df_agendas_unicas[col_tipo].astype(str).str.contains('EXP', case=False, na=False)].shape[0]
+                        else:
+                            # Caso não tenha coluna de tipo, tentamos deduzir pela categoria
+                            qtd_rec = df_agendas_unicas[df_agendas_unicas[col_cat].astype(str).str.contains('REC', case=False, na=False)].shape[0]
+                            qtd_exp = total_cargas - qtd_rec # O que sobrar assume-se expedição ou geral
+
+                        total_cargas = df_agendas_unicas.shape[0]
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
-                        total_pecas_geral = df_agendas_unicas['VAL_PECAS'].sum()
-                        total_m3_geral = df_agendas_unicas['VAL_M3'].sum()
-                        
-                        media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
-                        media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
+                        media_pecas_hora = df_agendas_unicas['VAL_PECAS'].sum() / total_horas_geral if total_horas_geral > 0 else 0
+                        media_m3_hora = df_agendas_unicas['VAL_M3'].sum() / total_horas_geral if total_horas_geral > 0 else 0
 
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
 
+                        # Rateio Equipe
                         df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
@@ -2181,175 +2191,169 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
 
                         with aba_macro:
+                            # --- BLOCO 1: KPIS PRINCIPAIS ---
                             c1, c2, c3, c4, c5 = st.columns(5)
-                            with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Cargas Finalizadas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
-                            with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA (Nível de Serviço)</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B;">{qtd_no_prazo} cargas no prazo</div></div>', unsafe_allow_html=True)
-                            with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Tempo Médio Geral</div><div class="kpi-value" style="font-size:28px;">{minutos_para_texto(tempo_medio_geral)}</div></div>', unsafe_allow_html=True)
-                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Média Peças / Hora</div><div class="kpi-value" style="font-size:28px;">{media_pecas_hora:.1f}</div></div>', unsafe_allow_html=True)
-                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Média m³ / Hora</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
+                            with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
+                            with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
+                            with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
+                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec} <span style="font-size:12px; color:#64748B;">agendas</span></div></div>', unsafe_allow_html=True)
+                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp} <span style="font-size:12px; color:#64748B;">agendas</span></div></div>', unsafe_allow_html=True)
 
+                            # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
+                            st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças (Barras) vs m³ (Linha)</h4>", unsafe_allow_html=True)
+                            
+                            df_daily = (
+                                df_agendas_unicas.groupby(col_data)
+                                .agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'})
+                                .reset_index()
+                                .sort_values(col_data)
+                            )
+                            
+                            fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
+                            
+                            # Barras para Peças
+                            fig_daily.add_trace(
+                                go.Bar(
+                                    x=df_daily[col_data], y=df_daily['VAL_PECAS'], 
+                                    name="Total Peças", marker_color='#0086FF', opacity=0.7,
+                                    hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"
+                                ), secondary_y=False
+                            )
+                            
+                            # Linha para M3
+                            fig_daily.add_trace(
+                                go.Scatter(
+                                    x=df_daily[col_data], y=df_daily['VAL_M3'], 
+                                    name="Total m³", line=dict(color='#14B8A6', width=4), mode='lines+markers+text',
+                                    text=df_daily['VAL_M3'].round(1), textposition='top center',
+                                    hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"
+                                ), secondary_y=True
+                            )
+                            
+                            fig_daily.update_layout(
+                                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                                margin=dict(l=0, r=0, t=10, b=0), height=400,
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                                hovermode="x unified"
+                            )
+                            fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m")
+                            fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9')
+                            fig_daily.update_yaxes(title_text="Volume m³", secondary_y=True, showgrid=False)
+                            
+                            st.plotly_chart(fig_daily, use_container_width=True, config={'displayModeBar': False})
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                            # --- BLOCO 3: GRÁFICOS DE CATEGORIA ---
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
-                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio por Categoria</h4>', unsafe_allow_html=True)
-                                df_cat = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
-                                df_cat['TEXTO_TEMPO'] = df_cat['MINUTOS'].apply(minutos_para_texto)
-                                fig1 = px.bar(df_cat, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#0086FF'])
-                                fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, margin=dict(l=0, r=0, t=0, b=0), height=350)
+                                st.markdown('<div class="MAGALOG-card"><h4 style='color: #334155; margin-bottom: 15px;'><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>', unsafe_allow_html=True)
+                                df_cat_plot = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
+                                df_cat_plot['TEXTO_TEMPO'] = df_cat_plot['MINUTOS'].apply(minutos_para_texto)
+                                fig1 = px.bar(df_cat_plot, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#8B5CF6'])
+                                fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, height=350, margin=dict(l=0,r=0,t=0,b=0))
                                 fig1.update_traces(textposition='outside')
                                 st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                             with col_g2:
-                                st.markdown('<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
+                                st.markdown('<div class="MAGALOG-card"><h4 style='color: #334155; margin-bottom: 15px;'><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>', unsafe_allow_html=True)
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
-                                    df_motivos.columns = ['Motivo', 'Qtd']
-                                    fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
+                                    fig2 = px.pie(df_motivos, values='count', names=col_just, hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
                                     fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
                                     st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
-                                else:
-                                    st.info("Nenhum atraso registrado no período.")
+                                else: st.info("Nenhum atraso no período.")
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                         with aba_equipe:
-                            # --- CSS DO TOOLTIP E DO PLACAR ---
+                            # --- CSS E PLACAR DE LÍDERES (PRESERVADOS) ---
                             st.markdown("""
                             <style>
                             .lb-wrapper { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); backdrop-filter: blur(8px); border-radius: 16px; padding: 25px; margin-top: 15px;}
                             .lb-header { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1.2fr 1.2fr 1.2fr 1.2fr; color: #64748B; font-weight: 800; font-size: 11px; text-transform: uppercase; padding: 0 15px 12px 15px; border-bottom: 2px solid #F1F5F9; margin-bottom: 12px; align-items: center;}
                             .lb-row { display: grid; grid-template-columns: 0.5fr 2.5fr 1fr 1fr 1.2fr 1.2fr 1.2fr 1.2fr; align-items: center; background: #FFFFFF; margin-bottom: 8px; padding: 12px 15px; border-radius: 12px; border: 1px solid #E2E8F0; transition: all 0.2s; border-left: 6px solid transparent;}
                             .lb-row:hover { transform: translateX(4px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-                            
                             .lb-gold { background: linear-gradient(90deg, #FFFBEB 0%, #FFFFFF 30%); border-left-color: #F59E0B; border-color: #FEF3C7;}
                             .lb-silver { background: linear-gradient(90deg, #F8FAFC 0%, #FFFFFF 30%); border-left-color: #94A3B8; border-color: #E2E8F0;}
                             .lb-bronze { background: linear-gradient(90deg, #FFF7ED 0%, #FFFFFF 30%); border-left-color: #B45309; border-color: #FFEDD5;}
                             .lb-danger { background: linear-gradient(90deg, #FEF2F2 0%, #FFFFFF 30%); border-left-color: #EF4444; border-color: #FEE2E2;}
-                            
                             .lb-rank { font-size: 18px; font-weight: 900; color: #0F172A; }
                             .lb-gold .lb-rank { color: #D97706; }
                             .lb-silver .lb-rank { color: #64748B; }
                             .lb-bronze .lb-rank { color: #92400E; }
                             .lb-danger .lb-rank { color: #DC2626; }
-                            
                             .lb-name { font-size: 14px; font-weight: 800; color: #1E293B; display: flex; align-items: center; gap: 8px;}
                             .lb-stat { font-size: 13px; font-weight: 600; color: #475569; }
-                            
                             .lb-highlight { background: #F0F9FF; color: #0284C7; padding: 4px 8px; border-radius: 6px; font-weight: 800; border: 1px solid #BAE6FD; display: inline-block; font-size: 12px;}
                             .lb-danger .lb-highlight { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
                             .lb-gold .lb-highlight { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
-
-                            /* TOOLTIP MÁGICO MAGALU */
                             .lb-tooltip { position: relative; display: inline-block; cursor: help; color: #94A3B8; margin-left: 4px; vertical-align: middle;}
                             .lb-tooltip .lb-tooltiptext { visibility: hidden; width: 240px; background-color: #0F172A; color: #F8FAFC; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 999; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s, bottom 0.3s; font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: normal; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #334155; }
                             .lb-tooltip .lb-tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #334155 transparent transparent transparent; }
                             .lb-tooltip:hover .lb-tooltiptext { visibility: visible; opacity: 1; bottom: 150%; }
-                            .lb-tooltip:hover .icon-MAGALOG { color: #0086FF; }
                             </style>
                             """, unsafe_allow_html=True)
 
                             st.markdown("<h4 style='color: #0086FF;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
                             
-                            c_filt1, c_filt2 = st.columns([3, 7])
-                            with c_filt1:
-                                categorias_lista = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
-                                cat_sel = st.selectbox("Filtrar por Categoria:", ["Todas as Categorias"] + categorias_lista)
-                            with c_filt2:
+                            c_rank_f1, c_rank_f2 = st.columns([3, 7])
+                            with c_rank_f1:
+                                cat_list_rank = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
+                                cat_sel_rank = st.selectbox("Filtrar Equipe por Categoria:", ["Todas as Categorias"] + cat_list_rank)
+                            with c_rank_f2:
                                 metric_sel = st.radio("🏆 Classificar placar por:", ["Peças / Hora", "m³ / Hora", "Menor Tempo Médio"], horizontal=True)
 
-                            df_operadores = df_fin.copy()
-                            if cat_sel != "Todas as Categorias":
-                                df_operadores = df_operadores[df_operadores[col_cat] == cat_sel].copy()
+                            df_ops_rank = df_fin.copy()
+                            if cat_sel_rank != "Todas as Categorias":
+                                df_ops_rank = df_ops_rank[df_ops_rank[col_cat] == cat_sel_rank].copy()
 
-                            if not df_operadores.empty:
-                                df_rank = (
-                                    df_operadores.groupby(col_aux)
-                                    .agg(
-                                        Cargas_Participadas=(col_agenda, 'nunique'),
-                                        Tempo_Medio_Minutos=('MINUTOS', 'mean'),
-                                        Horas_Totais=('HORAS', 'sum'),
-                                        Pecas_Descarregadas=('PECAS_PART', 'sum'),
-                                        M3_Descarregados=('M3_PART', 'sum')
-                                    ).reset_index()
+                            if not df_ops_rank.empty:
+                                df_rank_data = (
+                                    df_ops_rank.groupby(col_aux)
+                                    .agg({
+                                        col_agenda: 'nunique',
+                                        'MINUTOS': 'mean',
+                                        'HORAS': 'sum',
+                                        'PECAS_PART': 'sum',
+                                        'M3_PART': 'sum'
+                                    }).reset_index()
                                 )
-                                df_rank = df_rank[df_rank['Cargas_Participadas'] > 0].copy()
-                                
-                                df_rank['Media_Pecas_Hora'] = (df_rank['Pecas_Descarregadas'] / df_rank['Horas_Totais']).fillna(0)
-                                df_rank['Media_M3_Hora'] = (df_rank['M3_Descarregados'] / df_rank['Horas_Totais']).fillna(0)
+                                df_rank_data['PECAS_H'] = (df_rank_data['PECAS_PART'] / df_rank_data['HORAS']).fillna(0)
+                                df_rank_data['M3_H'] = (df_rank_data['M3_PART'] / df_rank_data['HORAS']).fillna(0)
 
-                                if metric_sel == "Peças / Hora":
-                                    df_rank = df_rank.sort_values('Media_Pecas_Hora', ascending=False).reset_index(drop=True)
-                                elif metric_sel == "m³ / Hora":
-                                    df_rank = df_rank.sort_values('Media_M3_Hora', ascending=False).reset_index(drop=True)
-                                else:
-                                    df_rank = df_rank.sort_values('Tempo_Medio_Minutos', ascending=True).reset_index(drop=True)
+                                if metric_sel == "Peças / Hora": df_rank_data = df_rank_data.sort_values('PECAS_H', ascending=False).reset_index(drop=True)
+                                elif metric_sel == "m³ / Hora": df_rank_data = df_rank_data.sort_values('M3_H', ascending=False).reset_index(drop=True)
+                                else: df_rank_data = df_rank_data.sort_values('MINUTOS', ascending=True).reset_index(drop=True)
                                 
-                                df_rank['Tempo_Medio'] = df_rank['Tempo_Medio_Minutos'].apply(minutos_para_texto)
+                                html_lb = "<div class='lb-wrapper'><div class='lb-header'><div>POS</div><div>OPERADOR</div>"
+                                html_lb += "<div>CARGAS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Total de agendas participadas.</div></div></div>"
+                                html_lb += "<div>T. MÉDIO <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Média de tempo gasto por carga.</div></div></div>"
+                                html_lb += "<div>PÇS TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Volume total rateado pela equipe.</div></div></div>"
+                                html_lb += "<div>M³ TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>m³ total rateado pela equipe.</div></div></div>"
+                                html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: Peças ÷ Horas.</div></div></div>"
+                                html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: m³ ÷ Horas.</div></div></div></div>"
 
-                                html_lb = "<div class='lb-wrapper'>"
-                                
-                                # --- HEADER COM TOOLTIPS EXPLICATIVOS ---
-                                html_lb += "<div class='lb-header'>"
-                                html_lb += "<div>POS</div><div>OPERADOR</div>"
-                                
-                                html_lb += "<div>CARGAS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Total de veículos/agendas em que o operador trabalhou.</div></div></div>"
-                                
-                                html_lb += "<div>T. MÉDIO <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Média de tempo gasto por carga (Soma do tempo total ÷ Cargas participadas).</div></div></div>"
-                                
-                                html_lb += "<div>PÇS TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Soma real das peças processadas. O volume total da carga é dividido por todos os membros da doca igualmente.</div></div></div>"
-                                
-                                html_lb += "<div>M³ TOTAIS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Soma do volume (m³) processado. Rateado pelo tamanho da equipe na doca.</div></div></div>"
-                                
-                                html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Velocidade de Trabalho:<br>Total de Peças processadas rateadas ÷ Total de Horas gastas nas docas.</div></div></div>"
-                                
-                                html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Velocidade de Trabalho:<br>Total de m³ rateado ÷ Total de Horas gastas nas docas.</div></div></div>"
+                                total_ops = len(df_rank_data)
+                                for idx, row_r in df_rank_data.iterrows():
+                                    pos_r = idx + 1
+                                    css_c = "lb-gold" if pos_r == 1 else "lb-silver" if pos_r == 2 else "lb-bronze" if pos_r == 3 else "lb-danger" if (pos_r >= total_ops - 2 and total_ops >= 6) else ""
+                                    ic_r = "workspace_premium" if pos_r == 1 else "military_tech" if pos_r <= 3 else "warning" if "danger" in css_c else "person"
+                                    
+                                    html_lb += f"<div class='lb-row {css_c}'>"
+                                    html_lb += f"<div class='lb-rank'>{pos_r}º</div>"
+                                    html_lb += f"<div class='lb-name'><span class='icon-MAGALOG' style='font-size:20px;'>{ic_r}</span> {row_r[col_aux]}</div>"
+                                    html_lb += f"<div class='lb-stat'>{int(row_r[col_agenda])}</div>"
+                                    html_lb += f"<div class='lb-stat'>{minutos_para_texto(row_r['MINUTOS'])}</div>"
+                                    html_lb += f"<div class='lb-stat'>{row_r['PECAS_PART']:.1f}</div>"
+                                    html_lb += f"<div class='lb-stat'>{row_r['M3_PART']:.2f}</div>"
+                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{row_r['PECAS_H']:.1f} pç/h</span></div>"
+                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{row_r['M3_H']:.2f} m³/h</span></div></div>"
                                 
                                 html_lb += "</div>"
-
-                                total_ops = len(df_rank)
-                                for i, row in df_rank.iterrows():
-                                    pos = i + 1
-                                    css_class = ""
-                                    
-                                    if pos == 1:
-                                        css_class = "lb-gold"
-                                        icon = "<span class='icon-MAGALOG' style='color:#D97706; font-size: 20px;'>workspace_premium</span>"
-                                    elif pos == 2:
-                                        css_class = "lb-silver"
-                                        icon = "<span class='icon-MAGALOG' style='color:#64748B; font-size: 20px;'>military_tech</span>"
-                                    elif pos == 3:
-                                        css_class = "lb-bronze"
-                                        icon = "<span class='icon-MAGALOG' style='color:#92400E; font-size: 20px;'>military_tech</span>"
-                                    elif pos >= total_ops - 2 and total_ops >= 6:
-                                        css_class = "lb-danger"
-                                        icon = "<span class='icon-MAGALOG' style='color:#DC2626; font-size: 20px;'>warning</span>"
-                                    else:
-                                        icon = "<span class='icon-MAGALOG' style='color:#94A3B8; font-size: 20px;'>person</span>"
-
-                                    nome = row[col_aux]
-                                    cargas = int(row['Cargas_Participadas'])
-                                    tempo = row['Tempo_Medio']
-                                    pecas_t = f"{row['Pecas_Descarregadas']:.1f}"
-                                    m3_t = f"{row['M3_Descarregados']:.2f}"
-                                    pecas_h = f"{row['Media_Pecas_Hora']:.1f}"
-                                    m3_h = f"{row['Media_M3_Hora']:.2f}"
-
-                                    html_lb += f"<div class='lb-row {css_class}'>"
-                                    html_lb += f"<div class='lb-rank'>{pos}º</div>"
-                                    html_lb += f"<div class='lb-name'>{icon} {nome}</div>"
-                                    html_lb += f"<div class='lb-stat'>{cargas}</div>"
-                                    html_lb += f"<div class='lb-stat'>{tempo}</div>"
-                                    html_lb += f"<div class='lb-stat'>{pecas_t}</div>"
-                                    html_lb += f"<div class='lb-stat'>{m3_t}</div>"
-                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{pecas_h} pç/h</span></div>"
-                                    html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{m3_h} m³/h</span></div>"
-                                    html_lb += "</div>"
-                                    
-                                html_lb += "</div>"
-                                
                                 st.markdown(html_lb, unsafe_allow_html=True)
-                            else:
-                                st.info("Sem dados suficientes para esta categoria.")
+                            else: st.info("Sem dados para esta categoria.")
 
     except Exception as e:
-        st.error(f"Erro no processamento de produtividade: {e}")
+        st.error(f"Erro no módulo de Produtividade: {e}")
