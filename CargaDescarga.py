@@ -2165,6 +2165,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             }).copy()
                         )
 
+                        # DECLARA O TOTAL DE CARGAS PRIMEIRO (AQUI ESTAVA O ERRO)
+                        total_cargas = df_agendas_unicas.shape[0]
+
                         # --- CÁLCULO RECEBIMENTO X EXPEDIÇÃO ---
                         if col_tipo:
                             qtd_rec = df_agendas_unicas[df_agendas_unicas[col_tipo].astype(str).str.contains('REC', case=False, na=False)].shape[0]
@@ -2172,12 +2175,16 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         else:
                             # Caso não tenha coluna de tipo, tentamos deduzir pela categoria
                             qtd_rec = df_agendas_unicas[df_agendas_unicas[col_cat].astype(str).str.contains('REC', case=False, na=False)].shape[0]
-                            qtd_exp = total_cargas - qtd_rec # O que sobrar assume-se expedição ou geral
+                            qtd_exp = total_cargas - qtd_rec # Agora ele sabe o que é total_cargas!
 
-                        total_cargas = df_agendas_unicas.shape[0]
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
-                        media_pecas_hora = df_agendas_unicas['VAL_PECAS'].sum() / total_horas_geral if total_horas_geral > 0 else 0
-                        media_m3_hora = df_agendas_unicas['VAL_M3'].sum() / total_horas_geral if total_horas_geral > 0 else 0
+                        tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
+                        
+                        total_pecas_geral = df_agendas_unicas['VAL_PECAS'].sum()
+                        total_m3_geral = df_agendas_unicas['VAL_M3'].sum()
+                        
+                        media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
+                        media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
 
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
