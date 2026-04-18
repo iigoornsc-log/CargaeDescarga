@@ -2219,19 +2219,18 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
 
-                        with aba_macro:
+                       with aba_macro:
                             # --- BLOCO 1: KPIS PRINCIPAIS ---
                             c1, c2, c3, c4, c5 = st.columns(5)
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                             with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
                             
-                            # KPI Recebimento Enriquecido
-                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec} <span style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
+                            # KPI Recebimento Enriquecido (Apenas o número limpo agora)
+                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
                             
-                            # KPI Expedição Enriquecido
-                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp} <span style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
-
+                            # KPI Expedição Enriquecido (Apenas o número limpo agora)
+                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
                             # Daqui para baixo continua o BLOCO 2 (Gráfico de Evolução) exatamente como estava...
 
                             # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
