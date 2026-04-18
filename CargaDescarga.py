@@ -2184,10 +2184,21 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                         df_agendas_unicas['OPERACAO_CALC'] = df_agendas_unicas[col_doca_final].apply(classificar_operacao)
                         
-                        qtd_rec = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "RECEBIMENTO"].shape[0]
-                        qtd_exp = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "EXPEDIÇÃO"].shape[0]
+                        # --- SEPARAÇÃO PARA DADOS RICOS NOS KPIS ---
+                        df_rec = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "RECEBIMENTO"]
+                        df_exp = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "EXPEDIÇÃO"]
 
-                        # --- CONTINUAÇÃO DOS CÁLCULOS ---
+                        # Contagem e Soma do Recebimento
+                        qtd_rec = df_rec.shape[0]
+                        pecas_rec = df_rec['VAL_PECAS'].sum()
+                        m3_rec = df_rec['VAL_M3'].sum()
+
+                        # Contagem e Soma da Expedição
+                        qtd_exp = df_exp.shape[0]
+                        pecas_exp = df_exp['VAL_PECAS'].sum()
+                        m3_exp = df_exp['VAL_M3'].sum()
+
+                        # --- CONTINUAÇÃO DOS CÁLCULOS GERAIS ---
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
                         tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
                         
@@ -2214,8 +2225,14 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                             with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div></div>', unsafe_allow_html=True)
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
-                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec} <span style="font-size:12px; color:#64748B;">agendas</span></div></div>', unsafe_allow_html=True)
-                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp} <span style="font-size:12px; color:#64748B;">agendas</span></div></div>', unsafe_allow_html=True)
+                            
+                            # KPI Recebimento Enriquecido
+                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec} <span style="font-size:12px; color:#64748B;">agendas</span></div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
+                            
+                            # KPI Expedição Enriquecido
+                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp} <span style="font-size:12px; color:#64748B;">agendas</span></div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
+
+                            # Daqui para baixo continua o BLOCO 2 (Gráfico de Evolução) exatamente como estava...
 
                             # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
