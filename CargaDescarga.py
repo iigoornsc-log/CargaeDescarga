@@ -2231,6 +2231,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             
                             # KPI Expedição Enriquecido (Apenas o número limpo agora)
                             with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
+
                             # Daqui para baixo continua o BLOCO 2 (Gráfico de Evolução) exatamente como estava...
 
                             # --- BLOCO 2: GRÁFICO DE EVOLUÇÃO DIÁRIA (O PULO DO GATO) ---
