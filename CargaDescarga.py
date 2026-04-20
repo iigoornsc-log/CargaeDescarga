@@ -2186,14 +2186,65 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             
                             df_daily = df_agendas_unicas.groupby(col_data).agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'}).reset_index().sort_values(col_data)
                             fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
-                            fig_daily.add_trace(go.Bar(x=df_daily[col_data], y=df_daily['VAL_PECAS'], name="Total Peças", marker_color='#0086FF', opacity=0.7, hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"), secondary_y=False)
-                            fig_daily.add_trace(go.Scatter(x=df_daily[col_data], y=df_daily['VAL_M3'], name="Total m³", line=dict(color='#9f04cf', width=4), mode='lines+markers+text', text=df_daily['VAL_M3'].round(1), textposition='top center', hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"), secondary_y=True)
-                            fig_daily.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=400, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), hovermode="x unified")
-                            fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m")
-                            fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9')
-                            fig_daily.update_yaxes(title_text="Volume m³", secondary_y=True, showgrid=False)
+                            
+                            # 1. BARRAS: Cores sólidas e rótulos no topo em negrito
+                            text_pecas = df_daily['VAL_PECAS'].apply(lambda x: f"<b>{int(x):,}</b>".replace(',', '.'))
+                            fig_daily.add_trace(
+                                go.Bar(
+                                    x=df_daily[col_data], 
+                                    y=df_daily['VAL_PECAS'], 
+                                    name="Total Peças", 
+                                    marker_color='#0086FF', 
+                                    opacity=1.0, # Cor 100% sólida
+                                    text=text_pecas,
+                                    textposition='outside', # Texto fora da barra
+                                    textfont=dict(color='#0086FF', size=12),
+                                    cliponaxis=False, # Impede que o número corte no topo
+                                    hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"
+                                ), 
+                                secondary_y=False
+                            )
+                            
+                            # 2. LINHA: Marcadores premium (fundo branco) e rótulos destacados
+                            text_m3 = df_daily['VAL_M3'].apply(lambda x: f"<b>{x:.1f}</b>".replace('.', ','))
+                            fig_daily.add_trace(
+                                go.Scatter(
+                                    x=df_daily[col_data], 
+                                    y=df_daily['VAL_M3'], 
+                                    name="Total m³", 
+                                    line=dict(color='#9f04cf', width=4), 
+                                    mode='lines+markers+text', 
+                                    marker=dict(size=9, color='#FFFFFF', line=dict(width=3, color='#9f04cf')), # Marcador vazado moderno
+                                    text=text_m3, 
+                                    textposition='top center', 
+                                    textfont=dict(color='#9f04cf', size=13),
+                                    cliponaxis=False,
+                                    hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"
+                                ), 
+                                secondary_y=True
+                            )
+                            
+                            # 3. LAYOUT: Mais respiro, fonte Inter e eixos clean
+                            fig_daily.update_layout(
+                                plot_bgcolor='rgba(0,0,0,0)', 
+                                paper_bgcolor='rgba(0,0,0,0)', 
+                                margin=dict(l=0, r=0, t=40, b=0), # Mais espaço no topo
+                                height=420, 
+                                legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1), 
+                                hovermode="x unified",
+                                font_family="Inter"
+                            )
+                            
+                            # Eixo X (Datas)
+                            fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m", tickfont=dict(color='#64748B', size=11, weight='bold'))
+                            
+                            # Eixos Y (Ocultamos os números laterais para o gráfico ficar mais limpo, já que os números estão nas barras)
+                            fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9', showticklabels=False, zeroline=False)
+                            fig_daily.update_yaxes(title_text="Volume m³", secondary_y=True, showgrid=False, showticklabels=False, zeroline=False)
+                            
                             st.plotly_chart(fig_daily, use_container_width=True, config={'displayModeBar': False})
                             st.markdown('</div>', unsafe_allow_html=True)
+
 
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
