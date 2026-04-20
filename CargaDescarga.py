@@ -2298,19 +2298,20 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             </style>
                             """, unsafe_allow_html=True)
 
-                            st.markdown("<h4 style='color: #0086FF;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
+                                                        st.markdown("<h4 style='color: #0086FF; margin-bottom: 15px;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
                             
                             c_rank_f1, c_rank_f2 = st.columns([3, 7])
                             with c_rank_f1:
                                 cat_list_rank = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
                                 cat_sel_rank = st.selectbox("Filtrar Equipe por Categoria:", ["Todas as Categorias"] + cat_list_rank)
                             with c_rank_f2:
-                                metric_sel = st.radio("🏆 Classificar placar por:", ["Peças / Hora", "m³ / Hora", "Menor Tempo Médio"], horizontal=True)
-
+                                # CORREÇÃO: Emoji removido e opção "Total de Cargas" adicionada
+                                metric_sel = st.radio("Classificar placar por:", ["Total de Cargas", "Peças / Hora", "m³ / Hora", "Menor Tempo Médio"], horizontal=True)
+                                
                             df_ops_rank = df_fin.copy()
                             if cat_sel_rank != "Todas as Categorias":
                                 df_ops_rank = df_ops_rank[df_ops_rank[col_cat] == cat_sel_rank].copy()
-
+                                
                             if not df_ops_rank.empty:
                                 df_rank_data = (
                                     df_ops_rank.groupby(col_aux)
@@ -2324,13 +2325,18 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 )
                                 df_rank_data['PECAS_H'] = (df_rank_data['PECAS_PART'] / df_rank_data['HORAS']).fillna(0)
                                 df_rank_data['M3_H'] = (df_rank_data['M3_PART'] / df_rank_data['HORAS']).fillna(0)
-
-                                if metric_sel == "Peças / Hora": df_rank_data = df_rank_data.sort_values('PECAS_H', ascending=False).reset_index(drop=True)
-                                elif metric_sel == "m³ / Hora": df_rank_data = df_rank_data.sort_values('M3_H', ascending=False).reset_index(drop=True)
-                                else: df_rank_data = df_rank_data.sort_values('MINUTOS', ascending=True).reset_index(drop=True)
+                                
+                                # CORREÇÃO: Lógica para filtrar pela quantidade de agendas (Cargas)
+                                if metric_sel == "Total de Cargas": 
+                                    df_rank_data = df_rank_data.sort_values(col_agenda, ascending=False).reset_index(drop=True)
+                                elif metric_sel == "Peças / Hora": 
+                                    df_rank_data = df_rank_data.sort_values('PECAS_H', ascending=False).reset_index(drop=True)
+                                elif metric_sel == "m³ / Hora": 
+                                    df_rank_data = df_rank_data.sort_values('M3_H', ascending=False).reset_index(drop=True)
+                                else: 
+                                    df_rank_data = df_rank_data.sort_values('MINUTOS', ascending=True).reset_index(drop=True)
                                 
                                 df_rank_data['Tempo_Medio'] = df_rank_data['MINUTOS'].apply(minutos_para_texto)
-
                                 html_lb = "<div class='lb-wrapper'>"
                                 
                                 html_lb += "<div class='lb-header'>"
@@ -2342,8 +2348,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: Peças ÷ Horas.</div></div></div>"
                                 html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: m³ ÷ Horas.</div></div></div>"
                                 html_lb += "</div>"
-
                                 total_ops = len(df_rank_data)
+                                
                                 for idx, row_r in df_rank_data.iterrows():
                                     pos_r = idx + 1
                                     css_c = "lb-gold" if pos_r == 1 else "lb-silver" if pos_r == 2 else "lb-bronze" if pos_r == 3 else "lb-danger" if (pos_r >= total_ops - 2 and total_ops >= 6) else ""
@@ -2361,7 +2367,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 
                                 html_lb += "</div>"
                                 st.markdown(html_lb, unsafe_allow_html=True)
-                            else: st.info("Sem dados para esta categoria.")
-
+                            else: 
+                                st.info("Sem dados para esta categoria.")
     except Exception as e:
         st.error(f"Erro no módulo de Produtividade: {e}")
