@@ -14,7 +14,7 @@ from datetime import date
 # ==========================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALOG CORPORATIVO)
 # ==========================================================
-st.set_page_config(page_title="MAGALOG | Carga e Descarga", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Carga e Descarga | MAGALOG", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
