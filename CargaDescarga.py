@@ -2352,66 +2352,75 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 html_lb += "</div>"
                                 st.markdown(html_lb, unsafe_allow_html=True)
                                 
-                                # =========================================================
+                                                                # =========================================================
                                 # NOVO BLOCO: RADAR DA LIDERANÇA (INSIGHTS COMPORTAMENTAIS)
                                 # =========================================================
                                 if len(df_rank_data) >= 3:
                                     st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 12px;'><span class='icon-MAGALOG' style='color: #0086FF;'>radar</span> Radar da Liderança (Análise de Perfil)</h4>", unsafe_allow_html=True)
                                     
-                                    # 1. Calculando a "Média da Equipe" para usar como linha de corte
+                                    # Médias dinâmicas baseadas na equipe atual da tela
                                     avg_pecas_h = df_rank_data['PECAS_H'].mean()
                                     avg_m3_h = df_rank_data['M3_H'].mean()
                                     avg_cargas = df_rank_data[col_agenda].mean()
+                                    max_cargas = df_rank_data[col_agenda].max()
                                     
                                     insights_html = ""
                                     alertas_gerados = 0
                                     
                                     for idx, row in df_rank_data.iterrows():
-                                        if alertas_gerados >= 4: break # Limita a 4 insights para não poluir a tela
+                                        if alertas_gerados >= 5: break # Limita a 5 insights para não lotar a tela
                                         
                                         nome = row[col_aux]
                                         pecas_h = row['PECAS_H']
                                         m3_h = row['M3_H']
                                         cargas = row[col_agenda]
                                         
-                                        # REGRA 1: Ponto de Atenção Crítico (Baixo em tudo)
-                                        if pecas_h < (avg_pecas_h * 0.6) and m3_h < (avg_m3_h * 0.6) and cargas <= (avg_cargas * 0.8):
-                                            insights_html += f"""<div style="background: #FEF2F2; border: 1px solid #FECACA; border-left: 4px solid #DC2626; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
-                                                <span class='icon-MAGALOG' style='color: #DC2626; font-size: 20px; margin-top: 2px;'>warning</span>
-                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> é um ponto de atenção crítico. Apresenta baixa participação em cargas (apenas {int(cargas)} agendas) e não produz nem em volume (m³) nem em peças. Sugestão: Acompanhar de perto a operação, validar ociosidade ou necessidade de reciclagem.</div>
+                                        # REGRA 1: Alta Velocidade, Baixa Participação (Ex: O caso do Robson no seu print)
+                                        if (pecas_h > avg_pecas_h * 1.15 or m3_h > avg_m3_h * 1.15) and cargas <= (avg_cargas * 0.8):
+                                            insights_html += f"""<div style="background: #FFFBEB; border: 1px solid #FDE68A; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
+                                                <span class='icon-MAGALOG' style='color: #F59E0B; font-size: 20px; margin-top: 2px;'>bolt</span>
+                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> possui eficiência altíssima ({pecas_h:.1f} pçs/h e {m3_h:.1f} m³/h), mas participou de poucas agendas ({int(cargas)} cargas). <span style="color:#B45309; font-weight:700;">Atenção:</span> Pode indicar "escolha" de cargas muito fáceis ("cherry-picking") ou atuação de meio turno.</div>
                                             </div>"""
                                             alertas_gerados += 1
                                             
-                                        # REGRA 2: Foco Exclusivo em Pesado/Grande (Alto m³, Baixa Peça)
-                                        elif m3_h > (avg_m3_h * 1.2) and pecas_h < (avg_pecas_h * 0.7):
+                                        # REGRA 2: Baixa Eficiência Crônica (Ex: O caso do Jose no seu print)
+                                        elif pecas_h < (avg_pecas_h * 0.85) and m3_h < (avg_m3_h * 0.85) and cargas >= (avg_cargas * 0.7):
+                                            insights_html += f"""<div style="background: #FEF2F2; border: 1px solid #FECACA; border-left: 4px solid #DC2626; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
+                                                <span class='icon-MAGALOG' style='color: #DC2626; font-size: 20px; margin-top: 2px;'>trending_down</span>
+                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> assumiu o giro de cargas ({int(cargas)} agendas), mas sua velocidade de entrega ({pecas_h:.1f} pçs/h) está bem abaixo da média do grupo ({avg_pecas_h:.0f} pçs/h). Pode indicar dificuldade no manuseio, fadiga ou excesso de alocação em piores cargas.</div>
+                                            </div>"""
+                                            alertas_gerados += 1
+
+                                        # REGRA 3: Ociosidade Crítica (Ex: O caso do Leonardo no seu print)
+                                        elif cargas < (avg_cargas * 0.5):
+                                            insights_html += f"""<div style="background: #F1F5F9; border: 1px solid #E2E8F0; border-left: 4px solid #64748B; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
+                                                <span class='icon-MAGALOG' style='color: #64748B; font-size: 20px; margin-top: 2px;'>person_off</span>
+                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> atuou em um volume criticamente baixo de cargas ({int(cargas)} agendas vs média de {int(avg_cargas)}). Validar urgentemente se ocorreu falta, atestado, desvio de função ou ociosidade oculta.</div>
+                                            </div>"""
+                                            alertas_gerados += 1
+                                            
+                                        # REGRA 4: Foco Desbalanceado no Pesado
+                                        elif m3_h > (avg_m3_h * 1.25) and pecas_h < (avg_pecas_h * 0.75):
                                             insights_html += f"""<div style="background: #F5F3FF; border: 1px solid #DDD6FE; border-left: 4px solid #8B5CF6; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
                                                 <span class='icon-MAGALOG' style='color: #8B5CF6; font-size: 20px; margin-top: 2px;'>fitness_center</span>
-                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> apresenta alto rendimento em m³, mas a quantidade de peças processada é muito baixa. Isso indica forte alocação em cargas de produtos grandes/pesados (ex: Eletro, Móveis). Importante validar se o rodízio de equipes para carga pesada está justo.</div>
+                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> tem alto volume em m³, mas baixo em peças. Sinal claro de alocação excessiva em cargas de grande porte/pesadas. Checar se o rodízio de esforço na doca está justo.</div>
                                             </div>"""
                                             alertas_gerados += 1
                                             
-                                        # REGRA 3: Foco Exclusivo em Miudezas (Alta Peça, Baixo m³)
-                                        elif pecas_h > (avg_pecas_h * 1.2) and m3_h < (avg_m3_h * 0.7):
-                                            insights_html += f"""<div style="background: #F0F9FF; border: 1px solid #BAE6FD; border-left: 4px solid #0086FF; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
-                                                <span class='icon-MAGALOG' style='color: #0086FF; font-size: 20px; margin-top: 2px;'>view_comfy_alt</span>
-                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> está com a contagem de peças altíssima, mas o volume em m³ está abaixo da média. Isso sinaliza perfil focado quase exclusivamente em cargas de itens pequenos (miudezas/utilidades). Avaliar se o balanceamento de tarefas está correto na doca.</div>
-                                            </div>"""
-                                            alertas_gerados += 1
-                                            
-                                        # REGRA 4: Alta Performance Estelar (Acima da média em tudo)
-                                        elif pecas_h > (avg_pecas_h * 1.3) and m3_h > (avg_m3_h * 1.3) and cargas > avg_cargas:
+                                        # REGRA 5: O Carregador de Piano / Motor da Operação (Ex: Sandro e Adilson no print)
+                                        elif cargas >= (max_cargas * 0.9) and pecas_h >= avg_pecas_h and m3_h >= (avg_m3_h * 0.9):
                                             insights_html += f"""<div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-left: 4px solid #10B981; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
-                                                <span class='icon-MAGALOG' style='color: #10B981; font-size: 20px; margin-top: 2px;'>stars</span>
-                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> é um destaque excepcional no período. Alta participação nas agendas, entregando m³ e peças operadas muito acima da média do grupo. Perfil de altíssima tração operacional.</div>
+                                                <span class='icon-MAGALOG' style='color: #10B981; font-size: 20px; margin-top: 2px;'>local_fire_department</span>
+                                                <div style="font-size: 13px; color: #475569; line-height: 1.4;"><b>{nome}</b> é o motor da operação hoje. Absorveu o maior volume de cargas da doca ({int(cargas)} agendas) sem perder a velocidade, com indicadores excelentes. Perfil de alta tração.</div>
                                             </div>"""
                                             alertas_gerados += 1
                                     
-                                    # Se o time for super equilibrado e ninguém estourar as regras
                                     if insights_html == "":
-                                        insights_html = "<div style='font-size: 13px; color: #64748B; background: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1;'><span class='icon-MAGALOG' style='vertical-align: middle;'>check_circle</span> A equipe apresenta uma distribuição de cargas altamente equilibrada. Nenhum desvio comportamental grave detectado na amostragem filtrada.</div>"
+                                        insights_html = "<div style='font-size: 13px; color: #64748B; background: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1;'><span class='icon-MAGALOG' style='vertical-align: middle;'>check_circle</span> A equipe apresenta uma distribuição de cargas bem equalizada.</div>"
                                         
                                     st.markdown(insights_html, unsafe_allow_html=True)
                                 # =========================================================
+
                                 
                             else: 
                                 st.info("Sem dados para esta categoria.")
