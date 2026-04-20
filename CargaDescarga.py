@@ -2033,11 +2033,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
         'Acompanhe SLA, produção por hora, fluxo de agendas e a evolução diária da operação.',
         'Analytics operacional'
     )
-
     try:
         with st.spinner("Calculando métricas de performance..."):
             df_fin = carregar_docas_finalizadas()
-
+            
             if df_fin.empty:
                 st.warning("Ainda não há dados de cargas finalizadas para gerar os indicadores.")
             else:
@@ -2046,7 +2045,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 # -----------------------------
                 df_fin = df_fin.copy()
                 df_fin.columns = [str(c).upper().strip() for c in df_fin.columns]
-
+                
                 col_data = 'DATA'
                 col_agenda = 'AGENDA'
                 col_tempo = 'TEMPO'
@@ -2055,15 +2054,15 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                 col_aux = 'NOME'
                 col_pecas = 'PEÇAS' if 'PEÇAS' in df_fin.columns else 'PECAS'
                 col_doca_final = next((c for c in df_fin.columns if 'DOCA' in c), None)
-
+                
                 if 'M³' in df_fin.columns: col_m3 = 'M³'
                 elif 'M3' in df_fin.columns: col_m3 = 'M3'
                 else: col_m3 = None
-
+                
                 colunas_obrigatorias = [col_data, col_agenda, col_tempo, col_just, col_cat, col_aux, col_pecas]
                 colunas_faltantes = [c for c in colunas_obrigatorias if c not in df_fin.columns]
                 if col_m3 is None: colunas_faltantes.append('M³')
-
+                
                 if colunas_faltantes:
                     st.error(f"Não foi possível gerar os indicadores. Colunas ausentes na DOCAS_FINALIZADAS: {', '.join(colunas_faltantes)}")
                 else:
@@ -2075,13 +2074,13 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 return h * 60 + m
                             return 0
                         except: return 0
-
+                        
                     def minutos_para_texto(mins):
                         if pd.isna(mins) or mins == 0: return "00h00m"
                         h = int(mins // 60)
                         m = int(mins % 60)
                         return f"{h:02d}h{m:02d}m"
-
+                        
                     def normalizar_numero_br(valor):
                         if pd.isna(valor): return 0.0
                         texto = str(valor).strip()
@@ -2091,24 +2090,22 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         elif "," in texto: texto = texto.replace(",", ".")
                         try: return float(texto)
                         except: return 0.0
-
+                        
                     df_fin[col_data] = pd.to_datetime(df_fin[col_data], dayfirst=True, errors='coerce')
                     df_fin = df_fin.dropna(subset=[col_data]).copy()
-
                     df_fin['MINUTOS'] = df_fin[col_tempo].apply(tempo_para_minutos)
                     df_fin = df_fin[df_fin['MINUTOS'] > 0].copy()
                     df_fin['HORAS'] = df_fin['MINUTOS'] / 60
-
                     df_fin['VAL_PECAS'] = df_fin[col_pecas].apply(normalizar_numero_br)
                     df_fin['VAL_M3'] = df_fin[col_m3].apply(normalizar_numero_br)
-
+                    
                     c_filtro1, c_filtro2 = st.columns(2)
                     with c_filtro1: data_ini = st.date_input("Data inicial", value=df_fin[col_data].min().date())
                     with c_filtro2: data_fim = st.date_input("Data final", value=df_fin[col_data].max().date())
-
+                    
                     mask_periodo = ((df_fin[col_data].dt.date >= data_ini) & (df_fin[col_data].dt.date <= data_fim))
                     df_fin = df_fin[mask_periodo].copy()
-
+                    
                     if df_fin.empty:
                         st.warning("Não há dados no período selecionado.")
                     else:
@@ -2121,9 +2118,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 col_doca_final: 'first'
                             }).copy()
                         )
-
                         total_cargas = df_agendas_unicas.shape[0]
-
+                        
                         # --- LÓGICA DE CLASSIFICAÇÃO POR DOCA ---
                         def classificar_operacao(doca_val):
                             try:
@@ -2134,60 +2130,54 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     return "EXPEDIÇÃO"
                             except:
                                 return "EXPEDIÇÃO"
-
+                                
                         df_agendas_unicas['OPERACAO_CALC'] = df_agendas_unicas[col_doca_final].apply(classificar_operacao)
                         
                         df_rec = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "RECEBIMENTO"]
                         df_exp = df_agendas_unicas[df_agendas_unicas['OPERACAO_CALC'] == "EXPEDIÇÃO"]
-
                         qtd_rec = df_rec.shape[0]
                         pecas_rec = df_rec['VAL_PECAS'].sum()
                         m3_rec = df_rec['VAL_M3'].sum()
-
                         qtd_exp = df_exp.shape[0]
                         pecas_exp = df_exp['VAL_PECAS'].sum()
                         m3_exp = df_exp['VAL_M3'].sum()
-
+                        
                         total_horas_geral = df_agendas_unicas['HORAS'].sum()
                         tempo_medio_geral = df_agendas_unicas['MINUTOS'].mean()
-                        
                         total_pecas_geral = df_agendas_unicas['VAL_PECAS'].sum()
                         total_m3_geral = df_agendas_unicas['VAL_M3'].sum()
                         
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
-
-                        # AQUI ESTÁ O NOVO CÁLCULO DE FORA DO PRAZO E NO PRAZO
+                        
+                        # CÁLCULO DE FORA DO PRAZO E NO PRAZO
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         qtd_fora_prazo = total_cargas - qtd_no_prazo
                         
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
-
+                        
                         df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
-
+                        
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
-
+                        
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
-                            
-                            # O NOVO CARD DE SLA AQUI:
                             with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{qtd_no_prazo} no prazo | {qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
-                            
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
                             with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
                             with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
-
+                            
+                            # GRÁFICO EVOLUÇÃO DIÁRIA ATUALIZADO
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
                             st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças (Barras) vs m³ (Linha)</h4>", unsafe_allow_html=True)
                             
                             df_daily = df_agendas_unicas.groupby(col_data).agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'}).reset_index().sort_values(col_data)
                             fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
                             
-                            # 1. BARRAS: Cores sólidas e rótulos no topo em negrito
                             text_pecas = df_daily['VAL_PECAS'].apply(lambda x: f"<b>{int(x):,}</b>".replace(',', '.'))
                             fig_daily.add_trace(
                                 go.Bar(
@@ -2195,17 +2185,16 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     y=df_daily['VAL_PECAS'], 
                                     name="Total Peças", 
                                     marker_color='#0086FF', 
-                                    opacity=1.0, # Cor 100% sólida
+                                    opacity=1.0, 
                                     text=text_pecas,
-                                    textposition='outside', # Texto fora da barra
+                                    textposition='outside', 
                                     textfont=dict(color='#0086FF', size=12),
-                                    cliponaxis=False, # Impede que o número corte no topo
+                                    cliponaxis=False, 
                                     hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"
                                 ), 
                                 secondary_y=False
                             )
                             
-                            # 2. LINHA: Marcadores premium (fundo branco) e rótulos destacados
                             text_m3 = df_daily['VAL_M3'].apply(lambda x: f"<b>{x:.1f}</b>".replace('.', ','))
                             fig_daily.add_trace(
                                 go.Scatter(
@@ -2214,7 +2203,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     name="Total m³", 
                                     line=dict(color='#9f04cf', width=4), 
                                     mode='lines+markers+text', 
-                                    marker=dict(size=9, color='#FFFFFF', line=dict(width=3, color='#9f04cf')), # Marcador vazado moderno
+                                    marker=dict(size=9, color='#FFFFFF', line=dict(width=3, color='#9f04cf')), 
                                     text=text_m3, 
                                     textposition='top center', 
                                     textfont=dict(color='#9f04cf', size=13),
@@ -2224,28 +2213,23 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 secondary_y=True
                             )
                             
-                            # 3. LAYOUT: Mais respiro, fonte Inter e eixos clean
                             fig_daily.update_layout(
                                 plot_bgcolor='rgba(0,0,0,0)', 
                                 paper_bgcolor='rgba(0,0,0,0)', 
-                                margin=dict(l=0, r=0, t=40, b=0), # Mais espaço no topo
+                                margin=dict(l=0, r=0, t=40, b=0), 
                                 height=420, 
                                 legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1), 
                                 hovermode="x unified",
                                 font_family="Inter"
                             )
                             
-                            # Eixo X (Datas)
                             fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m", tickfont=dict(color='#64748B', size=11, weight='bold'))
-                            
-                            # Eixos Y (Ocultamos os números laterais para o gráfico ficar mais limpo, já que os números estão nas barras)
                             fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9', showticklabels=False, zeroline=False)
                             fig_daily.update_yaxes(title_text="Volume m³", secondary_y=True, showgrid=False, showticklabels=False, zeroline=False)
                             
                             st.plotly_chart(fig_daily, use_container_width=True, config={'displayModeBar': False})
                             st.markdown('</div>', unsafe_allow_html=True)
-
-
+                            
                             col_g1, col_g2 = st.columns(2)
                             with col_g1:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>""", unsafe_allow_html=True)
@@ -2256,7 +2240,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 fig1.update_traces(textposition='outside')
                                 st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
                                 st.markdown('</div>', unsafe_allow_html=True)
-
+                                
                             with col_g2:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
@@ -2297,15 +2281,14 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             .lb-tooltip:hover .icon-MAGALOG { color: #0086FF; }
                             </style>
                             """, unsafe_allow_html=True)
-
-                                                        st.markdown("<h4 style='color: #0086FF; margin-bottom: 15px;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
+                            
+                            st.markdown("<h4 style='color: #0086FF; margin-bottom: 15px;'><span class='icon-MAGALOG'>social_leaderboard</span> Placar de Líderes Operacionais</h4>", unsafe_allow_html=True)
                             
                             c_rank_f1, c_rank_f2 = st.columns([3, 7])
                             with c_rank_f1:
                                 cat_list_rank = sorted(df_fin[col_cat].dropna().astype(str).unique().tolist())
                                 cat_sel_rank = st.selectbox("Filtrar Equipe por Categoria:", ["Todas as Categorias"] + cat_list_rank)
                             with c_rank_f2:
-                                # CORREÇÃO: Emoji removido e opção "Total de Cargas" adicionada
                                 metric_sel = st.radio("Classificar placar por:", ["Total de Cargas", "Peças / Hora", "m³ / Hora", "Menor Tempo Médio"], horizontal=True)
                                 
                             df_ops_rank = df_fin.copy()
@@ -2326,7 +2309,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 df_rank_data['PECAS_H'] = (df_rank_data['PECAS_PART'] / df_rank_data['HORAS']).fillna(0)
                                 df_rank_data['M3_H'] = (df_rank_data['M3_PART'] / df_rank_data['HORAS']).fillna(0)
                                 
-                                # CORREÇÃO: Lógica para filtrar pela quantidade de agendas (Cargas)
                                 if metric_sel == "Total de Cargas": 
                                     df_rank_data = df_rank_data.sort_values(col_agenda, ascending=False).reset_index(drop=True)
                                 elif metric_sel == "Peças / Hora": 
@@ -2337,8 +2319,8 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     df_rank_data = df_rank_data.sort_values('MINUTOS', ascending=True).reset_index(drop=True)
                                 
                                 df_rank_data['Tempo_Medio'] = df_rank_data['MINUTOS'].apply(minutos_para_texto)
-                                html_lb = "<div class='lb-wrapper'>"
                                 
+                                html_lb = "<div class='lb-wrapper'>"
                                 html_lb += "<div class='lb-header'>"
                                 html_lb += "<div>POS</div><div>OPERADOR</div>"
                                 html_lb += "<div>CARGAS <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Total de agendas participadas.</div></div></div>"
@@ -2348,6 +2330,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 html_lb += "<div>PEÇAS / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: Peças ÷ Horas.</div></div></div>"
                                 html_lb += "<div>M³ / H <div class='lb-tooltip'><span class='icon-MAGALOG' style='font-size:14px;'>help</span><div class='lb-tooltiptext'>Eficiência: m³ ÷ Horas.</div></div></div>"
                                 html_lb += "</div>"
+                                
                                 total_ops = len(df_rank_data)
                                 
                                 for idx, row_r in df_rank_data.iterrows():
@@ -2371,3 +2354,4 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.info("Sem dados para esta categoria.")
     except Exception as e:
         st.error(f"Erro no módulo de Produtividade: {e}")
+
