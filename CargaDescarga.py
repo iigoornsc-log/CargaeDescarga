@@ -2187,7 +2187,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             df_daily = df_agendas_unicas.groupby(col_data).agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'}).reset_index().sort_values(col_data)
                             fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
                             fig_daily.add_trace(go.Bar(x=df_daily[col_data], y=df_daily['VAL_PECAS'], name="Total Peças", marker_color='#0086FF', opacity=0.7, hovertemplate="Data: %{x}<br>Peças: %{y:,.0f}<extra></extra>"), secondary_y=False)
-                            fig_daily.add_trace(go.Scatter(x=df_daily[col_data], y=df_daily['VAL_M3'], name="Total m³", line=dict(color='#14B8A6', width=4), mode='lines+markers+text', text=df_daily['VAL_M3'].round(1), textposition='top center', hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"), secondary_y=True)
+                            fig_daily.add_trace(go.Scatter(x=df_daily[col_data], y=df_daily['VAL_M3'], name="Total m³", line=dict(color='#9f04cf', width=4), mode='lines+markers+text', text=df_daily['VAL_M3'].round(1), textposition='top center', hovertemplate="Data: %{x}<br>m³: %{y:,.2f}<extra></extra>"), secondary_y=True)
                             fig_daily.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=400, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), hovermode="x unified")
                             fig_daily.update_xaxes(showgrid=False, tickformat="%d/%m")
                             fig_daily.update_yaxes(title_text="Qtd Peças", secondary_y=False, showgrid=True, gridcolor='#F1F5F9')
