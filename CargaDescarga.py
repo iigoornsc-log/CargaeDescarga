@@ -2348,8 +2348,6 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{row_r['PECAS_H']:.1f} pç/h</span></div>"
                                     html_lb += f"<div class='lb-stat'><span class='lb-highlight'>{row_r['M3_H']:.2f} m³/h</span></div></div>"
                                 
-                                html_lb += "</div>"
-                                st.markdown(html_lb, unsafe_allow_html=True)
 
                                 html_lb += "</div>"
                                 st.markdown(html_lb, unsafe_allow_html=True)
