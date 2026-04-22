@@ -2270,15 +2270,51 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             st.markdown('</div>', unsafe_allow_html=True)
                             
                             col_g1, col_g2 = st.columns(2)
-                            with col_g1:
-                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">schedule</span> Tempo Médio / Categoria</h4>""", unsafe_allow_html=True)
-                                df_cat_plot = df_agendas_unicas.groupby(col_cat)['MINUTOS'].mean().reset_index().sort_values('MINUTOS')
-                                df_cat_plot['TEXTO_TEMPO'] = df_cat_plot['MINUTOS'].apply(minutos_para_texto)
-                                fig1 = px.bar(df_cat_plot, x='MINUTOS', y=col_cat, orientation='h', text='TEXTO_TEMPO', color_discrete_sequence=['#8B5CF6'])
-                                fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, visible=False), yaxis_title=None, height=350, margin=dict(l=0,r=0,t=0,b=0))
-                                fig1.update_traces(textposition='outside')
-                                st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+                                                        with col_g1:
+                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">format_list_bulleted</span> Raio-X por Categoria</h4>""", unsafe_allow_html=True)
+                                
+                                # Agrupamento Inteligente
+                                df_cat_table = df_agendas_unicas.groupby(col_cat).agg(
+                                    CARGAS=(col_agenda, 'nunique'),
+                                    MEDIA_PECAS=('VAL_PECAS', 'mean'),
+                                    MINUTOS=('MINUTOS', 'mean')
+                                ).reset_index().sort_values('MINUTOS', ascending=False)
+                                
+                                # Tratamento de Textos
+                                df_cat_table['MÉDIA TEMPO'] = df_cat_table['MINUTOS'].apply(minutos_para_texto)
+                                df_cat_table['MÉDIA PEÇAS'] = df_cat_table['MEDIA_PECAS'].apply(lambda x: f"{x:,.0f}".replace(',', '.'))
+                                df_cat_table = df_cat_table.rename(columns={col_cat: 'CATEGORIA', 'CARGAS': 'QTD CARGAS'})
+                                
+                                # CSS Dinâmico (Tabela Bonitinha)
+                                def estilizar_cat(df_plot):
+                                    estilos = pd.DataFrame('', index=df_plot.index, columns=df_plot.columns)
+                                    for idx, row in df_plot.iterrows():
+                                        m = row['MINUTOS']
+                                        
+                                        # Lógica Semáforo para o Tempo
+                                        if m > 120:
+                                            estilos.loc[idx, 'MÉDIA TEMPO'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 800;'
+                                        elif m > 60:
+                                            estilos.loc[idx, 'MÉDIA TEMPO'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 800;'
+                                        else:
+                                            estilos.loc[idx, 'MÉDIA TEMPO'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 800;'
+                                        
+                                        estilos.loc[idx, 'CATEGORIA'] = 'font-weight: 800; color: #0F172A;'
+                                        estilos.loc[idx, 'QTD CARGAS'] = 'color: #64748B; font-weight: 600; text-align: center;'
+                                        estilos.loc[idx, 'MÉDIA PEÇAS'] = 'color: #0086FF; font-weight: 700;'
+                                    return estilos
+                                
+                                df_exibir_cat = df_cat_table[['CATEGORIA', 'QTD CARGAS', 'MÉDIA PEÇAS', 'MÉDIA TEMPO', 'MINUTOS']]
+                                
+                                # Renderizando a Tabela com a ocultação da coluna numérica 'MINUTOS'
+                                st.dataframe(
+                                    df_exibir_cat.style.apply(estilizar_cat, axis=None).hide(subset=['MINUTOS']), 
+                                    use_container_width=True, 
+                                    hide_index=True,
+                                    height=350
+                                )
                                 st.markdown('</div>', unsafe_allow_html=True)
+
                                 
                             with col_g2:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
