@@ -2321,15 +2321,54 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 
                             with col_g2:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
+                                
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
+                                
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
                                     df_motivos.columns = ['Motivo', 'Qtd']
-                                    fig2 = px.pie(df_motivos, values='Qtd', names='Motivo', hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r)
-                                    fig2.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=350, showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+                                    
+                                    # Gráfico de Rosca Premium
+                                    fig2 = px.pie(
+                                        df_motivos, 
+                                        values='Qtd', 
+                                        names='Motivo', 
+                                        hole=0.45, # Rosca mais gordinha
+                                        color_discrete_sequence=px.colors.sequential.Reds_r
+                                    )
+                                    
+                                    # Posicionamento inteligente da legenda (Lateral) e Margens (Respiro)
+                                    fig2.update_layout(
+                                        margin=dict(l=10, r=10, t=20, b=20), 
+                                        height=350, 
+                                        showlegend=True, 
+                                        legend=dict(
+                                            orientation="v", # Vertical
+                                            yanchor="middle", 
+                                            y=0.5, 
+                                            xanchor="left", 
+                                            x=1.05,          # Legenda à direita da pizza
+                                            font=dict(size=10, color='#475569') # Fonte clean
+                                        ),
+                                        plot_bgcolor='rgba(0,0,0,0)', 
+                                        paper_bgcolor='rgba(0,0,0,0)',
+                                        font_family="Inter"
+                                    )
+                                    
+                                    # Textos dentro da pizza mais limpos (Só a %)
+                                    fig2.update_traces(
+                                        textposition='inside', 
+                                        textinfo='percent', 
+                                        insidetextfont=dict(color='#FFFFFF', size=12, weight='bold'),
+                                        hovertemplate="<b>%{label}</b><br>Quantidade: %{value}<br>Participação: %{percent}<extra></extra>"
+                                    )
+                                    
                                     st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
-                                else: st.info("Nenhum atraso no período.")
+                                else: 
+                                    st.info("Nenhum atraso registrado no período.")
+                                    
                                 st.markdown('</div>', unsafe_allow_html=True)
+
 
                         with aba_equipe:
                             st.markdown("""
