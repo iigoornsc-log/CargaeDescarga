@@ -2150,18 +2150,35 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
                         
-                        # CÁLCULO DE FORA DO PRAZO E NO PRAZO
+                                                # CÁLCULO DE FORA DO PRAZO E NO PRAZO
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         qtd_fora_prazo = total_cargas - qtd_no_prazo
                         
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
                         cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
                         
-                        df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique').replace(0, 1)
+                        # CORREÇÃO: Busca a coluna oficial de AUXILIARES da planilha para evitar rateio falso
+                        col_qtd_aux = next((c for c in df_fin.columns if 'AUXILIAR' in c), None)
+                        
+                        if col_qtd_aux:
+                            # Se a coluna existir, usa o número real gravado no banco
+                            df_fin['QTD_AUXILIARES_AGENDA'] = pd.to_numeric(df_fin[col_qtd_aux], errors='coerce').fillna(0)
+                            
+                            # Fallback: Se alguma linha da coluna vier zerada, aí sim ele tenta contar os nomes
+                            mask_zero = df_fin['QTD_AUXILIARES_AGENDA'] <= 0
+                            if mask_zero.any():
+                                df_fin.loc[mask_zero, 'QTD_AUXILIARES_AGENDA'] = df_fin[mask_zero].groupby(col_agenda)[col_aux].transform('nunique')
+                        else:
+                            # Se a coluna não existir, faz a contagem de nomes únicos
+                            df_fin['QTD_AUXILIARES_AGENDA'] = df_fin.groupby(col_agenda)[col_aux].transform('nunique')
+                        
+                        # Trava final de segurança para nunca dividir por zero
+                        df_fin['QTD_AUXILIARES_AGENDA'] = df_fin['QTD_AUXILIARES_AGENDA'].replace(0, 1)
+                        
+                        # Rateio justo e oficial
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
-                        
-                        aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
+
                         
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
