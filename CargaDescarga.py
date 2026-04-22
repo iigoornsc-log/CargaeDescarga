@@ -2273,23 +2273,27 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             with col_g1:
                                 st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">format_list_bulleted</span> Raio-X por Categoria</h4>""", unsafe_allow_html=True)
                                 
-                                # Agrupamento Inteligente
+                                # Agrupamento Inteligente (reset_index garante alinhamento perfeito)
                                 df_cat_table = df_agendas_unicas.groupby(col_cat).agg(
                                     CARGAS=(col_agenda, 'nunique'),
                                     MEDIA_PECAS=('VAL_PECAS', 'mean'),
                                     MINUTOS=('MINUTOS', 'mean')
-                                ).reset_index().sort_values('MINUTOS', ascending=False)
+                                ).reset_index().sort_values('MINUTOS', ascending=False).reset_index(drop=True)
                                 
                                 # Tratamento de Textos
                                 df_cat_table['MÉDIA TEMPO'] = df_cat_table['MINUTOS'].apply(minutos_para_texto)
                                 df_cat_table['MÉDIA PEÇAS'] = df_cat_table['MEDIA_PECAS'].apply(lambda x: f"{x:,.0f}".replace(',', '.'))
                                 df_cat_table = df_cat_table.rename(columns={col_cat: 'CATEGORIA', 'CARGAS': 'QTD CARGAS'})
                                 
+                                # DataFrame apenas com as colunas visíveis (Adeus erro do .hide!)
+                                df_exibir_cat = df_cat_table[['CATEGORIA', 'QTD CARGAS', 'MÉDIA PEÇAS', 'MÉDIA TEMPO']]
+                                
                                 # CSS Dinâmico (Tabela Bonitinha)
-                                def estilizar_cat(df_plot):
-                                    estilos = pd.DataFrame('', index=df_plot.index, columns=df_plot.columns)
-                                    for idx, row in df_plot.iterrows():
-                                        m = row['MINUTOS']
+                                def estilizar_cat(df_visible):
+                                    estilos = pd.DataFrame('', index=df_visible.index, columns=df_visible.columns)
+                                    for idx, row in df_visible.iterrows():
+                                        # Puxa o valor matemático dos minutos direto da base original, por trás dos panos
+                                        m = df_cat_table.loc[idx, 'MINUTOS']
                                         
                                         # Lógica Semáforo para o Tempo
                                         if m > 120:
@@ -2304,16 +2308,15 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                         estilos.loc[idx, 'MÉDIA PEÇAS'] = 'color: #0086FF; font-weight: 700;'
                                     return estilos
                                 
-                                df_exibir_cat = df_cat_table[['CATEGORIA', 'QTD CARGAS', 'MÉDIA PEÇAS', 'MÉDIA TEMPO', 'MINUTOS']]
-                                
-                                # Renderizando a Tabela com a ocultação da coluna numérica 'MINUTOS'
+                                # Renderizando a Tabela limpa e segura
                                 st.dataframe(
-                                    df_exibir_cat.style.apply(estilizar_cat, axis=None).hide(subset=['MINUTOS']), 
+                                    df_exibir_cat.style.apply(estilizar_cat, axis=None), 
                                     use_container_width=True, 
                                     hide_index=True,
                                     height=350
                                 )
                                 st.markdown('</div>', unsafe_allow_html=True)
+
 
                                 
                             with col_g2:
