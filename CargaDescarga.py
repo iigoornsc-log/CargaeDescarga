@@ -2183,15 +2183,32 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         # REINSERINDO A DECLARAÇÃO DAS ABAS QUE HAVIA SUMIDO
                         # =========================================================
                         aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
-                        
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
+                            
+                            # Formatação limpa dos números BR para evitar quebra no HTML
+                            str_pcs_rec = f"{pecas_rec:,.0f}".replace(",", ".")
+                            str_m3_rec = f"{m3_rec:,.1f}".replace(".", ",")
+                            str_pcs_exp = f"{pecas_exp:,.0f}".replace(",", ".")
+                            str_m3_exp = f"{m3_exp:,.1f}".replace(".", ",")
+                            
+                            with c1: 
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
+                                
+                            with c2: 
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla}; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{qtd_no_prazo} no prazo<br>{qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
+                                
+                            with c3: 
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
+                                
+                            with c4: 
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{str_pcs_rec} pçs<br>{str_m3_rec} m³</div></div>', unsafe_allow_html=True)
+                                
+                            with c5: 
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{str_pcs_exp} pçs<br>{str_m3_exp} m³</div></div>', unsafe_allow_html=True)
+                            
+                            # GRÁFICO EVOLUÇÃO DIÁRIA ATUALIZADO
 
-                            with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
-                            with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{qtd_no_prazo} no prazo | {qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
-                            with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
-                            with c4: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0EA5E9;"><div class="kpi-title">Recebimento</div><div class="kpi-value" style="font-size:28px;">{qtd_rec}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_rec:,.0f} pçs | {m3_rec:,.1f} m³</div></div>', unsafe_allow_html=True)
-                            with c5: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #14B8A6;"><div class="kpi-title">Expedição</div><div class="kpi-value" style="font-size:28px;">{qtd_exp}</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{pecas_exp:,.0f} pçs | {m3_exp:,.1f} m³</div></div>', unsafe_allow_html=True)
                             
                             # GRÁFICO EVOLUÇÃO DIÁRIA ATUALIZADO
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
