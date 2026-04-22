@@ -1169,6 +1169,54 @@ elif pagina_selecionada == "Gestão de Docas":
             else:
                 opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
+
+        @st.dialog("Adicionar Operador à Doca")
+    def popup_adicionar_operador(doca_origem, agenda_origem, conf_origem, equipe_atual, info_docas_global):
+        doca_origem_str = str(doca_origem).strip()
+        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Adicionando reforço na <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
+        
+        disponiveis = [p for p in lista_auxiliares if p not in equipe_atual]
+        novos_operadores = st.multiselect("Selecione os colaboradores para adicionar:", options=disponiveis, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
+        
+        conflitos = {}
+        for pessoa in novos_operadores:
+            if pessoa in mapa_pessoas:
+                if mapa_pessoas[pessoa] != doca_origem_str: conflitos[pessoa] = mapa_pessoas[pessoa]
+                
+        if conflitos:
+            st.warning("Os colaboradores abaixo já estão ocupados e serão transferidos de suas docas atuais:")
+            for p, d in conflitos.items(): st.markdown(f"- **{p}** (Sairá da Doca {d})")
+
+        fadigados = checar_fadiga(novos_operadores, agenda_origem, df_log, df_aux)
+        bloqueio_ergonomico = False
+        
+        if fadigados:
+            st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-MAGALOG'>warning</span> ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
+            ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação.", key="chk_fadiga_add")
+            if not ciente: bloqueio_ergonomico = True
+            
+        st.markdown('<br>', unsafe_allow_html=True)
+        if st.button("Confirmar Adição", type="primary", use_container_width=True):
+            if not novos_operadores: st.warning("Selecione pelo menos um colaborador para adicionar.")
+            elif bloqueio_ergonomico: st.error("Você precisa assumir o risco ergonômico marcando a caixa de seleção!")
+            else:
+                equipe_combinada = equipe_atual + novos_operadores
+                with st.spinner("Atualizando registros no sistema..."):
+                    sucesso = processar_gravacao_doca_v2(doca_origem, agenda_origem, conf_origem, equipe_combinada, conflitos, info_docas_global)
+                    if sucesso:
+                        st.success("Equipe atualizada com sucesso!")
+                        carregar_log_produtividade.clear()
+                        st.rerun()
+
+        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
+                            
+                            c_action1, c_action2 = st.columns(2)
+                            with c_action1:
+                                if st.button("Adicionar Alguém", key=f"btn_add_op_{row['DOCA']}_{index}", use_container_width=True):
+                                    popup_adicionar_operador(row['DOCA'], row['AGENDA'], row['CONFERENTE'], auxiliares_lista, info_docas)
+                            with c_action2:
+                                if st.button("Mover/Retirar", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                                    popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                 
         st.markdown('<br>', unsafe_allow_html=True)
         if st.button("Confirmar Alteração", type="primary", use_container_width=True):
