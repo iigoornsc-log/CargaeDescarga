@@ -1156,27 +1156,14 @@ elif pagina_selecionada == "Gestão de Docas":
                     carregar_log_produtividade.clear()
                     st.rerun()
 
-    @st.dialog("Gerenciar Operador da Doca")
-    def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
-        doca_origem_str = str(doca_origem).strip()
-        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
-        operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
-        acao = st.radio("O que deseja fazer com este colaborador?", ["Retirar da Operação (Ficará Livre no Pátio)", "Transferir para outra Doca ativa"])
-        docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
-        doca_destino = None
-        if "Transferir" in acao:
-            if not docas_ativas: st.warning("Não há outras docas em processo no momento para transferir.")
-            else:
-                opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
-                doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
-
-        @st.dialog("Adicionar Operador à Doca")
+    # --- POP-UP NOVO: ADICIONAR OPERADOR ---
+    @st.dialog("Adicionar Operador à Doca")
     def popup_adicionar_operador(doca_origem, agenda_origem, conf_origem, equipe_atual, info_docas_global):
         doca_origem_str = str(doca_origem).strip()
         st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Adicionando reforço na <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
         
         disponiveis = [p for p in lista_auxiliares if p not in equipe_atual]
-        novos_operadores = st.multiselect("Selecione os colaboradores para adicionar:", options=disponiveis, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
+        novos_operadores = st.multiselect("Selecione os colaboradores para adicionar:", options=disponiveis, format_func=lambda x: f"{x}  [{dict_skills_text.get(x, '')}]" if x in dict_skills_text else x)
         
         conflitos = {}
         for pessoa in novos_operadores:
@@ -1208,15 +1195,19 @@ elif pagina_selecionada == "Gestão de Docas":
                         carregar_log_produtividade.clear()
                         st.rerun()
 
-        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            
-                            c_action1, c_action2 = st.columns(2)
-                            with c_action1:
-                                if st.button("Adicionar Alguém", key=f"btn_add_op_{row['DOCA']}_{index}", use_container_width=True):
-                                    popup_adicionar_operador(row['DOCA'], row['AGENDA'], row['CONFERENTE'], auxiliares_lista, info_docas)
-                            with c_action2:
-                                if st.button("Mover/Retirar", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
-                                    popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
+    @st.dialog("Gerenciar Operador da Doca")
+    def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
+        doca_origem_str = str(doca_origem).strip()
+        st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
+        operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
+        acao = st.radio("O que deseja fazer com este colaborador?", ["Retirar da Operação (Ficará Livre no Pátio)", "Transferir para outra Doca ativa"])
+        docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
+        doca_destino = None
+        if "Transferir" in acao:
+            if not docas_ativas: st.warning("Não há outras docas em processo no momento para transferir.")
+            else:
+                opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
+                doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
         if st.button("Confirmar Alteração", type="primary", use_container_width=True):
@@ -1361,7 +1352,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
                             
-                        html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFFFFF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha/Plano:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU/Peds:</b> {info['SKU']} &nbsp;|&nbsp; <b>Volume:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Status WMS:</b> <span style='color:{cor_tema}; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                        html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFFFFF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E2E8F0;'><b>Linha/Plano:</b> {info['LINHA']}  |  <b>SKU/Peds:</b> {info['SKU']}  |  <b>Volume:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Status WMS:</b> <span style='color:{cor_tema}; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
                         st.markdown(css_hack, unsafe_allow_html=True)
                         c_title, c_time = st.columns([5, 5])
@@ -1428,8 +1419,14 @@ elif pagina_selecionada == "Gestão de Docas":
                                                 st.rerun()
                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
-                            if st.button("Mover/Retirar Alguém", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
-                                popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
+                            
+                            c_action1, c_action2 = st.columns(2)
+                            with c_action1:
+                                if st.button("Adicionar Reforço", key=f"btn_add_op_{row['DOCA']}_{index}", use_container_width=True):
+                                    popup_adicionar_operador(row['DOCA'], row['AGENDA'], row['CONFERENTE'], auxiliares_lista, info_docas)
+                            with c_action2:
+                                if st.button("Mover/Retirar", key=f"btn_mgr_{row['DOCA']}_{index}", use_container_width=True):
+                                    popup_gerenciar_operador(row['DOCA'], auxiliares_lista, info_docas)
                                 
                 if cards_exibidos_aba1 == 0: st.info("Nenhuma doca encontrada com esses filtros.")
         else:
@@ -1534,11 +1531,11 @@ elif pagina_selecionada == "Gestão de Docas":
                         if "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']} &nbsp;|&nbsp; <b>Pedidos:</b> {info['SKU']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']}  |  <b>Pedidos:</b> {info['SKU']}  |  <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
                         else:
                             cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #FFF7ED; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #FFEDD5;'><b>Linha:</b> {info['LINHA']}  |  <b>SKU:</b> {info['SKU']}  |  <b>Peças:</b> {info['PEÇAS']}<br><div style='margin-top: 4px;'><b>Valor Carga:</b> {info['VALOR']}  |  <b>Pagto:</b> {info['PAGTO']}  |  <b>Status:</b> <span style='color:#EA580C; font-weight:bold;'>{info['STATUS']}</span></div></div>"
 
                         st.markdown(css_hack, unsafe_allow_html=True)
                         st.markdown(f"""
