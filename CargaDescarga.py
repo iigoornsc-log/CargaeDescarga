@@ -2150,7 +2150,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
                         
-                                                # CÁLCULO DE FORA DO PRAZO E NO PRAZO
+                        # CÁLCULO DE FORA DO PRAZO E NO PRAZO
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         qtd_fora_prazo = total_cargas - qtd_no_prazo
                         
