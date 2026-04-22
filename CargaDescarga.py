@@ -2150,7 +2150,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         media_pecas_hora = total_pecas_geral / total_horas_geral if total_horas_geral > 0 else 0
                         media_m3_hora = total_m3_geral / total_horas_geral if total_horas_geral > 0 else 0
                         
-                        # CÁLCULO DE FORA DO PRAZO E NO PRAZO
+                                                # CÁLCULO DE FORA DO PRAZO E NO PRAZO
                         qtd_no_prazo = df_agendas_unicas[df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)].shape[0]
                         qtd_fora_prazo = total_cargas - qtd_no_prazo
                         
@@ -2164,7 +2164,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             # Se a coluna existir, usa o número real gravado no banco
                             df_fin['QTD_AUXILIARES_AGENDA'] = pd.to_numeric(df_fin[col_qtd_aux], errors='coerce').fillna(0)
                             
-                            # Fallback: Se alguma linha da coluna vier zerada, aí sim ele tenta contar os nomes
+                            # Fallback: Se alguma linha da coluna vier zerada, tenta contar os nomes
                             mask_zero = df_fin['QTD_AUXILIARES_AGENDA'] <= 0
                             if mask_zero.any():
                                 df_fin.loc[mask_zero, 'QTD_AUXILIARES_AGENDA'] = df_fin[mask_zero].groupby(col_agenda)[col_aux].transform('nunique')
@@ -2178,10 +2178,15 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         # Rateio justo e oficial
                         df_fin['PECAS_PART'] = df_fin['VAL_PECAS'] / df_fin['QTD_AUXILIARES_AGENDA']
                         df_fin['M3_PART'] = df_fin['VAL_M3'] / df_fin['QTD_AUXILIARES_AGENDA']
-
+                        
+                        # =========================================================
+                        # REINSERINDO A DECLARAÇÃO DAS ABAS QUE HAVIA SUMIDO
+                        # =========================================================
+                        aba_macro, aba_equipe = st.tabs(["Visão Macro & NS", "Placar de Líderes (Equipe)"])
                         
                         with aba_macro:
                             c1, c2, c3, c4, c5 = st.columns(5)
+
                             with c1: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                             with c2: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla};"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:12px; color:#64748B; font-weight:600; margin-top:4px;">{qtd_no_prazo} no prazo | {qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
                             with c3: st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
