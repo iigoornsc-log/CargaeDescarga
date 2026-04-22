@@ -2212,7 +2212,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             
                             # GRÁFICO EVOLUÇÃO DIÁRIA ATUALIZADO
                             st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
-                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças (Barras) vs m³ (Linha)</h4>", unsafe_allow_html=True)
+                            st.markdown("<h4 style='color: #334155; margin-bottom: 20px;'><span class='icon-MAGALOG'>trending_up</span> Evolução Diária: Peças vs m³</h4>", unsafe_allow_html=True)
                             
                             df_daily = df_agendas_unicas.groupby(col_data).agg({'VAL_PECAS': 'sum', 'VAL_M3': 'sum'}).reset_index().sort_values(col_data)
                             fig_daily = make_subplots(specs=[[{"secondary_y": True}]])
