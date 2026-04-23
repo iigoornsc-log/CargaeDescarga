@@ -1879,8 +1879,8 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                 )
                 
                 if not rec.empty:
-                    # Criamos duas abas super elegantes dentro do próprio card
-                    aba_cat, aba_veic = st.tabs(["Por Categoria", "Por Tipo de Veículo"])
+                    # Agora temos TRÊS abas elegantes e dinâmicas
+                    aba_cat, aba_veic, aba_forn = st.tabs(["Por Categoria", "Por Veículo", "Por Fornecedor"])
                     
                     # ==========================================
                     # ABA 1: VISÃO ORIGINAL POR CATEGORIA
@@ -1913,8 +1913,8 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                             hide_index=True, use_container_width=True, height=280
                         )
                         
-                                        # ==========================================
-                    # ABA 2: NOVA VISÃO POR TIPO DE VEÍCULO
+                    # ==========================================
+                    # ABA 2: VISÃO POR TIPO DE VEÍCULO CONSOLIDADO
                     # ==========================================
                     with aba_veic:
                         col_cat_carro = next((c for c in rec.columns if 'CAT' in c.upper() and 'CARRO' in c.upper()), None)
@@ -1923,14 +1923,9 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                                 s = str(val).strip().upper()
                                 if s in ['', 'NAN', 'NONE', 'NULL']: return 'NÃO INFORMADO'
                                 
-                                # 1. Corta no traço "-"
-                                if '-' in s: 
-                                    s = s.split('-', 1)[1].strip()
-                                
-                                # 2. Motor de De-duplicação (Limpa sufixos de operação)
+                                if '-' in s: s = s.split('-', 1)[1].strip()
                                 s = s.replace('_PALETIZADO', '').replace(' PALETIZADO', '').strip()
                                 
-                                # 3. Agrupamento Inteligente de Famílias de Veículos
                                 if 'TRUCK' in s or 'TOCO' in s: return 'CAMINHÃO (TRUCK/TOCO)'
                                 if 'VAN' in s or 'KOMBI' in s or 'SPRINTER' in s: return 'VAN / KOMBI'
                                 if 'FIORINO' in s or 'CARRO' in s: return 'FIORINO / CARRO'
@@ -1940,8 +1935,7 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                                 if 'GRANELEIRO' in s: return 'GRANELEIRO'
                                 if 'BITREM' in s: return 'BITREM'
                                 if 'BAÚ' in s or 'BAU' in s: return 'CARRETA BAÚ'
-                                
-                                return s # Retorna o original limpo se não cair em nenhuma regra
+                                return s 
                                 
                             rec['TIPO_VEICULO'] = rec[col_cat_carro].apply(extrair_veiculo)
                         else:
@@ -1949,12 +1943,9 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                             
                         rec['TIPO_VEICULO'] = rec['TIPO_VEICULO'].replace('', 'NÃO INFORMADO')
 
-                        # BLINDAGEM DE RUÍDO: Lista Negra de preenchimentos indevidos na planilha
-                        black_list = ['NAO É COBRADO', 'NÃO É COBRADO', 'NÃO INFORMADO', 'NAO INFORMADO', '2 AGENDA','3 AGENDA','CELULARES/ACESSÓRIOS_ATÉ 100 PEÇAS','40 peças','5 AGENDA','MADEIRA_DE 51 _ 100 VOLUMES',]
-                        
+                        black_list = ['NAO É COBRADO', 'NÃO É COBRADO', 'NÃO INFORMADO', 'NAO INFORMADO', '2 AGENDA']
                         rec_veiculos_limpos = rec[~rec['TIPO_VEICULO'].isin(black_list)].copy()
 
-                        # Agrupamento pelo Novo Eixo Limpo e Consolidado
                         if not rec_veiculos_limpos.empty:
                             df_veiculo_agendas = (
                                 rec_veiculos_limpos.groupby('TIPO_VEICULO', as_index=False)
@@ -1970,24 +1961,62 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
                             
                             c_v1, c_v2 = st.columns(2)
                             with c_v1:
-                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Total de Agendas Válidas</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_veic}</div></div>""", unsafe_allow_html=True)
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Agendas Válidas</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_veic}</div></div>""", unsafe_allow_html=True)
                             with c_v2:
-                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor Cobrado (Veículos)</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_veic)}</div></div>""", unsafe_allow_html=True)
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor (Veículos)</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_veic)}</div></div>""", unsafe_allow_html=True)
                                 
                             st.dataframe(
                                 df_veiculo_agendas,
                                 column_config={
-                                    'TIPO_VEICULO': st.column_config.TextColumn("Tipo de Veículo Consolidado", width="large"),
+                                    'TIPO_VEICULO': st.column_config.TextColumn("Veículo Consolidado", width="large"),
                                     'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
                                     'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
                                 },
                                 hide_index=True, use_container_width=True, height=280
                             )
                         else:
-                            st.info("Nenhum tipo de veículo válido preenchido no período filtrado.")
+                            st.info("Nenhum tipo de veículo válido no período filtrado.")
 
-
+                    # ==========================================
+                    # ABA 3: NOVA VISÃO POR FORNECEDOR/SELLER
+                    # ==========================================
+                    with aba_forn:
+                        col_forn = 'FORNECEDOR/SELLER'
+                        if col_forn in rec.columns:
+                            df_forn_agendas = (
+                                rec.groupby(col_forn, as_index=False)
+                                .agg(
+                                    AGENDAS=('AGENDA WMS', 'nunique'),
+                                    VALOR=('VALOR_CONSIDERADO', 'sum')
+                                )
+                                .sort_values(['VALOR', 'AGENDAS'], ascending=[False, False])
+                            )
+                            
+                            total_agendas_forn = df_forn_agendas['AGENDAS'].sum()
+                            total_valor_forn = df_forn_agendas['VALOR'].sum()
+                            
+                            c_f1, c_f2 = st.columns(2)
+                            with c_f1:
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Agendas por Fornecedor</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_forn}</div></div>""", unsafe_allow_html=True)
+                            with c_f2:
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor (Fornecedores)</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_forn)}</div></div>""", unsafe_allow_html=True)
+                                
+                            st.dataframe(
+                                df_forn_agendas,
+                                column_config={
+                                    col_forn: st.column_config.TextColumn("Fornecedor / Seller", width="large"),
+                                    'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
+                                    'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
+                                },
+                                hide_index=True, use_container_width=True, height=280
+                            )
+                        else:
+                            st.warning("Coluna 'FORNECEDOR/SELLER' não encontrada na base.")
+                            
+                else:
+                    st.info("Sem agendas cobradas no período para exibir faturamento.")
                 st.markdown('</div>', unsafe_allow_html=True)
+
 
             # --------------------------------------------
             # Evolução mensal
