@@ -1257,7 +1257,8 @@ elif pagina_selecionada == "Gestão de Docas":
             filtro_doca = st.text_input("Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    aba1, aba2 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)"])
+    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Atividades Fixas (Suporte)"])
+
 
 
     with aba1:
@@ -1563,6 +1564,106 @@ elif pagina_selecionada == "Gestão de Docas":
                                 popup_start_carga(doca_str, agenda_str, conf_str)
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
+
+    with aba3:
+        st.markdown("<br><h4 style='color: #0086FF; margin-bottom: 5px;'><span class='icon-MAGALOG'>engineering</span> Atividades Fixas e Suporte</h4>", unsafe_allow_html=True)
+        st.markdown("<div style='color: #64748B; font-size: 14px; margin-bottom: 25px;'>Aloque a equipe em funções de suporte (sem volume de peças ou m³) para registrar o tempo trabalhado e evitar que sejam lidos como ociosos no Radar da Liderança. O tempo será gravado normalmente na base de finalizados.</div>", unsafe_allow_html=True)
+        
+        # O Cardápio de Atividades
+        atividades = [
+            {"id": "5S", "nome": "5S - Organização e Limpeza", "icon": "cleaning_services", "cor": "#0086FF"},
+            {"id": "COURRIER", "nome": "Suporte Interno (Courrier)", "icon": "inventory_2", "cor": "#8B5CF6"},
+            {"id": "OUTROS", "nome": "Atividades Externas / Outros", "icon": "construction", "cor": "#F59E0B"}
+        ]
+        
+        cols_atv = st.columns(3)
+        
+        for i, atv in enumerate(atividades):
+            with cols_atv[i]:
+                # Criando as assinaturas únicas para o banco de dados
+                doca_atv = "ATV-" + atv['id']
+                agenda_atv = atv['id']
+                conferente_atv = "Líder Suporte"
+                
+                # Checa se essa atividade já está rodando agora
+                is_active = doca_atv in info_docas
+                
+                st.markdown(f"""
+                <div class="MAGALOG-card" style="border-top: 4px solid {atv['cor']} !important; height: 100%;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; border-bottom: 1px solid #F1F5F9; padding-bottom: 10px;">
+                        <span class="icon-MAGALOG" style="color:{atv['cor']}; font-size:26px; background: {atv['cor']}15; padding: 8px; border-radius: 8px;">{atv['icon']}</span>
+                        <div style="font-weight:900; color:#0F172A; font-size:15px;">{atv['nome']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if is_active:
+                    equipe_atv = info_docas[doca_atv]['equipe']
+                    is_paused = any("PAUSADO" in p.upper() for p in equipe_atv)
+                    
+                    # Cálculo cronológico real da atividade
+                    agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                    tempo_ativo_seg, inicio_real_dt = calcular_tempo_real_ativo(agenda_atv, df_log, agora_dt)
+                    h_atv, m_atv = int(tempo_ativo_seg // 3600), int((tempo_ativo_seg % 3600) // 60)
+                    tempo_decorrido = f"{h_atv:02d}h{m_atv:02d}m"
+                    
+                    if is_paused:
+                        st.markdown(f"<div style='background:#FEF3C7; color:#B45309; padding:6px; border-radius:6px; font-size:12px; font-weight:bold; text-align:center; margin-bottom:15px;'><span class='icon-MAGALOG' style='font-size:14px; vertical-align: middle;'>pause_circle</span> PAUSADO</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='background:#E6F9EC; color:#00C853; padding:6px; border-radius:6px; font-size:12px; font-weight:bold; text-align:center; margin-bottom:15px;'><span class='icon-MAGALOG' style='font-size:14px; vertical-align: middle;'>timer</span> EM ANDAMENTO ({tempo_decorrido})</div>", unsafe_allow_html=True)
+                        
+                    html_eq = renderizar_equipe_html(", ".join(equipe_atv))
+                    st.markdown(f"<div style='font-size:11px; font-weight:800; color:#64748B; margin-bottom:8px;'>EQUIPE ALOCADA:</div>{html_eq}<br><br>", unsafe_allow_html=True)
+                    
+                    # BOTOES DE AÇÃO
+                    c_b1, c_b2 = st.columns(2)
+                    with c_b1:
+                        if is_paused:
+                            log_agenda = df_log[df_log['AGENDA'].astype(str).str.strip() == agenda_atv]
+                            pessoas_antes_pausa = log_agenda[~log_agenda['AUXILIARES'].astype(str).str.upper().str.contains('PAUSADO|ENCERRADO', regex=True)]['AUXILIARES'].unique().tolist()
+                            if st.button("Retomar", key=f"ret_{atv['id']}", use_container_width=True, type="primary"):
+                                popup_start_carga(doca_atv, agenda_atv, conferente_atv, is_retomada=True, equipe_padrao=pessoas_antes_pausa)
+                        else:
+                            if st.button("Pausar", key=f"pse_{atv['id']}", use_container_width=True):
+                                popup_pausar_operacao(doca_atv, agenda_atv, conferente_atv)
+                    with c_b2:
+                        if st.button("Encerrar", key=f"fim_{atv['id']}", type="primary", use_container_width=True):
+                            clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                            tempo_ativo_segundos, inicio_real = calcular_tempo_real_ativo(agenda_atv, df_log, clique_dt)
+                            total_minutos_final = int(tempo_ativo_segundos // 60)
+                            horas, mins = total_minutos_final // 60, total_minutos_final % 60
+                            tempo_str = f"{horas:02d}:{mins:02d}"
+                            
+                            cat_final = "ATIVIDADE EXTERNA"
+                            equipe_limpa = [p for p in equipe_atv if "PAUSADO" not in p.upper()]
+                            
+                            # Gravação na planilha final sem peças e m3 (evita distorcer)
+                            linhas_conclusao = []
+                            for pessoa in equipe_limpa:
+                                linhas_conclusao.append([
+                                    clique_dt.strftime("%d/%m/%Y"), doca_atv, agenda_atv, conferente_atv, len(equipe_limpa), 
+                                    pessoa, inicio_real.strftime("%d/%m/%Y %H:%M:%S"), clique_dt.strftime("%H:%M:%S"), 
+                                    tempo_str, "No Prazo", cat_final, 0, 0
+                                ])
+                                
+                            linha_log_fecha = [clique_dt.strftime("%d/%m/%Y %H:%M:%S"), doca_atv, agenda_atv, conferente_atv, "ENCERRADO", cat_final]
+                            
+                            with st.spinner("Encerrando atividade..."):
+                                if gravar_conclusao_doca(linhas_conclusao, linha_log_fecha):
+                                    st.success("Atividade encerrada e horas computadas!")
+                                    carregar_log_produtividade.clear()
+                                    st.rerun()
+                                    
+                    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
+                    if st.button("Mover/Retirar Alguém", key=f"mgr_{atv['id']}", use_container_width=True):
+                        popup_gerenciar_operador(doca_atv, equipe_atv, info_docas)
+                        
+                else:
+                    st.markdown("<div style='color:#94A3B8; font-size:13px; margin-bottom:25px; text-align:center; padding:20px 0;'>Nenhuma equipe alocada no momento.<br>Mão de obra livre.</div>", unsafe_allow_html=True)
+                    if st.button("Iniciar Atividade", key=f"start_{atv['id']}", type="primary", use_container_width=True):
+                        popup_start_carga(doca_atv, agenda_atv, conferente_atv)
+                        
+                st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ==========================================================
 # MÓDULO 5: FINANCEIRO (DIRETORIA)
