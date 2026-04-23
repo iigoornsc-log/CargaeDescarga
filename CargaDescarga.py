@@ -1564,65 +1564,6 @@ elif pagina_selecionada == "Gestão de Docas":
                                 
                 if cards_exibidos_aba2 == 0: st.info("Nenhuma agenda encontrada com esses filtros.")
 
-    with aba3:
-        try:
-            with st.container(border=True):
-                st.markdown('<h4 style="color: #0086FF; margin-top: 0px; margin-bottom: 20px;"><span class="icon-MAGALOG">edit_location</span> Lançamento Manual / Atualizar</h4>', unsafe_allow_html=True)
-                lista_agendas = []
-                if not df_aux.empty: lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
-                opcoes_agenda = [""] + lista_agendas + ["DIGITAR OUTRA AGENDA..."]
-                agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar)", options=opcoes_agenda, index=0)
-                if agenda_combo == "DIGITAR OUTRA AGENDA...": agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
-                else: agenda_sel = agenda_combo
-                doca_padrao, conf_padrao = "", ""
-                if agenda_sel and agenda_sel != "DIGITAR OUTRA AGENDA..." and not df_aux.empty:
-                    match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
-                    if not match.empty:
-                        col_l = [str(c).upper().strip() for c in match.columns]
-                        for cr, cu in zip(match.columns, col_l):
-                            if 'DOCA' in cu:
-                                v = str(match.iloc[0][cr])
-                                if v.lower() != 'nan' and v.strip() != '': doca_padrao = v.strip()
-                                break
-                        for cr, cu in zip(match.columns, col_l):
-                            if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu:
-                                v = str(match.iloc[0][cr])
-                                if v.lower() != 'nan' and v.strip() != '': conf_padrao = v.strip()
-                                break
-                
-                col1, col2 = st.columns(2)
-                with col1: doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
-                with col2: conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
-                st.markdown('<br>', unsafe_allow_html=True)
-                
-                equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares, format_func=lambda x: f"{x}  [{dict_skills_text[x]}]" if x in dict_skills_text else x)
-                
-                conflitos = {}
-                for pessoa in equipe_sel:
-                    if pessoa in mapa_pessoas:
-                        if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
-
-                fadigados = checar_fadiga(equipe_sel, agenda_sel, df_log, df_aux)
-                bloqueio_ergonomico = False
-                
-                if fadigados:
-                    st.markdown(f"<div style='background-color: #FEF2F2; border: 1px solid #DC2626; border-radius: 8px; padding: 15px; margin-top: 15px; margin-bottom: 15px;'><b style='color: #DC2626;'><span class='icon-MAGALOG'>warning</span> ALERTA DE SAÚDE E SEGURANÇA (SST)</b><br><span style='color: #7F1D1D; font-size: 13px;'>Os colaboradores <b>{', '.join(fadigados)}</b> já atuaram em carga pesada nas últimas 24h. Risco ergonômico!</span></div>", unsafe_allow_html=True)
-                    ciente = st.checkbox("Declaro ciência do risco e autorizo a alocação na carga pesada.", key="chk_fadiga_aba3")
-                    if not ciente: bloqueio_ergonomico = True
-
-                st.markdown('<br>', unsafe_allow_html=True)
-                if st.button("Gravar / Atualizar Doca", use_container_width=True):
-                    if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
-                    elif not equipe_sel: st.warning("Selecione a equipe atual.")
-                    elif bloqueio_ergonomico: st.error("Você precisa confirmar a ciência do risco ergonômico para gravar!")
-                    else:
-                        with st.spinner("Registrando movimentação..."):
-                            sucesso = processar_gravacao_doca_v2(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
-                            if sucesso:
-                                st.success(f"Doca {doca_sel} atualizada!")
-                                carregar_log_produtividade.clear()
-                                st.rerun()
-        except Exception as e: st.error(f"Erro no módulo de Docas: {e}")
 # ==========================================================
 # MÓDULO 5: FINANCEIRO (DIRETORIA)
 # ==========================================================
