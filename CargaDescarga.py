@@ -1257,7 +1257,7 @@ elif pagina_selecionada == "Gestão de Docas":
             filtro_doca = st.text_input("Buscar Doca ou Agenda:", placeholder="Ex: 14 ou 99999")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)", "Montar Equipes"])
+    aba1, aba2, aba3 = st.tabs(["Visão das Docas (EM PROCESSO)", "Fila de Docas (PENDENTE)"])
 
     with aba1:
         if not df_log.empty:
