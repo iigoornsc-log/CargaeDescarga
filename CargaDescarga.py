@@ -1874,70 +1874,118 @@ elif pagina_selecionada == "Financeiro (Diretoria)":
             with col_g2:
                 st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
                 st.markdown(
-                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>table_chart</span> Agendas Cobradas por Categoria</h4>",
+                    "<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>table_chart</span> Detalhamento de Faturamento</h4>",
                     unsafe_allow_html=True
                 )
-
+                
                 if not rec.empty:
-                    df_cat_agendas = (
-                        rec.groupby('CATEGORIA', as_index=False)
-                        .agg(
-                            AGENDAS=('AGENDA WMS', 'nunique'),
-                            VALOR=('VALOR_CONSIDERADO', 'sum')
+                    # Criamos duas abas super elegantes dentro do próprio card
+                    aba_cat, aba_veic = st.tabs(["Por Categoria", "Por Tipo de Veículo"])
+                    
+                    # ==========================================
+                    # ABA 1: VISÃO ORIGINAL POR CATEGORIA
+                    # ==========================================
+                    with aba_cat:
+                        df_cat_agendas = (
+                            rec.groupby('CATEGORIA', as_index=False)
+                            .agg(
+                                AGENDAS=('AGENDA WMS', 'nunique'),
+                                VALOR=('VALOR_CONSIDERADO', 'sum')
+                            )
+                            .sort_values(['VALOR', 'AGENDAS'], ascending=[False, False])
                         )
-                        .sort_values(['VALOR', 'AGENDAS'], ascending=[False, False])
-                    )
-
-                    total_agendas_cobradas = df_cat_agendas['AGENDAS'].sum()
-                    total_valor_cobrado = df_cat_agendas['VALOR'].sum()
-
-                    c_top1, c_top2 = st.columns(2)
-                    with c_top1:
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background:#F8FAFC;
-                                border:1px solid #E2E8F0;
-                                border-radius:12px;
-                                padding:12px 14px;
-                                margin-bottom:12px;
-                            ">
-                                <div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Total de Agendas</div>
-                                <div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_cobradas}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
+                        total_agendas_cat = df_cat_agendas['AGENDAS'].sum()
+                        total_valor_cat = df_cat_agendas['VALOR'].sum()
+                        
+                        c_top1, c_top2 = st.columns(2)
+                        with c_top1:
+                            st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Total de Agendas</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_cat}</div></div>""", unsafe_allow_html=True)
+                        with c_top2:
+                            st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor Cobrado</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_cat)}</div></div>""", unsafe_allow_html=True)
+                            
+                        st.dataframe(
+                            df_cat_agendas,
+                            column_config={
+                                'CATEGORIA': st.column_config.TextColumn("Categoria", width="large"),
+                                'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
+                                'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
+                            },
+                            hide_index=True, use_container_width=True, height=280
                         )
-                    with c_top2:
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background:#F8FAFC;
-                                border:1px solid #E2E8F0;
-                                border-radius:12px;
-                                padding:12px 14px;
-                                margin-bottom:12px;
-                            ">
-                                <div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor Cobrado</div>
-                                <div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_cobrado)}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                        
+                                        # ==========================================
+                    # ABA 2: NOVA VISÃO POR TIPO DE VEÍCULO
+                    # ==========================================
+                    with aba_veic:
+                        col_cat_carro = next((c for c in rec.columns if 'CAT' in c.upper() and 'CARRO' in c.upper()), None)
+                        if col_cat_carro:
+                            def extrair_veiculo(val):
+                                s = str(val).strip().upper()
+                                if s in ['', 'NAN', 'NONE', 'NULL']: return 'NÃO INFORMADO'
+                                
+                                # 1. Corta no traço "-"
+                                if '-' in s: 
+                                    s = s.split('-', 1)[1].strip()
+                                
+                                # 2. Motor de De-duplicação (Limpa sufixos de operação)
+                                s = s.replace('_PALETIZADO', '').replace(' PALETIZADO', '').strip()
+                                
+                                # 3. Agrupamento Inteligente de Famílias de Veículos
+                                if 'TRUCK' in s or 'TOCO' in s: return 'CAMINHÃO (TRUCK/TOCO)'
+                                if 'VAN' in s or 'KOMBI' in s or 'SPRINTER' in s: return 'VAN / KOMBI'
+                                if 'FIORINO' in s or 'CARRO' in s: return 'FIORINO / CARRO'
+                                if 'VUC' in s or 'HR' in s: return 'VUC / HR'
+                                if 'TRÊS' in s or '3/4' in s or 'TRES' in s: return 'TRÊS POR QUATRO'
+                                if 'SIDER' in s: return 'SIDER'
+                                if 'GRANELEIRO' in s: return 'GRANELEIRO'
+                                if 'BITREM' in s: return 'BITREM'
+                                if 'BAÚ' in s or 'BAU' in s: return 'CARRETA BAÚ'
+                                
+                                return s # Retorna o original limpo se não cair em nenhuma regra
+                                
+                            rec['TIPO_VEICULO'] = rec[col_cat_carro].apply(extrair_veiculo)
+                        else:
+                            rec['TIPO_VEICULO'] = 'COLUNA NÃO ENCONTRADA'
+                            
+                        rec['TIPO_VEICULO'] = rec['TIPO_VEICULO'].replace('', 'NÃO INFORMADO')
 
-                    st.dataframe(
-                        df_cat_agendas,
-                        column_config={
-                            'CATEGORIA': st.column_config.TextColumn("Categoria", width="large"),
-                            'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
-                            'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
-                        },
-                        hide_index=True,
-                        use_container_width=True,
-                        height=360
-                    )
-                else:
-                    st.info("Sem agendas cobradas no período para exibir por categoria.")
+                        # BLINDAGEM DE RUÍDO: Lista Negra de preenchimentos indevidos na planilha
+                        black_list = ['NAO É COBRADO', 'NÃO É COBRADO', 'NÃO INFORMADO', 'NAO INFORMADO', '2 AGENDA','3 AGENDA','CELULARES/ACESSÓRIOS_ATÉ 100 PEÇAS','40 peças','5 AGENDA','MADEIRA_DE 51 _ 100 VOLUMES',]
+                        
+                        rec_veiculos_limpos = rec[~rec['TIPO_VEICULO'].isin(black_list)].copy()
+
+                        # Agrupamento pelo Novo Eixo Limpo e Consolidado
+                        if not rec_veiculos_limpos.empty:
+                            df_veiculo_agendas = (
+                                rec_veiculos_limpos.groupby('TIPO_VEICULO', as_index=False)
+                                .agg(
+                                    AGENDAS=('AGENDA WMS', 'nunique'),
+                                    VALOR=('VALOR_CONSIDERADO', 'sum')
+                                )
+                                .sort_values(['VALOR', 'AGENDAS'], ascending=[False, False])
+                            )
+                            
+                            total_agendas_veic = df_veiculo_agendas['AGENDAS'].sum()
+                            total_valor_veic = df_veiculo_agendas['VALOR'].sum()
+                            
+                            c_v1, c_v2 = st.columns(2)
+                            with c_v1:
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Total de Agendas Válidas</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{total_agendas_veic}</div></div>""", unsafe_allow_html=True)
+                            with c_v2:
+                                st.markdown(f"""<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:11px; color:#64748B; font-weight:800; text-transform:uppercase;">Valor Cobrado (Veículos)</div><div style="font-size:24px; color:#0F172A; font-weight:900;">{formatar_moeda_br(total_valor_veic)}</div></div>""", unsafe_allow_html=True)
+                                
+                            st.dataframe(
+                                df_veiculo_agendas,
+                                column_config={
+                                    'TIPO_VEICULO': st.column_config.TextColumn("Tipo de Veículo Consolidado", width="large"),
+                                    'AGENDAS': st.column_config.NumberColumn("Agendas", format="%d"),
+                                    'VALOR': st.column_config.NumberColumn("Valor", format="R$ %.2f"),
+                                },
+                                hide_index=True, use_container_width=True, height=280
+                            )
+                        else:
+                            st.info("Nenhum tipo de veículo válido preenchido no período filtrado.")
+
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
