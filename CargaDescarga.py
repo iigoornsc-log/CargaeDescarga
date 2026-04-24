@@ -2534,7 +2534,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     
                                 st.markdown('</div>', unsafe_allow_html=True)
 
-                            # =========================================================
+                             # =========================================================
                             # NOVA TABELA: HISTÓRICO DE NÍVEL DE SERVIÇO E DESVIOS
                             # =========================================================
                             st.markdown("<br>", unsafe_allow_html=True)
@@ -2568,15 +2568,16 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             # Classificação de Cores e Textos para a Tabela
                             df_ns['STATUS'] = df_ns[col_just].apply(lambda x: 'NO PRAZO' if 'NO PRAZO' in str(x).upper() else 'ATRASADO')
                             df_ns['BALANÇO'] = df_ns['DESVIO'].apply(lambda x: f"{int(x)} min (Atraso)" if x < 0 else f"+{int(x)} min (Sobra)")
+                            df_ns['TEMPO ESTIMADO'] = df_ns['META_MIN'].apply(minutos_para_texto)
                             df_ns['TEMPO REAL'] = df_ns['MINUTOS'].apply(minutos_para_texto)
                             df_ns['PEÇAS'] = df_ns['VAL_PECAS'].apply(lambda x: f"{int(x):,}".replace(',', '.'))
                             
                             # Seleção final das colunas visíveis
                             cols_ns = [col_agenda]
                             if col_conf: cols_ns.append('LÍDER')
-                            cols_ns.extend([col_cat, 'PEÇAS', 'TEMPO REAL', 'STATUS', 'BALANÇO', col_just])
+                            cols_ns.extend([col_cat, 'PEÇAS', 'TEMPO ESTIMADO', 'TEMPO REAL', 'STATUS', 'BALANÇO', col_just])
                             
-                            # CORREÇÃO: Primeiro Ordena pelo DESVIO, DEPOIS corta as colunas visíveis
+                            # Primeiro Ordena pelo DESVIO, DEPOIS corta as colunas visíveis
                             df_exibir_ns = df_ns.sort_values('DESVIO')[cols_ns]
                             
                             df_exibir_ns = df_exibir_ns.rename(columns={col_agenda: 'AGENDA', col_cat: 'CATEGORIA', col_just: 'JUSTIFICATIVA'})
@@ -2596,12 +2597,14 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                         estilos.loc[idx, 'JUSTIFICATIVA'] = 'color: #64748B; font-size: 11px;'
                                     if 'AGENDA' in df_style.columns:
                                         estilos.loc[idx, 'AGENDA'] = 'font-weight: 800; color: #0F172A;'
+                                        
+                                    estilos.loc[idx, 'TEMPO ESTIMADO'] = 'color: #64748B; font-weight: 600;' # Estilo neutro para a meta
+                                    estilos.loc[idx, 'TEMPO REAL'] = 'color: #0F172A; font-weight: 900;' # Destaque forte para o que realmente aconteceu
+                                    
                                 return estilos
                                 
                             st.dataframe(df_exibir_ns.style.apply(estilizar_ns, axis=None), use_container_width=True, hide_index=True, height=400)
                             st.markdown('</div>', unsafe_allow_html=True)
-
-
 
 
                         with aba_equipe:
