@@ -836,20 +836,28 @@ elif pagina_selecionada == "Gestão de Docas":
     df_aux_rec = carregar_aux()
     df_aux_exp = carregar_auxexp()
     
-    # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
+        # --- 1. PROCESSAMENTO DA EXPEDIÇÃO (CONSOLIDAÇÃO DE DOCAS) ---
     if not df_aux_exp.empty:
         if 'Status Chegada' not in df_aux_exp.columns:
             df_aux_exp['Status Chegada'] = ''
             
+        # CAÇADOR INTELIGENTE DAS NOVAS COLUNAS
+        col_tot_pecas = next((c for c in df_aux_exp.columns if 'TOTAL PEÇA' in str(c).upper() or 'TOTAL PECA' in str(c).upper()), 'Ped Venda')
+        col_tot_m3 = next((c for c in df_aux_exp.columns if 'TOTAL M³' in str(c).upper() or 'TOTAL M3' in str(c).upper() or 'M³ TOTAL' in str(c).upper()), 'M³ Total')
+            
         df_aux_exp = df_aux_exp.rename(columns={
             'ID Carga': 'AGENDA WMS',
             'Plano de Transporte': 'CATEGORIA',
-            'M³ Total': 'VOLUME_M3',
-            'Ped Venda': 'PEDIDOS',
+            col_tot_m3: 'VOLUME_M3',
+            col_tot_pecas: 'QTD_PECAS',
             'Limit Carreg': 'LIMITE_RAW',
             'Doca': 'DOCA_ORIGINAL'
         })
-
+        
+        # Garante que as novas colunas sejam numéricas (limpando sujeiras) para a soma ser correta
+        df_aux_exp['VOLUME_M3'] = pd.to_numeric(df_aux_exp['VOLUME_M3'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df_aux_exp['QTD_PECAS'] = pd.to_numeric(df_aux_exp['QTD_PECAS'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        
         def consolidar_doca(d):
             d_str = str(d).strip()
             return d_str[:2] if len(d_str) >= 4 else d_str
@@ -866,26 +874,26 @@ elif pagina_selecionada == "Gestão de Docas":
             
         df_aux_exp['STATUS_CALC'] = df_aux_exp.apply(checar_se_foi_embora, axis=1)
         df_aux_exp = df_aux_exp[df_aux_exp['STATUS_CALC'] != 'LIBERADO'].copy()
-
+        
         if not df_aux_exp.empty:
             df_exp_grouped = df_aux_exp.groupby('DOCA').agg({
                 'AGENDA WMS': lambda x: ' | '.join(x.astype(str)),
                 'CATEGORIA': lambda x: ' | '.join(x.astype(str)),
                 'VOLUME_M3': 'sum',
-                'PEDIDOS': 'sum',
+                'QTD_PECAS': 'sum',
                 'LIMITE_RAW': 'min',
                 'STATUS_CALC': lambda x: 'AGUARDANDO' if 'AGUARDANDO' in x.values else 'LIBERADO',
                 'Status Chegada': lambda x: 'AGUARD CHEGADA' if any('AGUARD' in str(v).upper() for v in x.dropna()) else 'NO PÁTIO'
             }).reset_index()
-
+            
             df_exp_grouped['TIPO_OPERACAO'] = "EXPEDIÇÃO"
             df_exp_grouped['STATUS'] = df_exp_grouped['STATUS_CALC']
             df_exp_grouped['STATUS_CHEGADA_RAW'] = df_exp_grouped['Status Chegada'] 
             df_exp_grouped['LINHA'] = df_exp_grouped['CATEGORIA'] 
-            df_exp_grouped['PEÇAS_VAL'] = df_exp_grouped['PEDIDOS'] 
-            df_exp_grouped['M3_VAL'] = df_exp_grouped['VOLUME_M3']
-            df_exp_grouped['PEÇAS'] = df_exp_grouped['VOLUME_M3'] 
-            df_exp_grouped['SKU'] = df_exp_grouped['PEDIDOS']
+            df_exp_grouped['PEÇAS_VAL'] = df_exp_grouped['QTD_PECAS'] # Alimentando o banco final
+            df_exp_grouped['M3_VAL'] = df_exp_grouped['VOLUME_M3']    # Alimentando o banco final
+            df_exp_grouped['PEÇAS'] = df_exp_grouped['QTD_PECAS'] 
+            df_exp_grouped['SKU'] = "-" # Ocultando campo obsoleto
             df_exp_grouped['PAGAMENTO'] = "N/A"
             df_exp_grouped['R$ DESCARGA'] = "-"
             df_exp_grouped['CONFERENTE'] = "Expedição"
@@ -911,6 +919,9 @@ elif pagina_selecionada == "Gestão de Docas":
             df_aux_exp_final = df_exp_grouped
         else:
             df_aux_exp_final = pd.DataFrame()
+    else:
+        df_aux_exp_final = pd.DataFrame()
+
     else:
         df_aux_exp_final = pd.DataFrame()
 
@@ -1349,7 +1360,8 @@ elif pagina_selecionada == "Gestão de Docas":
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(245,158,11,0.15) !important; background-color: #FFFBEB !important; }}</style><div class='card-proc-{index}'></div>"
                         elif "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
-                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>Total Peças:</b> {info['PEÇAS_BRUTO']:,.0f} &nbsp;|&nbsp; <b>M³ Total:</b> {info['M3_BRUTO']:,.2f} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>".replace(',', 'X').replace('.', ',').replace('X', '.')
                         else:
                             cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
@@ -1532,8 +1544,8 @@ elif pagina_selecionada == "Gestão de Docas":
                     with st.container(border=True):
                         if "EXPEDIÇÃO" in tipo_op:
                             cor_tema = "#0086FF"
-                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
-                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>M³ Total:</b> {info['PEÇAS']}  |  <b>Pedidos:</b> {info['SKU']}  |  <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>"
+                            css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-proc-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(0,134,255,0.15) !important; }}</style><div class='card-proc-{index}'></div>"
+                            html_detalhes = f"<div style='font-size: 11.5px; color: #475569; background-color: #F0F9FF; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #BAE6FD;'><b>Planos:</b> <span style='color:#0369A1; font-weight:bold;'>{info['LINHA']}</span><br><div style='margin-top: 4px;'><b>Total Peças:</b> {info['PEÇAS_BRUTO']:,.0f} &nbsp;|&nbsp; <b>M³ Total:</b> {info['M3_BRUTO']:,.2f} &nbsp;|&nbsp; <b>Status:</b> <span style='color:#0284C7; font-weight:bold;'>{info['STATUS']}</span></div></div>".replace(',', 'X').replace('.', ',').replace('X', '.')
                         else:
                             cor_tema = "#EA580C"
                             css_hack = f"<style>div[data-testid='stVerticalBlockBorderWrapper']:has(.card-pend-{index}) {{ border: 2px solid {cor_tema} !important; box-shadow: 0 4px 15px rgba(234,88,12,0.15) !important; }}</style><div class='card-pend-{index}'></div>"
