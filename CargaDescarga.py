@@ -2576,7 +2576,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                             if col_conf: cols_ns.append('LÍDER')
                             cols_ns.extend([col_cat, 'PEÇAS', 'TEMPO REAL', 'STATUS', 'BALANÇO', col_just])
                             
-                            df_exibir_ns = df_ns[cols_ns].sort_values('DESVIO') # Ordena para os piores atrasos ficarem no topo
+                            # CORREÇÃO: Primeiro Ordena pelo DESVIO, DEPOIS corta as colunas visíveis
+                            df_exibir_ns = df_ns.sort_values('DESVIO')[cols_ns]
+                            
                             df_exibir_ns = df_exibir_ns.rename(columns={col_agenda: 'AGENDA', col_cat: 'CATEGORIA', col_just: 'JUSTIFICATIVA'})
                             
                             # Inteligência CSS (Cores do Painel)
@@ -2598,6 +2600,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 
                             st.dataframe(df_exibir_ns.style.apply(estilizar_ns, axis=None), use_container_width=True, hide_index=True, height=400)
                             st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 
