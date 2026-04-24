@@ -922,9 +922,6 @@ elif pagina_selecionada == "Gestão de Docas":
     else:
         df_aux_exp_final = pd.DataFrame()
 
-    else:
-        df_aux_exp_final = pd.DataFrame()
-
     # --- 2. PROCESSAMENTO DO RECEBIMENTO ---
     if not df_aux_rec.empty:
         df_aux_rec['AGENDA WMS'] = df_aux_rec['AGENDA WMS'].astype(str).str.strip()
