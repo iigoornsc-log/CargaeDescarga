@@ -2534,6 +2534,72 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     
                                 st.markdown('</div>', unsafe_allow_html=True)
 
+                            # =========================================================
+                            # NOVA TABELA: HISTÓRICO DE NÍVEL DE SERVIÇO E DESVIOS
+                            # =========================================================
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">assignment_late</span> Histórico de Nível de Serviço (SLA)</h4>""", unsafe_allow_html=True)
+                            
+                            # 1. Puxa as metas atuais da planilha auxiliar para cruzar os dados
+                            df_aux_prod = carregar_aux()
+                            dict_meta = {}
+                            if not df_aux_prod.empty:
+                                col_meta_aux = next((c for c in df_aux_prod.columns if 'META' in str(c).upper()), None)
+                                col_ag_aux = next((c for c in df_aux_prod.columns if 'AGENDA' in str(c).upper()), None)
+                                if col_meta_aux and col_ag_aux:
+                                    for _, r in df_aux_prod.iterrows():
+                                        try: dict_meta[str(r[col_ag_aux]).strip()] = int(float(str(r[col_meta_aux]).replace(',','.')))
+                                        except: pass
+                                        
+                            def get_meta(ag): return dict_meta.get(str(ag).strip(), 60) # 60 min é a meta padrão do sistema
+                            
+                            df_ns = df_agendas_unicas.copy()
+                            df_ns['META_MIN'] = df_ns[col_agenda].apply(get_meta)
+                            
+                            # A mágica matemática: Meta - Realizado
+                            df_ns['DESVIO'] = df_ns['META_MIN'] - df_ns['MINUTOS']
+                            
+                            # Resgata o nome do Líder/Conferente da base original
+                            col_conf = next((c for c in df_fin.columns if 'CONFERENTE' in c), None)
+                            if col_conf:
+                                map_conf = dict(zip(df_fin[col_agenda], df_fin[col_conf]))
+                                df_ns['LÍDER'] = df_ns[col_agenda].map(map_conf)
+                            
+                            # Classificação de Cores e Textos para a Tabela
+                            df_ns['STATUS'] = df_ns[col_just].apply(lambda x: 'NO PRAZO' if 'NO PRAZO' in str(x).upper() else 'ATRASADO')
+                            df_ns['BALANÇO'] = df_ns['DESVIO'].apply(lambda x: f"{int(x)} min (Atraso)" if x < 0 else f"+{int(x)} min (Sobra)")
+                            df_ns['TEMPO REAL'] = df_ns['MINUTOS'].apply(minutos_para_texto)
+                            df_ns['PEÇAS'] = df_ns['VAL_PECAS'].apply(lambda x: f"{int(x):,}".replace(',', '.'))
+                            
+                            # Seleção final das colunas visíveis
+                            cols_ns = [col_agenda]
+                            if col_conf: cols_ns.append('LÍDER')
+                            cols_ns.extend([col_cat, 'PEÇAS', 'TEMPO REAL', 'STATUS', 'BALANÇO', col_just])
+                            
+                            df_exibir_ns = df_ns[cols_ns].sort_values('DESVIO') # Ordena para os piores atrasos ficarem no topo
+                            df_exibir_ns = df_exibir_ns.rename(columns={col_agenda: 'AGENDA', col_cat: 'CATEGORIA', col_just: 'JUSTIFICATIVA'})
+                            
+                            # Inteligência CSS (Cores do Painel)
+                            def estilizar_ns(df_style):
+                                estilos = pd.DataFrame('', index=df_style.index, columns=df_style.columns)
+                                for idx, row in df_style.iterrows():
+                                    if row['STATUS'] == 'NO PRAZO':
+                                        estilos.loc[idx, 'STATUS'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 800;'
+                                        estilos.loc[idx, 'BALANÇO'] = 'color: #10B981; font-weight: 700;'
+                                    else:
+                                        estilos.loc[idx, 'STATUS'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 800;'
+                                        estilos.loc[idx, 'BALANÇO'] = 'color: #EF4444; font-weight: 700;'
+                                    
+                                    if 'JUSTIFICATIVA' in df_style.columns:
+                                        estilos.loc[idx, 'JUSTIFICATIVA'] = 'color: #64748B; font-size: 11px;'
+                                    if 'AGENDA' in df_style.columns:
+                                        estilos.loc[idx, 'AGENDA'] = 'font-weight: 800; color: #0F172A;'
+                                return estilos
+                                
+                            st.dataframe(df_exibir_ns.style.apply(estilizar_ns, axis=None), use_container_width=True, hide_index=True, height=400)
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+
 
                         with aba_equipe:
                             st.markdown("""
