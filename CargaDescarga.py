@@ -3249,26 +3249,21 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
             with st.spinner("Analisando passado, embaralhando equipe e cruzando habilidades..."):
                 time.sleep(1.5)
                 
-                # 1. Limpeza e Rotatividade Aleatória (Shuffle)
+                # 1. Fila Única e Rotatividade Aleatória (Shuffle)
                 pool_disponivel = [p for p in todos_colaboradores if p not in ausentes_sel and p not in fixos_ecom]
                 random.shuffle(pool_disponivel) 
-                
-                # 2. Separação por Skills
-                pool_ecom = [p for p in pool_disponivel if p in skills_ecom]
-                pool_carreg = [p for p in pool_disponivel if p in skills_carreg]
-                pool_geral = [p for p in pool_disponivel if p not in pool_ecom and p not in pool_carreg]
                 
                 equipes_ecom = [[] for _ in range(qtd_ecom)]
                 equipes_carreg = [[] for _ in range(qtd_carreg)]
                 equipes_gerais = [[] for _ in range(qtd_geral)]
                 
-                # 3. Alocação FIXA
+                # 2. Alocação FIXA (E-COM)
                 if qtd_ecom > 0 and fixos_ecom:
                     equipes_ecom[0].extend(fixos_ecom)
                 elif qtd_ecom == 0 and fixos_ecom:
-                    pool_geral.extend(fixos_ecom)
+                    pool_disponivel.extend(fixos_ecom) # Se não tiver Ecom hoje, os fixos caem no rateio normal
                 
-                                # 4. Função INTELIGENTE de distribuição (Com chave liga/desliga de memória)
+                # 3. Função INTELIGENTE de distribuição
                 def alocar_pessoas(pessoas, lista_de_equipes, limite_tamanho=99, usar_memoria_ia=True):
                     sobras = []
                     for p in pessoas:
@@ -3280,10 +3275,10 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                             
                             conflito = False
                             for membro in equipe:
-                                # Regra A: Manual (ambos na lista de incompativeis) - Vale para TODOS
+                                # Regra A: Manual (ambos na lista de incompativeis)
                                 if p in incompativeis and membro in incompativeis:
                                     conflito = True; break
-                                # Regra B: Memória da I.A. (Trabalharam juntos ontem) - Pode ser desligada
+                                # Regra B: Memória da I.A. (Trabalharam juntos ontem)
                                 if usar_memoria_ia and p in historico_restricoes and membro in historico_restricoes.get(p, set()):
                                     conflito = True; break
                             
@@ -3296,33 +3291,24 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                             sobras.append(p)
                     return sobras
 
-                # 5. Distribuindo a galera
-                # A. Especialistas: E-COM e CARREGAMENTO IGNORAM a memória de ontem (Podem repetir a parceria)
-                sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3, usar_memoria_ia=False)
-                pool_geral.extend(sobras_carreg)
+                # 4. Distribuição em Cascata (Evita clonagem de multi-skills)
                 
-                sobras_ecom = alocar_pessoas(pool_ecom, equipes_ecom, usar_memoria_ia=False)
-                pool_geral.extend(sobras_ecom)
+                # A. CARREGAMENTO (Prioridade 1 - Máx 3 por equipe)
+                cand_carreg = [p for p in pool_disponivel if p in skills_carreg]
+                for p in cand_carreg: pool_disponivel.remove(p) # Retira da fila única
+                sobras_carreg = alocar_pessoas(cand_carreg, equipes_carreg, limite_tamanho=3, usar_memoria_ia=False)
+                pool_disponivel.extend(sobras_carreg) # Se sobrou gente, volta pra fila única
                 
-                # B. Operação GERAL: RESPEITA a memória de ontem (Rotatividade forçada)
-                sobras_gerais = alocar_pessoas(pool_geral, equipes_gerais, usar_memoria_ia=True)
+                # B. E-COM (Prioridade 2)
+                cand_ecom = [p for p in pool_disponivel if p in skills_ecom]
+                for p in cand_ecom: pool_disponivel.remove(p) # Retira da fila única
+                sobras_ecom = alocar_pessoas(cand_ecom, equipes_ecom, usar_memoria_ia=False)
+                pool_disponivel.extend(sobras_ecom) # Se sobrou gente, volta pra fila única
                 
-                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou tudo, força na menor equipe
-                if sobras_gerais:
-                    for p in sobras_gerais:
-                        equipes_gerais.sort(key=len)
-                        equipes_gerais[0].append(p)
-
-                # 5. Distribuindo a galera
-                sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3)
-                pool_geral.extend(sobras_carreg)
+                # C. Operação GERAL (O restante da fila única)
+                sobras_gerais = alocar_pessoas(pool_disponivel, equipes_gerais, usar_memoria_ia=True)
                 
-                sobras_ecom = alocar_pessoas(pool_ecom, equipes_ecom)
-                pool_geral.extend(sobras_ecom)
-                
-                sobras_gerais = alocar_pessoas(pool_geral, equipes_gerais)
-                
-                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou tudo, força na menor equipe
+                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou, força na menor equipe
                 if sobras_gerais:
                     for p in sobras_gerais:
                         equipes_gerais.sort(key=len)
@@ -3330,7 +3316,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 
                 # ==========================================
                 # GRAVAÇÃO AUTOMÁTICA NO HISTÓRICO
-                # ==========================================
+
                 hoje_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y")
                 linhas_para_salvar = []
                 
