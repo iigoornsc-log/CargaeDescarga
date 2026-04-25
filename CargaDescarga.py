@@ -2911,13 +2911,24 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     
                     st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>warning</span> Impacto Médio Diário na Operação</h4>", unsafe_allow_html=True)
                     
+                    # Função construtora de KPI com o padrão visual simétrico (130px) do Carga e Descarga
+                    def renderizar_kpi_rh(titulo, valor, subtitulo, cor):
+                        st.markdown(f'''
+                        <div class="kpi-card" style="border-top: 4px solid {cor}; height: 130px; padding: 10px; text-align: center;">
+                            <div class="kpi-title">{titulo}</div>
+                            <div class="kpi-value" style="font-size:28px; color:{cor};">{valor}</div>
+                            <div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{subtitulo}</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                    
                     c1, c2, c3, c4 = st.columns(4)
-                    with c1: exibir_kpi("Faltas/Atestados por Dia", f"{media_ausencias_dia:.1f}", f"Total de {total_ausencias} no período", "#E74C3C")
-                    with c2: exibir_kpi("Horas Produtivas Perdidas", f"{horas_perdidas_dia:.1f}h", "Base: 427 min/colaborador", "#F39C12")
-                    with c3: exibir_kpi("Peças Deixaram de Descer", f"{pecas_perdidas_dia:,.0f}".replace(',','.'), f"Veloc. CD: {avg_pecas_h:.0f} pçs/h", "#8B5CF6")
-                    with c4: exibir_kpi("Volume M³ Retido", f"{m3_perdidos_dia:.1f}".replace('.',','), f"Veloc. CD: {avg_m3_h:.1f} m³/h", "#0086FF")
+                    with c1: renderizar_kpi_rh("Faltas/Atestados por Dia", f"{media_ausencias_dia:.1f}", f"Total de {total_ausencias} no período", "#E74C3C")
+                    with c2: renderizar_kpi_rh("Horas Produtivas Perdidas", f"{horas_perdidas_dia:.1f}h", "Base: 427 min/colaborador", "#F39C12")
+                    with c3: renderizar_kpi_rh("Peças Deixaram de Descer", f"{pecas_perdidas_dia:,.0f}".replace(',','.'), f"Veloc. CD: {avg_pecas_h:.0f} pçs/h", "#8B5CF6")
+                    with c4: renderizar_kpi_rh("Volume M³ Retido", f"{m3_perdidos_dia:.1f}".replace('.',','), f"Veloc. CD: {avg_m3_h:.1f} m³/h", "#0086FF")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
+
                     
                     # 4. Gráficos Analíticos
                     col_g1, col_g2 = st.columns(2)
