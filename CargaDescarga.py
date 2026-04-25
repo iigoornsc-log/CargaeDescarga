@@ -2850,7 +2850,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                 
                 if df_filtrado.empty:
                     st.info("Nenhuma ocorrência encontrada para os filtros selecionados.")
-                                else:
+                else:
                     # Funções de conversão embutidas localmente para evitar o erro de escopo
                     def limpa_numero_br(valor):
                         if pd.isna(valor): return 0.0
