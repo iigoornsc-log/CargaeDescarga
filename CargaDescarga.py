@@ -3210,35 +3210,35 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
             
         st.markdown("<hr style='margin: 15px 0; border-top: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
         
-        # Mapeamento de Skills
+                # Mapeamento de Skills (Focado na galera filtrada)
         skills_ecom = []
         skills_carreg = []
+        skills_full = []
         if not df_matriz.empty:
             for _, row in df_matriz.iterrows():
                 nome = str(row.get('NOME', '')).strip()
-                if nome in todos_colaboradores:
+                if nome in todos_colaboradores: # Só mapeia quem está no turno selecionado
                     if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']: skills_ecom.append(nome)
                     if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']: skills_carreg.append(nome)
+                    if str(row.get('FULL', '')).upper() in ['TRUE', '1', 'SIM']: skills_full.append(nome)
         
         # ==========================================
-        # 2. PAINEL DE CONFIGURAÇÃO (INPUTS)
+        # PAINEL DE CONFIGURAÇÃO (INPUTS)
         # ==========================================
         st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#0086FF;'>settings_suggest</span> 2. Demanda Operacional de Hoje</h4>", unsafe_allow_html=True)
         
-        c_eq1, c_eq2, c_eq3 = st.columns(3)
-        with c_eq1:
-            qtd_geral = st.number_input("Equipes GERAIS (Descarga)", min_value=1, max_value=15, value=4)
-        with c_eq2:
-            qtd_ecom = st.number_input("Equipes E-COM", min_value=0, max_value=5, value=1)
-        with c_eq3:
-            qtd_carreg = st.number_input("Equipes de CARREGAMENTO", min_value=0, max_value=5, value=1)
+        c_eq1, c_eq2, c_eq3, c_eq4 = st.columns(4)
+        with c_eq1: qtd_geral = st.number_input("Equipes GERAIS", min_value=1, max_value=15, value=4, help="Descarga Convencional 1P")
+        with c_eq2: qtd_ecom = st.number_input("Equipes E-COM", min_value=0, max_value=5, value=1)
+        with c_eq3: qtd_full = st.number_input("Equipes FULL", min_value=0, max_value=5, value=1)
+        with c_eq4: qtd_carreg = st.number_input("Equipes CARREGAMENTO", min_value=0, max_value=5, value=1)
             
         st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 3. Regras de Ouro e Restrições Manuais</h4>", unsafe_allow_html=True)
         
         col_r1, col_r2 = st.columns(2)
         with col_r1:
-            ausentes_sel = st.multiselect("❌ Remover Ausentes / Férias", options=todos_colaboradores)
-            fixos_ecom = st.multiselect("🔒 Equipe Fixa E-COM (Devem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel])
+            ausentes_sel = st.multiselect("❌ Remover Ausentes / Férias", options=todos_colaboradores, help="Estas pessoas não serão escaladas hoje.")
+            fixos_ecom = st.multiselect("🔒 Equipe Fixa E-COM (Devem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="Eles serão forçados na Equipe E-COM 1.")
         with col_r2:
             incompativeis = st.multiselect("⚡ Incompatíveis (NÃO podem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="Além da memória de ontem, o algoritmo também separará essas pessoas escolhidas manualmente.")
         
@@ -3255,6 +3255,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 
                 equipes_ecom = [[] for _ in range(qtd_ecom)]
                 equipes_carreg = [[] for _ in range(qtd_carreg)]
+                equipes_full = [[] for _ in range(qtd_full)]
                 equipes_gerais = [[] for _ in range(qtd_geral)]
                 
                 # 2. Alocação FIXA (E-COM)
@@ -3295,20 +3296,26 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 
                 # A. CARREGAMENTO (Prioridade 1 - Máx 3 por equipe)
                 cand_carreg = [p for p in pool_disponivel if p in skills_carreg]
-                for p in cand_carreg: pool_disponivel.remove(p) # Retira da fila única
+                for p in cand_carreg: pool_disponivel.remove(p) 
                 sobras_carreg = alocar_pessoas(cand_carreg, equipes_carreg, limite_tamanho=3, usar_memoria_ia=False)
-                pool_disponivel.extend(sobras_carreg) # Se sobrou gente, volta pra fila única
+                pool_disponivel.extend(sobras_carreg) 
                 
                 # B. E-COM (Prioridade 2)
                 cand_ecom = [p for p in pool_disponivel if p in skills_ecom]
-                for p in cand_ecom: pool_disponivel.remove(p) # Retira da fila única
+                for p in cand_ecom: pool_disponivel.remove(p) 
                 sobras_ecom = alocar_pessoas(cand_ecom, equipes_ecom, usar_memoria_ia=False)
-                pool_disponivel.extend(sobras_ecom) # Se sobrou gente, volta pra fila única
+                pool_disponivel.extend(sobras_ecom) 
                 
-                # C. Operação GERAL (O restante da fila única)
+                # C. FULL (Prioridade 3)
+                cand_full = [p for p in pool_disponivel if p in skills_full]
+                for p in cand_full: pool_disponivel.remove(p) 
+                sobras_full = alocar_pessoas(cand_full, equipes_full, usar_memoria_ia=False)
+                pool_disponivel.extend(sobras_full)
+                
+                # D. Operação GERAL (O restante da fila única - Com Memória de Ontem Ligada)
                 sobras_gerais = alocar_pessoas(pool_disponivel, equipes_gerais, usar_memoria_ia=True)
                 
-                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou, força na menor equipe
+                # Fallback: Força na menor equipe caso as restrições bloqueiem todas
                 if sobras_gerais:
                     for p in sobras_gerais:
                         equipes_gerais.sort(key=len)
@@ -3316,7 +3323,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 
                 # ==========================================
                 # GRAVAÇÃO AUTOMÁTICA NO HISTÓRICO
-
+                # ==========================================
                 hoje_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y")
                 linhas_para_salvar = []
                 
@@ -3324,6 +3331,8 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                     if eq: linhas_para_salvar.append([hoje_str, turno_str, f"Geral {i+1}", ", ".join(eq)])
                 for i, eq in enumerate(equipes_ecom):
                     if eq: linhas_para_salvar.append([hoje_str, turno_str, f"E-COM {i+1}", ", ".join(eq)])
+                for i, eq in enumerate(equipes_full):
+                    if eq: linhas_para_salvar.append([hoje_str, turno_str, f"FULL {i+1}", ", ".join(eq)])
                 for i, eq in enumerate(equipes_carreg):
                     if eq: linhas_para_salvar.append([hoje_str, turno_str, f"Carregamento {i+1}", ", ".join(eq)])
                 
@@ -3343,6 +3352,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                         badges = ""
                         if m in skills_ecom: badges += "<span style='color:#0284C7; font-size:10px; background:#E0F2FE; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>ECOM</span>"
                         if m in skills_carreg: badges += "<span style='color:#EA580C; font-size:10px; background:#FFEDD5; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>CARREG</span>"
+                        if m in skills_full: badges += "<span style='color:#D946EF; font-size:10px; background:#FDF4FF; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>FULL</span>"
                         if m in incompativeis: badges += "<span style='color:#DC2626; font-size:10px; background:#FEF2F2; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>⚡</span>"
                         
                         html_membros += f"<div style='padding: 6px 0; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #334155; font-weight: 600;'><span class='icon-MAGALOG' style='font-size:14px; color:#94A3B8; vertical-align: middle; margin-right:4px;'>person</span>{m} {badges}</div>"
@@ -3361,13 +3371,13 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                     """, unsafe_allow_html=True)
 
                 if qtd_geral > 0:
-                    st.markdown("<div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operação Geral (Descarga)</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operação Geral (Descarga 1P)</div>", unsafe_allow_html=True)
                     cols_g = st.columns(4)
                     for i, eq in enumerate(equipes_gerais):
                         with cols_g[i % 4]:
                             desenhar_card_equipe(f"Equipe {i+1}", eq, "#0086FF", "forklift")
                 
-                if qtd_ecom > 0 or qtd_carreg > 0:
+                if qtd_ecom > 0 or qtd_full > 0 or qtd_carreg > 0:
                     st.markdown("<br><div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operações Específicas</div>", unsafe_allow_html=True)
                     cols_esp = st.columns(4)
                     idx_col = 0
@@ -3375,10 +3385,15 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                         with cols_esp[idx_col % 4]:
                             desenhar_card_equipe(f"E-COM {i+1}", eq, "#8B5CF6", "shopping_cart")
                         idx_col += 1
+                    for i, eq in enumerate(equipes_full):
+                        with cols_esp[idx_col % 4]:
+                            desenhar_card_equipe(f"FULL {i+1}", eq, "#D946EF", "inventory_2") # Rosa Full
+                        idx_col += 1
                     for i, eq in enumerate(equipes_carreg):
                         with cols_esp[idx_col % 4]:
                             desenhar_card_equipe(f"CARREG. {i+1}", eq, "#F59E0B", "upload")
                         idx_col += 1
+
 
 
 
