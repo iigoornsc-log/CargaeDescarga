@@ -3128,21 +3128,40 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
     if df_equipe.empty:
         st.warning("Não foi possível carregar a equipe da base de dados.")
     else:
-        todos_colaboradores = sorted([str(n).strip() for n in df_equipe['NOME'].dropna().unique() if str(n).strip() != ''])
+        # ==========================================
+        # FILTRO DE TURNO (MUITO IMPORTANTE ANTES DE LISTAR OS NOMES)
+        # ==========================================
+        col_turno = next((c for c in df_equipe.columns if 'TURNO' in c.upper()), None)
         
-        # Mapeamento de Skills
+        st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#8B5CF6;'>schedule</span> 1. Filtro de Turno</h4>", unsafe_allow_html=True)
+        
+        turnos_disponiveis = sorted([str(t).strip() for t in df_equipe[col_turno].dropna().unique() if str(t).strip() != '']) if col_turno else ["Turno Único"]
+        turno_sel = st.multiselect("Selecione os Turnos que deseja escalar agora:", options=turnos_disponiveis, default=turnos_disponiveis[:1] if turnos_disponiveis else None)
+        
+        st.markdown("<hr style='margin: 15px 0; border-top: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
+        
+        # Filtra a equipe baseada no turno selecionado
+        if col_turno and turno_sel:
+            df_equipe_filtrada = df_equipe[df_equipe[col_turno].isin(turno_sel)].copy()
+        else:
+            df_equipe_filtrada = df_equipe.copy()
+
+        todos_colaboradores = sorted([str(n).strip() for n in df_equipe_filtrada['NOME'].dropna().unique() if str(n).strip() != ''])
+        
+        # Mapeamento de Skills (Focado na galera filtrada)
         skills_ecom = []
         skills_carreg = []
         if not df_matriz.empty:
             for _, row in df_matriz.iterrows():
                 nome = str(row.get('NOME', '')).strip()
-                if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']: skills_ecom.append(nome)
-                if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']: skills_carreg.append(nome)
+                if nome in todos_colaboradores: # Só mapeia quem está no turno selecionado
+                    if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']: skills_ecom.append(nome)
+                    if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']: skills_carreg.append(nome)
         
         # ==========================================
         # PAINEL DE CONFIGURAÇÃO (INPUTS)
         # ==========================================
-        st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#0086FF;'>settings_suggest</span> 1. Demanda Operacional de Hoje</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#0086FF;'>settings_suggest</span> 2. Demanda Operacional de Hoje</h4>", unsafe_allow_html=True)
         
         c_eq1, c_eq2, c_eq3 = st.columns(3)
         with c_eq1:
@@ -3152,7 +3171,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
         with c_eq3:
             qtd_carreg = st.number_input("Equipes de CARREGAMENTO", min_value=0, max_value=5, value=1)
             
-        st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 2. Regras de Ouro e Restrições</h4>", unsafe_allow_html=True)
+        st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 3. Regras de Ouro e Restrições</h4>", unsafe_allow_html=True)
         
         col_r1, col_r2 = st.columns(2)
         with col_r1:
@@ -3162,6 +3181,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
             incompativeis = st.multiselect("⚡ Incompatíveis (NÃO podem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="O algoritmo garantirá que essas pessoas caiam em equipes DIFERENTES.")
         
         st.markdown("<br>", unsafe_allow_html=True)
+
         
         # BOTÃO AZUL MATADOR
         if st.button("✨ DIVIDIR EQUIPES", type="primary", use_container_width=True):
