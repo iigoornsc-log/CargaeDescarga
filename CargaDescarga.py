@@ -760,8 +760,9 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
-        "Registro Absenteísmo", 
         "Gestão de Docas", 
+        "Gerador de Equipes (I.A.)",
+        "Registro Absenteísmo",
         "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)",
@@ -3109,6 +3110,185 @@ elif pagina_selecionada == "Absenteísmo (RH)":
     except Exception as e:
         st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
 
+# ==========================================================
+# MÓDULO 7: GERADOR INTELIGENTE DE EQUIPES (I.A. ESCALAÇÃO)
+# ==========================================================
+elif pagina_selecionada == "Gerador de Equipes (I.A.)":
+    import random # Importação necessária para o embaralhador de equipes
+    
+    render_hero(
+        'Gerador Inteligente de Equipes',
+        'Defina a demanda do dia e deixe o algoritmo escalar a operação balanceando habilidades, regras de convivência e rotatividade.',
+        'MAGALOG • I.A. Operacional'
+    )
+    
+    df_equipe = carregar_equipe()
+    df_matriz = carregar_matriz()
+    
+    if df_equipe.empty:
+        st.warning("Não foi possível carregar a equipe da base de dados.")
+    else:
+        todos_colaboradores = sorted([str(n).strip() for n in df_equipe['NOME'].dropna().unique() if str(n).strip() != ''])
+        
+        # Mapeamento de Skills
+        skills_ecom = []
+        skills_carreg = []
+        if not df_matriz.empty:
+            for _, row in df_matriz.iterrows():
+                nome = str(row.get('NOME', '')).strip()
+                if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']: skills_ecom.append(nome)
+                if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']: skills_carreg.append(nome)
+        
+        # ==========================================
+        # PAINEL DE CONFIGURAÇÃO (INPUTS)
+        # ==========================================
+        st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#0086FF;'>settings_suggest</span> 1. Demanda Operacional de Hoje</h4>", unsafe_allow_html=True)
+        
+        c_eq1, c_eq2, c_eq3 = st.columns(3)
+        with c_eq1:
+            qtd_geral = st.number_input("Equipes GERAIS (Descarga)", min_value=1, max_value=15, value=4)
+        with c_eq2:
+            qtd_ecom = st.number_input("Equipes E-COM", min_value=0, max_value=5, value=1)
+        with c_eq3:
+            qtd_carreg = st.number_input("Equipes de CARREGAMENTO", min_value=0, max_value=5, value=1)
+            
+        st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 2. Regras de Ouro e Restrições</h4>", unsafe_allow_html=True)
+        
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            ausentes_sel = st.multiselect("❌ Remover Ausentes / Férias", options=todos_colaboradores, help="Estas pessoas não serão escaladas hoje.")
+            fixos_ecom = st.multiselect("🔒 Equipe Fixa E-COM (Devem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="Eles serão forçados na Equipe E-COM 1.")
+        with col_r2:
+            incompativeis = st.multiselect("⚡ Incompatíveis (NÃO podem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="O algoritmo garantirá que essas pessoas caiam em equipes DIFERENTES.")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # BOTÃO AZUL MATADOR
+        if st.button("✨ DIVIDIR EQUIPES", type="primary", use_container_width=True):
+            with st.spinner("Embaralhando equipe, cruzando habilidades e validando regras de convivência..."):
+                time.sleep(1.5) # Efeito de processamento
+                
+                # 1. Limpeza e Rotatividade (Shuffle)
+                pool_disponivel = [p for p in todos_colaboradores if p not in ausentes_sel and p not in fixos_ecom]
+                random.shuffle(pool_disponivel) # A MÁGICA DA ROTATIVIDADE DIÁRIA AQUI!
+                
+                # 2. Separação por Skills
+                pool_ecom = [p for p in pool_disponivel if p in skills_ecom]
+                pool_carreg = [p for p in pool_disponivel if p in skills_carreg]
+                
+                # Remove os especialistas do pool geral para tentar alocá-los primeiro nas suas áreas
+                pool_geral = [p for p in pool_disponivel if p not in pool_ecom and p not in pool_carreg]
+                
+                # Estruturas das Equipes
+                equipes_ecom = [[] for _ in range(qtd_ecom)]
+                equipes_carreg = [[] for _ in range(qtd_carreg)]
+                equipes_gerais = [[] for _ in range(qtd_geral)]
+                
+                # 3. Alocação FIXA
+                if qtd_ecom > 0 and fixos_ecom:
+                    equipes_ecom[0].extend(fixos_ecom)
+                elif qtd_ecom == 0 and fixos_ecom:
+                    pool_geral.extend(fixos_ecom) # Se não tem Ecom, joga eles pro geral
+                
+                # 4. Função inteligente de distribuição
+                def alocar_pessoas(pessoas, lista_de_equipes, limite_tamanho=99):
+                    sobras = []
+                    for p in pessoas:
+                        alocado = False
+                        # Tenta achar uma equipe que não tenha ninguém incompatível
+                        # Ordena as equipes pelo tamanho para garantir balanceamento
+                        lista_de_equipes.sort(key=len)
+                        
+                        for equipe in lista_de_equipes:
+                            if len(equipe) >= limite_tamanho: continue
+                            
+                            # Checa restrição de incompatibilidade
+                            conflito = False
+                            if p in incompativeis:
+                                for membro in equipe:
+                                    if membro in incompativeis:
+                                        conflito = True
+                                        break
+                            
+                            if not conflito:
+                                equipe.append(p)
+                                alocado = True
+                                break
+                                
+                        if not alocado:
+                            # Se deu conflito em todas ou encheu, vai pra sobra
+                            sobras.append(p)
+                    return sobras
+
+                # 5. Distribuindo a galera
+                # A. Carregamento (Máximo 3 por equipe para não ficar ocioso)
+                sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3)
+                pool_geral.extend(sobras_carreg) # Quem sobrou vai descarregar
+                
+                # B. E-COM (Distribuição uniforme)
+                sobras_ecom = alocar_pessoas(pool_ecom, equipes_ecom)
+                pool_geral.extend(sobras_ecom)
+                
+                # C. GERAIS (O grande rateio)
+                sobras_gerais = alocar_pessoas(pool_geral, equipes_gerais)
+                
+                # D. Repescagem (Se alguém incompatível sobrou por falta de espaço, força nas gerais ignorando a regra)
+                if sobras_gerais:
+                    for p in sobras_gerais:
+                        equipes_gerais.sort(key=len)
+                        equipes_gerais[0].append(p)
+                
+                # ==========================================
+                # RENDERIZAÇÃO DOS CARDS (O RESULTADO)
+                # ==========================================
+                st.markdown("---")
+                st.markdown("<h4 style='color: #0F172A; margin-bottom: 20px;'><span class='icon-MAGALOG' style='color:#10B981;'>check_circle</span> Escalação Oficial do Turno</h4>", unsafe_allow_html=True)
+                
+                def desenhar_card_equipe(titulo, membros, cor_borda, icone):
+                    html_membros = ""
+                    for m in membros:
+                        # Adiciona badges visuais se a pessoa tiver a skill
+                        badges = ""
+                        if m in skills_ecom: badges += "<span style='color:#0284C7; font-size:10px; background:#E0F2FE; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>ECOM</span>"
+                        if m in skills_carreg: badges += "<span style='color:#EA580C; font-size:10px; background:#FFEDD5; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>CARREG</span>"
+                        if m in incompativeis: badges += "<span style='color:#DC2626; font-size:10px; background:#FEF2F2; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>⚡</span>"
+                        
+                        html_membros += f"<div style='padding: 6px 0; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #334155; font-weight: 600;'><span class='icon-MAGALOG' style='font-size:14px; color:#94A3B8; vertical-align: middle; margin-right:4px;'>person</span>{m} {badges}</div>"
+                        
+                    st.markdown(f"""
+                    <div class="MAGALOG-card" style="border-top: 4px solid {cor_borda} !important; height: 100%;">
+                        <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="icon-MAGALOG" style="color:{cor_borda}; font-size:24px;">{icone}</span>
+                                <div style="font-weight:900; color:#0F172A; font-size:15px; text-transform: uppercase;">{titulo}</div>
+                            </div>
+                            <div style="background:#F1F5F9; color:#475569; font-size:11px; font-weight:900; padding:4px 8px; border-radius:12px;">{len(membros)} OP</div>
+                        </div>
+                        {html_membros if membros else "<div style='color:#94A3B8; font-size:12px; font-style:italic;'>Nenhum operador alocado.</div>"}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Renderiza Geral
+                if qtd_geral > 0:
+                    st.markdown("<div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operação Geral (Descarga)</div>", unsafe_allow_html=True)
+                    cols_g = st.columns(4)
+                    for i, eq in enumerate(equipes_gerais):
+                        with cols_g[i % 4]:
+                            desenhar_card_equipe(f"Equipe {i+1}", eq, "#0086FF", "forklift")
+                
+                # Renderiza Ecom e Carregamento na mesma linha
+                if qtd_ecom > 0 or qtd_carreg > 0:
+                    st.markdown("<br><div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operações Específicas</div>", unsafe_allow_html=True)
+                    cols_esp = st.columns(4)
+                    idx_col = 0
+                    for i, eq in enumerate(equipes_ecom):
+                        with cols_esp[idx_col % 4]:
+                            desenhar_card_equipe(f"E-COM {i+1}", eq, "#8B5CF6", "shopping_cart")
+                        idx_col += 1
+                    for i, eq in enumerate(equipes_carreg):
+                        with cols_esp[idx_col % 4]:
+                            desenhar_card_equipe(f"CARREG. {i+1}", eq, "#F59E0B", "upload")
+                        idx_col += 1
 
 
 
