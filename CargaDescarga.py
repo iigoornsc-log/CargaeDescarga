@@ -3010,7 +3010,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                         column_config={"TOTAL": st.column_config.NumberColumn("TOTAL DE OCORRÊNCIAS")}
                     )
 
-                    # =========================================================
+                                        # =========================================================
                     # 6. GRÁFICO DE IMPACTO DIÁRIO (CAPACIDADE PRODUTIVA PERDIDA)
                     # =========================================================
                     st.markdown("<br><h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>trending_down</span> Capacidade Produtiva Perdida por Dia</h4>", unsafe_allow_html=True)
@@ -3029,21 +3029,23 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     df_perdas_dia = pd.merge(df_todas_datas, df_perdas_dia, on='DATA', how='left').fillna(0)
                     df_perdas_dia = df_perdas_dia.sort_values('DATA')
                     
-                    # Monta o gráfico de eixo duplo
+                    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                    
+                    # Monta o gráfico de eixo duplo com visual Premium (Spline + Area)
                     fig_perdas = make_subplots(specs=[[{"secondary_y": True}]])
                     
-                    # Barras Laranjas (Peças)
+                    # Barras Laranjas Modernas (Peças)
                     text_pecas_perdidas = df_perdas_dia['Pecas_Perdidas'].apply(lambda x: f"<b>{int(x):,}</b>".replace(',', '.') if x > 0 else "")
                     fig_perdas.add_trace(
                         go.Bar(
                             x=df_perdas_dia['DATA'], 
                             y=df_perdas_dia['Pecas_Perdidas'], 
                             name="Peças Perdidas", 
-                            marker_color='#F59E0B', # Laranja
-                            opacity=1.0,
+                            marker_color='#FF9F43', # Laranja Moderno (Neon/Soft)
+                            opacity=0.85,
                             text=text_pecas_perdidas,
                             textposition='outside',
-                            textfont=dict(color='#F59E0B', size=12),
+                            textfont=dict(color='#D97706', size=11, family="Inter"),
                             cliponaxis=False,
                             hovertemplate="Data: %{x|%d/%m/%Y}<br>Faltas no dia: %{customdata}<br>Peças Perdidas: %{y:,.0f}<extra></extra>",
                             customdata=df_perdas_dia['Qtd_Faltas']
@@ -3051,7 +3053,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                         secondary_y=False
                     )
                     
-                    # Linha Azul (M³)
+                    # Curva Suave Azul com Sombreamento (m³)
                     text_m3_perdidos = df_perdas_dia['M3_Perdidos'].apply(lambda x: f"<b>{x:.1f}</b>".replace('.', ',') if x > 0 else "")
                     fig_perdas.add_trace(
                         go.Scatter(
@@ -3059,11 +3061,13 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                             y=df_perdas_dia['M3_Perdidos'], 
                             name="m³ Perdido", 
                             mode='lines+markers+text',
-                            line=dict(color='#0086FF', width=4), # Azul
-                            marker=dict(size=9, color='#FFFFFF', line=dict(width=3, color='#0086FF')),
+                            line=dict(color='#3B82F6', width=3, shape='spline'), # Azul Moderno, Linha Curvada (Spline)
+                            fill='tozeroy', # Sombreado de área premium embaixo da curva
+                            fillcolor='rgba(59, 130, 246, 0.15)', # Azul translúcido
+                            marker=dict(size=7, color='#FFFFFF', line=dict(width=2, color='#3B82F6')),
                             text=text_m3_perdidos,
                             textposition='top center',
-                            textfont=dict(color='#0086FF', size=13),
+                            textfont=dict(color='#2563EB', size=11, family="Inter"),
                             cliponaxis=False,
                             hovertemplate="Data: %{x|%d/%m/%Y}<br>m³ Perdido: %{y:,.1f}<extra></extra>"
                         ), 
@@ -3074,27 +3078,31 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     fig_perdas.update_layout(
                         plot_bgcolor='rgba(0,0,0,0)', 
                         paper_bgcolor='rgba(0,0,0,0)', 
-                        margin=dict(l=0, r=0, t=40, b=0), 
-                        height=420, 
-                        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1),
+                        margin=dict(l=10, r=10, t=40, b=10), 
+                        height=380, 
+                        legend=dict(
+                            orientation="h", 
+                            yanchor="bottom", 
+                            y=1.05, 
+                            xanchor="right", 
+                            x=1,
+                            font=dict(size=12, color='#475569', family="Inter")
+                        ),
                         hovermode="x unified",
                         font_family="Inter"
                     )
                     
+                    # Eixos X e Y super limpos
                     fig_perdas.update_xaxes(showgrid=False, tickformat="%d/%m", tickfont=dict(color='#64748B', size=11, weight='bold'))
-                    fig_perdas.update_yaxes(title_text="Peças Perdidas", secondary_y=False, showgrid=True, gridcolor='#F1F5F9', showticklabels=False, zeroline=False)
-                    fig_perdas.update_yaxes(title_text="m³ Perdido", secondary_y=True, showgrid=False, showticklabels=False, zeroline=False)
+                    fig_perdas.update_yaxes(secondary_y=False, showgrid=True, gridcolor='#F1F5F9', showticklabels=False, zeroline=False)
+                    fig_perdas.update_yaxes(secondary_y=True, showgrid=False, showticklabels=False, zeroline=False)
                     
-                    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
                     st.plotly_chart(fig_perdas, use_container_width=True, config={'displayModeBar': False})
                     st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
 
-
-    except Exception as e:
-        st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
 
 
 
