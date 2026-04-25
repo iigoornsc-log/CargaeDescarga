@@ -2924,8 +2924,8 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     c1, c2, c3, c4 = st.columns(4)
                     with c1: renderizar_kpi_rh("Faltas/Atestados por Dia", f"{media_ausencias_dia:.1f}", f"Total de {total_ausencias} no período", "#E74C3C")
                     with c2: renderizar_kpi_rh("Horas Produtivas Perdidas", f"{horas_perdidas_dia:.1f}h", "Base: 427 min/colaborador", "#F39C12")
-                    with c3: renderizar_kpi_rh("Peças Deixaram de Descer", f"{pecas_perdidas_dia:,.0f}".replace(',','.'), f"Veloc. CD: {avg_pecas_h:.0f} pçs/h", "#8B5CF6")
-                    with c4: renderizar_kpi_rh("Volume M³ Retido", f"{m3_perdidos_dia:.1f}".replace('.',','), f"Veloc. CD: {avg_m3_h:.1f} m³/h", "#0086FF")
+                    with c3: renderizar_kpi_rh("Perda produtiva em Peças", f"{pecas_perdidas_dia:,.0f}".replace(',','.'), f"Veloc. CD: {avg_pecas_h:.0f} pçs/h", "#8B5CF6")
+                    with c4: renderizar_kpi_rh("Perda produtivda em M³", f"{m3_perdidos_dia:.1f}".replace('.',','), f"Veloc. CD: {avg_m3_h:.1f} m³/h", "#0086FF")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
 
