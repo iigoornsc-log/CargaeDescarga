@@ -3268,8 +3268,8 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 elif qtd_ecom == 0 and fixos_ecom:
                     pool_geral.extend(fixos_ecom)
                 
-                # 4. Função INTELIGENTE de distribuição (Com memória de ontem)
-                def alocar_pessoas(pessoas, lista_de_equipes, limite_tamanho=99):
+                                # 4. Função INTELIGENTE de distribuição (Com chave liga/desliga de memória)
+                def alocar_pessoas(pessoas, lista_de_equipes, limite_tamanho=99, usar_memoria_ia=True):
                     sobras = []
                     for p in pessoas:
                         alocado = False
@@ -3280,11 +3280,11 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                             
                             conflito = False
                             for membro in equipe:
-                                # Regra A: Manual (ambos na lista de incompativeis)
+                                # Regra A: Manual (ambos na lista de incompativeis) - Vale para TODOS
                                 if p in incompativeis and membro in incompativeis:
                                     conflito = True; break
-                                # Regra B: Memória da I.A. (Trabalharam juntos ontem)
-                                if p in historico_restricoes and membro in historico_restricoes[p]:
+                                # Regra B: Memória da I.A. (Trabalharam juntos ontem) - Pode ser desligada
+                                if usar_memoria_ia and p in historico_restricoes and membro in historico_restricoes.get(p, set()):
                                     conflito = True; break
                             
                             if not conflito:
@@ -3295,6 +3295,23 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                         if not alocado:
                             sobras.append(p)
                     return sobras
+
+                # 5. Distribuindo a galera
+                # A. Especialistas: E-COM e CARREGAMENTO IGNORAM a memória de ontem (Podem repetir a parceria)
+                sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3, usar_memoria_ia=False)
+                pool_geral.extend(sobras_carreg)
+                
+                sobras_ecom = alocar_pessoas(pool_ecom, equipes_ecom, usar_memoria_ia=False)
+                pool_geral.extend(sobras_ecom)
+                
+                # B. Operação GERAL: RESPEITA a memória de ontem (Rotatividade forçada)
+                sobras_gerais = alocar_pessoas(pool_geral, equipes_gerais, usar_memoria_ia=True)
+                
+                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou tudo, força na menor equipe
+                if sobras_gerais:
+                    for p in sobras_gerais:
+                        equipes_gerais.sort(key=len)
+                        equipes_gerais[0].append(p)
 
                 # 5. Distribuindo a galera
                 sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3)
