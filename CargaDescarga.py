@@ -2850,7 +2850,29 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                 
                 if df_filtrado.empty:
                     st.info("Nenhuma ocorrência encontrada para os filtros selecionados.")
-                else:
+                                else:
+                    # Funções de conversão embutidas localmente para evitar o erro de escopo
+                    def limpa_numero_br(valor):
+                        if pd.isna(valor): return 0.0
+                        texto = str(valor).strip()
+                        if texto == "" or texto.upper() in ["NAN", "NONE", "-"]: return 0.0
+                        texto = texto.replace("R$", "").replace(" ", "")
+                        if "." in texto and "," in texto: texto = texto.replace(".", "").replace(",", ".")
+                        elif "," in texto: texto = texto.replace(",", ".")
+                        try: return float(texto)
+                        except: return 0.0
+                        
+                    def time_to_mins(t_str):
+                        try:
+                            partes = str(t_str).strip().split(':')
+                            if len(partes) == 2:
+                                h, m = map(int, partes)
+                                return h * 60 + m
+                            elif len(partes) == 3:
+                                return int(partes[0]) * 60 + int(partes[1]) + float(partes[2]) / 60.0
+                            return 0
+                        except: return 0
+
                     # 2. Matemática do Impacto (Calculando a velocidade real do CD em background)
                     df_prod = carregar_docas_finalizadas()
                     avg_pecas_h = 0
@@ -2870,7 +2892,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                             df_p['PÇS'] = df_p[col_pc].apply(limpa_numero_br)
                             df_p['M3'] = df_p[col_m3].apply(limpa_numero_br) if col_m3 else 0
                             
-                            # Pega 1 linha por agenda para não somar peças duplicadas
+                            # Pega 1 linha por agenda para não somar peças duplicadas pelo número de ajudantes
                             df_agendas = df_p.groupby(col_ag).first()
                             tot_h = df_agendas['HORAS'].sum()
                             if tot_h > 0:
