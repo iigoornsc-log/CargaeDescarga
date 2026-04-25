@@ -3015,19 +3015,24 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     # =========================================================
                     st.markdown("<br><h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>trending_down</span> Capacidade Produtiva Perdida por Dia</h4>", unsafe_allow_html=True)
                     
+                    # BLINDAGEM DE DATA: Extrai apenas a data pura, ignorando horas
+                    df_filtrado['DATA_PURA'] = df_filtrado['DATA'].dt.date
+                    
                     # Agrupa as faltas por data exata
-                    df_perdas_dia = df_filtrado.groupby('DATA').size().reset_index(name='Qtd_Faltas')
+                    df_perdas_dia = df_filtrado.groupby('DATA_PURA').size().reset_index(name='Qtd_Faltas')
                     
                     # Calcula a perda real de cada dia
-                    df_perdas_dia['Horas_Perdidas'] = df_perdas_dia['Qtd_Faltas'] * (427 / 60)
+                    df_perdas_dia['Horas_Perdidas'] = df_perdas_dia['Qtd_Faltas'] * (427 / 60.0)
                     df_perdas_dia['Pecas_Perdidas'] = df_perdas_dia['Horas_Perdidas'] * avg_pecas_h
                     df_perdas_dia['M3_Perdidos'] = df_perdas_dia['Horas_Perdidas'] * avg_m3_h
                     
-                    # Cria um calendário completo do período filtrado para o gráfico não pular dias vazios
-                    todas_datas = pd.date_range(start=dt_ini, end=dt_fim)
-                    df_todas_datas = pd.DataFrame({'DATA': todas_datas})
-                    df_perdas_dia = pd.merge(df_todas_datas, df_perdas_dia, on='DATA', how='left').fillna(0)
-                    df_perdas_dia = df_perdas_dia.sort_values('DATA')
+                    # Cria um calendário completo com o tipo DATE exato
+                    todas_datas = pd.date_range(start=dt_ini, end=dt_fim).date
+                    df_todas_datas = pd.DataFrame({'DATA_PURA': todas_datas})
+                    
+                    # Cruzamento blindado (agora os dois lados são tipo 'date')
+                    df_perdas_dia = pd.merge(df_todas_datas, df_perdas_dia, on='DATA_PURA', how='left').fillna(0)
+                    df_perdas_dia = df_perdas_dia.sort_values('DATA_PURA')
                     
                     st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
                     
@@ -3038,7 +3043,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     text_pecas_perdidas = df_perdas_dia['Pecas_Perdidas'].apply(lambda x: f"<b>{int(x):,}</b>".replace(',', '.') if x > 0 else "")
                     fig_perdas.add_trace(
                         go.Bar(
-                            x=df_perdas_dia['DATA'], 
+                            x=df_perdas_dia['DATA_PURA'], 
                             y=df_perdas_dia['Pecas_Perdidas'], 
                             name="Peças Perdidas", 
                             marker_color='#FF9F43', # Laranja Moderno (Neon/Soft)
@@ -3057,7 +3062,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     text_m3_perdidos = df_perdas_dia['M3_Perdidos'].apply(lambda x: f"<b>{x:.1f}</b>".replace('.', ',') if x > 0 else "")
                     fig_perdas.add_trace(
                         go.Scatter(
-                            x=df_perdas_dia['DATA'], 
+                            x=df_perdas_dia['DATA_PURA'], 
                             y=df_perdas_dia['M3_Perdidos'], 
                             name="m³ Perdido", 
                             mode='lines+markers+text',
@@ -3099,6 +3104,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                     
                     st.plotly_chart(fig_perdas, use_container_width=True, config={'displayModeBar': False})
                     st.markdown('</div>', unsafe_allow_html=True)
+
 
     except Exception as e:
         st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
