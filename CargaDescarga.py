@@ -383,6 +383,38 @@ def carregar_log_absenteismo():
             if tentativa == 2: return pd.DataFrame()
             time.sleep(1.5)
 
+@st.cache_data(ttl=60)
+def carregar_historico_escalas():
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("HISTORICO_ESCALAS")
+            dados = ws.get_all_values()
+            if len(dados) > 1:
+                df = pd.DataFrame(dados[1:], columns=dados[0])
+                df.columns = df.columns.str.strip().str.upper()
+                return df
+            return pd.DataFrame(columns=['DATA', 'TURNO', 'EQUIPE', 'MEMBROS'])
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
+
+def salvar_escala_ia(linhas_para_salvar):
+    try:
+        client = conectar_google()
+        sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+        try:
+            ws = sh.worksheet("HISTORICO_ESCALAS")
+        except:
+            ws = sh.add_worksheet(title="HISTORICO_ESCALAS", rows="100", cols="4")
+            ws.append_row(["DATA", "TURNO", "EQUIPE", "MEMBROS"])
+        ws.append_rows(linhas_para_salvar)
+        return True
+    except Exception as e:
+        return False
+
+
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
@@ -3114,22 +3146,23 @@ elif pagina_selecionada == "Absenteísmo (RH)":
 # MÓDULO 7: GERADOR INTELIGENTE DE EQUIPES (I.A. ESCALAÇÃO)
 # ==========================================================
 elif pagina_selecionada == "Gerador de Equipes (I.A.)":
-    import random # Importação necessária para o embaralhador de equipes
+    import random 
     
     render_hero(
         'Gerador Inteligente de Equipes',
-        'Defina a demanda do dia e deixe o algoritmo escalar a operação balanceando habilidades, regras de convivência e rotatividade.',
+        'Defina a demanda do dia e deixe o algoritmo escalar a operação balanceando habilidades, restrições e evitando repetições de equipes do dia anterior.',
         'MAGALOG • I.A. Operacional'
     )
     
     df_equipe = carregar_equipe()
     df_matriz = carregar_matriz()
+    df_historico_ia = carregar_historico_escalas()
     
     if df_equipe.empty:
         st.warning("Não foi possível carregar a equipe da base de dados.")
     else:
         # ==========================================
-        # FILTRO DE TURNO (MUITO IMPORTANTE ANTES DE LISTAR OS NOMES)
+        # 1. FILTRO DE TURNO E MEMÓRIA DA I.A.
         # ==========================================
         col_turno = next((c for c in df_equipe.columns if 'TURNO' in c.upper()), None)
         
@@ -3138,28 +3171,57 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
         turnos_disponiveis = sorted([str(t).strip() for t in df_equipe[col_turno].dropna().unique() if str(t).strip() != '']) if col_turno else ["Turno Único"]
         turno_sel = st.multiselect("Selecione os Turnos que deseja escalar agora:", options=turnos_disponiveis, default=turnos_disponiveis[:1] if turnos_disponiveis else None)
         
-        st.markdown("<hr style='margin: 15px 0; border-top: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
-        
         # Filtra a equipe baseada no turno selecionado
         if col_turno and turno_sel:
             df_equipe_filtrada = df_equipe[df_equipe[col_turno].isin(turno_sel)].copy()
+            turno_str = " + ".join(turno_sel)
         else:
             df_equipe_filtrada = df_equipe.copy()
+            turno_str = "Geral"
 
         todos_colaboradores = sorted([str(n).strip() for n in df_equipe_filtrada['NOME'].dropna().unique() if str(n).strip() != ''])
         
-        # Mapeamento de Skills (Focado na galera filtrada)
+        # --- O CÉREBRO DA I.A. (LENDO O DIA DE ONTEM) ---
+        historico_restricoes = {}
+        data_memoria = None
+        
+        if not df_historico_ia.empty and turno_sel:
+            df_hist_turno = df_historico_ia[df_historico_ia['TURNO'] == turno_str].copy()
+            if not df_hist_turno.empty:
+                df_hist_turno['DATA_DT'] = pd.to_datetime(df_hist_turno['DATA'], format='%d/%m/%Y', errors='coerce')
+                ultima_data = df_hist_turno['DATA_DT'].max()
+                
+                if pd.notnull(ultima_data):
+                    data_memoria = ultima_data.strftime('%d/%m/%Y')
+                    df_ontem = df_hist_turno[df_hist_turno['DATA_DT'] == ultima_data]
+                    
+                    for _, row in df_ontem.iterrows():
+                        membros_str = str(row.get('MEMBROS', ''))
+                        membros_lista = [m.strip() for m in membros_str.split(',') if m.strip()]
+                        
+                        # Cria teia de aranha de restrições (Quem trabalhou junto ontem não pode hoje)
+                        for m1 in membros_lista:
+                            if m1 not in historico_restricoes: historico_restricoes[m1] = set()
+                            for m2 in membros_lista:
+                                if m1 != m2: historico_restricoes[m1].add(m2)
+        
+        if data_memoria:
+            st.markdown(f"<div style='background: #F0FDF4; border: 1px solid #A7F3D0; padding: 10px; border-radius: 8px; color: #065F46; font-size: 13px; font-weight: 600;'><span class='icon-MAGALOG' style='vertical-align:middle; margin-right: 5px;'>psychology</span> <b>Memória I.A. Ativada:</b> O sistema rastreou as equipes formadas no dia {data_memoria} para este turno e vai forçar a rotatividade (evitando que as mesmas pessoas trabalhem juntas hoje).</div>", unsafe_allow_html=True)
+            
+        st.markdown("<hr style='margin: 15px 0; border-top: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
+        
+        # Mapeamento de Skills
         skills_ecom = []
         skills_carreg = []
         if not df_matriz.empty:
             for _, row in df_matriz.iterrows():
                 nome = str(row.get('NOME', '')).strip()
-                if nome in todos_colaboradores: # Só mapeia quem está no turno selecionado
+                if nome in todos_colaboradores:
                     if str(row.get('ECOM', '')).upper() in ['TRUE', '1', 'SIM']: skills_ecom.append(nome)
                     if str(row.get('CARREGAMENTO', '')).upper() in ['TRUE', '1', 'SIM']: skills_carreg.append(nome)
         
         # ==========================================
-        # PAINEL DE CONFIGURAÇÃO (INPUTS)
+        # 2. PAINEL DE CONFIGURAÇÃO (INPUTS)
         # ==========================================
         st.markdown("<h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#0086FF;'>settings_suggest</span> 2. Demanda Operacional de Hoje</h4>", unsafe_allow_html=True)
         
@@ -3171,35 +3233,31 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
         with c_eq3:
             qtd_carreg = st.number_input("Equipes de CARREGAMENTO", min_value=0, max_value=5, value=1)
             
-        st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 3. Regras de Ouro e Restrições</h4>", unsafe_allow_html=True)
+        st.markdown("<br><h4 style='color: #0F172A; margin-bottom: 15px;'><span class='icon-MAGALOG' style='color:#F59E0B;'>rule</span> 3. Regras de Ouro e Restrições Manuais</h4>", unsafe_allow_html=True)
         
         col_r1, col_r2 = st.columns(2)
         with col_r1:
-            ausentes_sel = st.multiselect("❌ Remover Ausentes / Férias", options=todos_colaboradores, help="Estas pessoas não serão escaladas hoje.")
-            fixos_ecom = st.multiselect("🔒 Equipe Fixa E-COM (Devem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="Eles serão forçados na Equipe E-COM 1.")
+            ausentes_sel = st.multiselect("❌ Remover Ausentes / Férias", options=todos_colaboradores)
+            fixos_ecom = st.multiselect("🔒 Equipe Fixa E-COM (Devem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel])
         with col_r2:
-            incompativeis = st.multiselect("⚡ Incompatíveis (NÃO podem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="O algoritmo garantirá que essas pessoas caiam em equipes DIFERENTES.")
+            incompativeis = st.multiselect("⚡ Incompatíveis (NÃO podem ficar juntos)", options=[p for p in todos_colaboradores if p not in ausentes_sel], help="Além da memória de ontem, o algoritmo também separará essas pessoas escolhidas manualmente.")
         
         st.markdown("<br>", unsafe_allow_html=True)
-
         
         # BOTÃO AZUL MATADOR
-        if st.button("✨ DIVIDIR EQUIPES", type="primary", use_container_width=True):
-            with st.spinner("Embaralhando equipe, cruzando habilidades e validando regras de convivência..."):
-                time.sleep(1.5) # Efeito de processamento
+        if st.button("✨ DIVIDIR E GRAVAR EQUIPES", type="primary", use_container_width=True):
+            with st.spinner("Analisando passado, embaralhando equipe e cruzando habilidades..."):
+                time.sleep(1.5)
                 
-                # 1. Limpeza e Rotatividade (Shuffle)
+                # 1. Limpeza e Rotatividade Aleatória (Shuffle)
                 pool_disponivel = [p for p in todos_colaboradores if p not in ausentes_sel and p not in fixos_ecom]
-                random.shuffle(pool_disponivel) # A MÁGICA DA ROTATIVIDADE DIÁRIA AQUI!
+                random.shuffle(pool_disponivel) 
                 
                 # 2. Separação por Skills
                 pool_ecom = [p for p in pool_disponivel if p in skills_ecom]
                 pool_carreg = [p for p in pool_disponivel if p in skills_carreg]
-                
-                # Remove os especialistas do pool geral para tentar alocá-los primeiro nas suas áreas
                 pool_geral = [p for p in pool_disponivel if p not in pool_ecom and p not in pool_carreg]
                 
-                # Estruturas das Equipes
                 equipes_ecom = [[] for _ in range(qtd_ecom)]
                 equipes_carreg = [[] for _ in range(qtd_carreg)]
                 equipes_gerais = [[] for _ in range(qtd_geral)]
@@ -3208,27 +3266,26 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                 if qtd_ecom > 0 and fixos_ecom:
                     equipes_ecom[0].extend(fixos_ecom)
                 elif qtd_ecom == 0 and fixos_ecom:
-                    pool_geral.extend(fixos_ecom) # Se não tem Ecom, joga eles pro geral
+                    pool_geral.extend(fixos_ecom)
                 
-                # 4. Função inteligente de distribuição
+                # 4. Função INTELIGENTE de distribuição (Com memória de ontem)
                 def alocar_pessoas(pessoas, lista_de_equipes, limite_tamanho=99):
                     sobras = []
                     for p in pessoas:
                         alocado = False
-                        # Tenta achar uma equipe que não tenha ninguém incompatível
-                        # Ordena as equipes pelo tamanho para garantir balanceamento
-                        lista_de_equipes.sort(key=len)
+                        lista_de_equipes.sort(key=len) # Tenta sempre a equipe mais vazia para balancear
                         
                         for equipe in lista_de_equipes:
                             if len(equipe) >= limite_tamanho: continue
                             
-                            # Checa restrição de incompatibilidade
                             conflito = False
-                            if p in incompativeis:
-                                for membro in equipe:
-                                    if membro in incompativeis:
-                                        conflito = True
-                                        break
+                            for membro in equipe:
+                                # Regra A: Manual (ambos na lista de incompativeis)
+                                if p in incompativeis and membro in incompativeis:
+                                    conflito = True; break
+                                # Regra B: Memória da I.A. (Trabalharam juntos ontem)
+                                if p in historico_restricoes and membro in historico_restricoes[p]:
+                                    conflito = True; break
                             
                             if not conflito:
                                 equipe.append(p)
@@ -3236,38 +3293,50 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                                 break
                                 
                         if not alocado:
-                            # Se deu conflito em todas ou encheu, vai pra sobra
                             sobras.append(p)
                     return sobras
 
                 # 5. Distribuindo a galera
-                # A. Carregamento (Máximo 3 por equipe para não ficar ocioso)
                 sobras_carreg = alocar_pessoas(pool_carreg, equipes_carreg, limite_tamanho=3)
-                pool_geral.extend(sobras_carreg) # Quem sobrou vai descarregar
+                pool_geral.extend(sobras_carreg)
                 
-                # B. E-COM (Distribuição uniforme)
                 sobras_ecom = alocar_pessoas(pool_ecom, equipes_ecom)
                 pool_geral.extend(sobras_ecom)
                 
-                # C. GERAIS (O grande rateio)
                 sobras_gerais = alocar_pessoas(pool_geral, equipes_gerais)
                 
-                # D. Repescagem (Se alguém incompatível sobrou por falta de espaço, força nas gerais ignorando a regra)
+                # Fallback: Se alguém ficou de fora porque a regra de ontem bloqueou tudo, força na menor equipe
                 if sobras_gerais:
                     for p in sobras_gerais:
                         equipes_gerais.sort(key=len)
                         equipes_gerais[0].append(p)
                 
                 # ==========================================
+                # GRAVAÇÃO AUTOMÁTICA NO HISTÓRICO
+                # ==========================================
+                hoje_str = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%d/%m/%Y")
+                linhas_para_salvar = []
+                
+                for i, eq in enumerate(equipes_gerais):
+                    if eq: linhas_para_salvar.append([hoje_str, turno_str, f"Geral {i+1}", ", ".join(eq)])
+                for i, eq in enumerate(equipes_ecom):
+                    if eq: linhas_para_salvar.append([hoje_str, turno_str, f"E-COM {i+1}", ", ".join(eq)])
+                for i, eq in enumerate(equipes_carreg):
+                    if eq: linhas_para_salvar.append([hoje_str, turno_str, f"Carregamento {i+1}", ", ".join(eq)])
+                
+                if linhas_para_salvar:
+                    salvar_escala_ia(linhas_para_salvar)
+                    carregar_historico_escalas.clear() # Limpa o cache para amanhã ler os novos dados
+                
+                # ==========================================
                 # RENDERIZAÇÃO DOS CARDS (O RESULTADO)
                 # ==========================================
                 st.markdown("---")
-                st.markdown("<h4 style='color: #0F172A; margin-bottom: 20px;'><span class='icon-MAGALOG' style='color:#10B981;'>check_circle</span> Escalação Oficial do Turno</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #0F172A; margin-bottom: 20px;'><span class='icon-MAGALOG' style='color:#10B981;'>check_circle</span> Escalação Oficial do Turno Salva</h4>", unsafe_allow_html=True)
                 
                 def desenhar_card_equipe(titulo, membros, cor_borda, icone):
                     html_membros = ""
                     for m in membros:
-                        # Adiciona badges visuais se a pessoa tiver a skill
                         badges = ""
                         if m in skills_ecom: badges += "<span style='color:#0284C7; font-size:10px; background:#E0F2FE; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>ECOM</span>"
                         if m in skills_carreg: badges += "<span style='color:#EA580C; font-size:10px; background:#FFEDD5; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:800;'>CARREG</span>"
@@ -3288,7 +3357,6 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Renderiza Geral
                 if qtd_geral > 0:
                     st.markdown("<div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operação Geral (Descarga)</div>", unsafe_allow_html=True)
                     cols_g = st.columns(4)
@@ -3296,7 +3364,6 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                         with cols_g[i % 4]:
                             desenhar_card_equipe(f"Equipe {i+1}", eq, "#0086FF", "forklift")
                 
-                # Renderiza Ecom e Carregamento na mesma linha
                 if qtd_ecom > 0 or qtd_carreg > 0:
                     st.markdown("<br><div style='color: #64748B; font-weight: 800; font-size: 13px; margin-bottom: 10px; text-transform: uppercase;'>Operações Específicas</div>", unsafe_allow_html=True)
                     cols_esp = st.columns(4)
@@ -3309,6 +3376,7 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                         with cols_esp[idx_col % 4]:
                             desenhar_card_equipe(f"CARREG. {i+1}", eq, "#F59E0B", "upload")
                         idx_col += 1
+
 
 
 
