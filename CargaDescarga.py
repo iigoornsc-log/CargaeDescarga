@@ -365,6 +365,24 @@ def carregar_auxexp():
             if tentativa == 2: return pd.DataFrame()
             time.sleep(1.5)
 
+@st.cache_data(ttl=60)
+def carregar_log_absenteismo():
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+            ws = sh.worksheet("LOG_ABSENTEISMO")
+            dados = ws.get_all_values()
+            if len(dados) > 1:
+                df = pd.DataFrame(dados[1:], columns=dados[0])
+                df.columns = df.columns.str.strip().str.upper()
+                return df
+            else:
+                return pd.DataFrame(columns=['DATA', 'ID', 'NOME', 'OCORRÊNCIA', 'TURNO'])
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
+
 # ==========================================================
 # 3. FUNÇÕES DE GRAVAÇÃO (BACK-END)
 # ==========================================================
@@ -746,7 +764,8 @@ pagina_selecionada = st.sidebar.radio(
         "Gestão de Docas", 
         "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
-        "Financeiro (Diretoria)"
+        "Financeiro (Diretoria)",
+        "Absenteísmo (RH)"
     ]
 )
 
@@ -2789,5 +2808,177 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.info("Sem dados para esta categoria.")
     except Exception as e:
         st.error(f"Erro no módulo de Produtividade: {e}")
+
+# ==========================================================
+# MÓDULO 6: GESTÃO DE PESSOAS E IMPACTO (RH)
+# ==========================================================
+elif pagina_selecionada == "Absenteísmo (RH)":
+    render_hero(
+        'Análise de Absenteísmo e Impacto',
+        'Cruze os dados de faltas com a produtividade do CD para descobrir o real prejuízo operacional gerado pelas ausências.',
+        'Recursos Humanos • Analytics'
+    )
+    
+    try:
+        with st.spinner("Analisando impacto do absenteísmo..."):
+            df_abs = carregar_log_absenteismo()
+            
+            if df_abs.empty:
+                st.warning("O Log de Absenteísmo está vazio ou não foi encontrado.")
+            else:
+                # 1. Tratamento de Datas e Filtros
+                df_abs['DATA'] = pd.to_datetime(df_abs['DATA'], dayfirst=True, errors='coerce')
+                df_abs = df_abs.dropna(subset=['DATA']).copy()
+                
+                st.sidebar.markdown("### <span class='icon-MAGALOG'>filter_alt</span> Filtros de RH", unsafe_allow_html=True)
+                
+                c_f1, c_f2 = st.columns(2)
+                with c_f1: dt_ini = st.date_input("Data Inicial", value=df_abs['DATA'].min().date())
+                with c_f2: dt_fim = st.date_input("Data Final", value=df_abs['DATA'].max().date())
+                
+                # Filtro inteligente de Motivos (Por padrão, foca no que causa prejuízo real)
+                col_ocorrencia = next((c for c in df_abs.columns if 'OCORR' in c), 'OCORRÊNCIA')
+                motivos_unicos = df_abs[col_ocorrencia].dropna().unique().tolist()
+                motivos_default = [m for m in motivos_unicos if str(m).upper() in ['FALTA', 'ATESTADO']]
+                if not motivos_default: motivos_default = motivos_unicos # Se não tiver falta/atestado, marca tudo
+                
+                motivos_sel = st.sidebar.multiselect("Motivos Considerados (Absenteísmo):", options=motivos_unicos, default=motivos_default)
+                
+                # Aplicação dos Filtros
+                mask = (df_abs['DATA'].dt.date >= dt_ini) & (df_abs['DATA'].dt.date <= dt_fim) & (df_abs[col_ocorrencia].isin(motivos_sel))
+                df_filtrado = df_abs[mask].copy()
+                
+                if df_filtrado.empty:
+                    st.info("Nenhuma ocorrência encontrada para os filtros selecionados.")
+                else:
+                    # 2. Matemática do Impacto (Calculando a velocidade real do CD em background)
+                    df_prod = carregar_docas_finalizadas()
+                    avg_pecas_h = 0
+                    avg_m3_h = 0
+                    
+                    if not df_prod.empty:
+                        df_prod.columns = [str(c).upper().strip() for c in df_prod.columns]
+                        col_ag = next((c for c in df_prod.columns if 'AGENDA' in c), None)
+                        col_tmp = next((c for c in df_prod.columns if 'TEMPO' in c), None)
+                        col_pc = next((c for c in df_prod.columns if 'PEÇAS' in c or 'PECA' in c), None)
+                        col_m3 = next((c for c in df_prod.columns if 'M³' in c or 'M3' in c), None)
+                        
+                        if col_ag and col_tmp and col_pc:
+                            df_p = df_prod.copy()
+                            df_p['MINS'] = df_p[col_tmp].apply(time_to_mins)
+                            df_p['HORAS'] = df_p['MINS'] / 60
+                            df_p['PÇS'] = df_p[col_pc].apply(limpa_numero_br)
+                            df_p['M3'] = df_p[col_m3].apply(limpa_numero_br) if col_m3 else 0
+                            
+                            # Pega 1 linha por agenda para não somar peças duplicadas
+                            df_agendas = df_p.groupby(col_ag).first()
+                            tot_h = df_agendas['HORAS'].sum()
+                            if tot_h > 0:
+                                avg_pecas_h = df_agendas['PÇS'].sum() / tot_h
+                                avg_m3_h = df_agendas['M3'].sum() / tot_h
+                                
+                    # 3. KPIs de Absenteísmo
+                    dias_com_registro = max(1, df_filtrado['DATA'].nunique()) # Evita divisão por zero
+                    total_ausencias = len(df_filtrado)
+                    media_ausencias_dia = total_ausencias / dias_com_registro
+                    
+                    # Cada pessoa = 427 minutos = 7.11 horas
+                    horas_perdidas_dia = (media_ausencias_dia * 427) / 60
+                    pecas_perdidas_dia = horas_perdidas_dia * avg_pecas_h
+                    m3_perdidos_dia = horas_perdidas_dia * avg_m3_h
+                    
+                    st.markdown("<h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>warning</span> Impacto Médio Diário na Operação</h4>", unsafe_allow_html=True)
+                    
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1: exibir_kpi("Faltas/Atestados por Dia", f"{media_ausencias_dia:.1f}", f"Total de {total_ausencias} no período", "#E74C3C")
+                    with c2: exibir_kpi("Horas Produtivas Perdidas", f"{horas_perdidas_dia:.1f}h", "Base: 427 min/colaborador", "#F39C12")
+                    with c3: exibir_kpi("Peças Deixaram de Descer", f"{pecas_perdidas_dia:,.0f}".replace(',','.'), f"Veloc. CD: {avg_pecas_h:.0f} pçs/h", "#8B5CF6")
+                    with c4: exibir_kpi("Volume M³ Retido", f"{m3_perdidos_dia:.1f}".replace('.',','), f"Veloc. CD: {avg_m3_h:.1f} m³/h", "#0086FF")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    
+                    # 4. Gráficos Analíticos
+                    col_g1, col_g2 = st.columns(2)
+                    with col_g1:
+                        st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">calendar_month</span> Reincidência por Dia da Semana</h4>""", unsafe_allow_html=True)
+                        
+                        # Traduzir dias da semana
+                        dias_semana = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
+                        df_filtrado['DIA_SEMANA_NUM'] = df_filtrado['DATA'].dt.weekday
+                        df_filtrado['DIA_SEMANA'] = df_filtrado['DIA_SEMANA_NUM'].map(dias_semana)
+                        
+                        df_semana = df_filtrado.groupby(['DIA_SEMANA_NUM', 'DIA_SEMANA']).size().reset_index(name='Qtd')
+                        
+                        fig_sem = px.bar(df_semana, x='DIA_SEMANA', y='Qtd', text='Qtd', color_discrete_sequence=['#FF3366'])
+                        fig_sem.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300, xaxis_title=None, yaxis_title=None)
+                        fig_sem.update_traces(textposition='outside', textfont=dict(weight='bold'))
+                        fig_sem.update_xaxes(showgrid=False)
+                        fig_sem.update_yaxes(showgrid=True, gridcolor='#F1F5F9', showticklabels=False)
+                        st.plotly_chart(fig_sem, use_container_width=True, config={'displayModeBar': False})
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
+                    with col_g2:
+                        st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">date_range</span> Reincidência por Dia do Mês</h4>""", unsafe_allow_html=True)
+                        
+                        df_filtrado['DIA_MES'] = df_filtrado['DATA'].dt.day
+                        df_mes = df_filtrado.groupby('DIA_MES').size().reset_index(name='Qtd')
+                        
+                        # Preenche os dias que não tiveram falta com 0 para o gráfico não pular números
+                        todos_dias = pd.DataFrame({'DIA_MES': range(1, 32)})
+                        df_mes = pd.merge(todos_dias, df_mes, on='DIA_MES', how='left').fillna(0)
+                        
+                        fig_mes = go.Figure(go.Scatter(
+                            x=df_mes['DIA_MES'], y=df_mes['Qtd'],
+                            mode='lines+markers+text',
+                            line=dict(color='#8B5CF6', width=3),
+                            marker=dict(size=8, color='#FFFFFF', line=dict(width=2, color='#8B5CF6')),
+                            text=df_mes['Qtd'].apply(lambda x: int(x) if x > 0 else ""),
+                            textposition='top center',
+                            textfont=dict(weight='bold', color='#8B5CF6')
+                        ))
+                        fig_mes.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300, xaxis=dict(tickmode='linear', dtick=2))
+                        fig_mes.update_yaxes(showgrid=False, showticklabels=False)
+                        st.plotly_chart(fig_mes, use_container_width=True, config={'displayModeBar': False})
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+                    # 5. Hall da Vergonha (Ranking Negativo)
+                    st.markdown("<br><h4 style='color: #DC2626; margin-bottom: 15px;'><span class='icon-MAGALOG'>policy</span> Ranking de Absenteísmo (Maiores Ocorrências)</h4>", unsafe_allow_html=True)
+                    
+                    # Agrupa e pivota a tabela
+                    df_rank = df_filtrado.groupby(['NOME', col_ocorrencia]).size().unstack(fill_value=0).reset_index()
+                    
+                    # Cria a coluna TOTAL somando as colunas de motivo
+                    motivos_cols = [c for c in df_rank.columns if c != 'NOME']
+                    df_rank['TOTAL'] = df_rank[motivos_cols].sum(axis=1)
+                    
+                    df_rank = df_rank.sort_values('TOTAL', ascending=False).reset_index(drop=True)
+                    
+                    # Estilização CSS Negativa
+                    def estilizar_hall_vergonha(df_v):
+                        estilos = pd.DataFrame('', index=df_v.index, columns=df_v.columns)
+                        for idx, row in df_v.iterrows():
+                            # Se a pessoa tem mais de 2 faltas/atestados, pinta de vermelho forte
+                            if row['TOTAL'] >= 3:
+                                estilos.loc[idx, 'TOTAL'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 900; text-align: center;'
+                            elif row['TOTAL'] == 2:
+                                estilos.loc[idx, 'TOTAL'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 800; text-align: center;'
+                            else:
+                                estilos.loc[idx, 'TOTAL'] = 'color: #0F172A; font-weight: 700; text-align: center;'
+                                
+                            estilos.loc[idx, 'NOME'] = 'font-weight: 800; color: #1E293B;'
+                        return estilos
+
+                    # Formata a exibição
+                    st.dataframe(
+                        df_rank.style.apply(estilizar_hall_vergonha, axis=None), 
+                        use_container_width=True, 
+                        hide_index=True, 
+                        height=400,
+                        column_config={"TOTAL": st.column_config.NumberColumn("TOTAL DE OCORRÊNCIAS")}
+                    )
+
+    except Exception as e:
+        st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
+
 
 
