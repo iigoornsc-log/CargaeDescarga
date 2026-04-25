@@ -2734,7 +2734,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 html_lb += "</div>"
                                 st.markdown(html_lb, unsafe_allow_html=True)
                                 
-                                                                # =========================================================
+                                # =========================================================
                                 # NOVO BLOCO: RADAR DA LIDERANÇA (INSIGHTS COMPORTAMENTAIS)
                                 # =========================================================
                                 if len(df_rank_data) >= 3:
@@ -3001,7 +3001,7 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                             estilos.loc[idx, 'NOME'] = 'font-weight: 800; color: #1E293B;'
                         return estilos
 
-                    # Formata a exibição
+                                        # Formata a exibição
                     st.dataframe(
                         df_rank.style.apply(estilizar_hall_vergonha, axis=None), 
                         use_container_width=True, 
@@ -3009,6 +3009,89 @@ elif pagina_selecionada == "Absenteísmo (RH)":
                         height=400,
                         column_config={"TOTAL": st.column_config.NumberColumn("TOTAL DE OCORRÊNCIAS")}
                     )
+
+                    # =========================================================
+                    # 6. GRÁFICO DE IMPACTO DIÁRIO (CAPACIDADE PRODUTIVA PERDIDA)
+                    # =========================================================
+                    st.markdown("<br><h4 style='color: #334155; margin-bottom: 15px;'><span class='icon-MAGALOG'>trending_down</span> Capacidade Produtiva Perdida por Dia</h4>", unsafe_allow_html=True)
+                    
+                    # Agrupa as faltas por data exata
+                    df_perdas_dia = df_filtrado.groupby('DATA').size().reset_index(name='Qtd_Faltas')
+                    
+                    # Calcula a perda real de cada dia
+                    df_perdas_dia['Horas_Perdidas'] = df_perdas_dia['Qtd_Faltas'] * (427 / 60)
+                    df_perdas_dia['Pecas_Perdidas'] = df_perdas_dia['Horas_Perdidas'] * avg_pecas_h
+                    df_perdas_dia['M3_Perdidos'] = df_perdas_dia['Horas_Perdidas'] * avg_m3_h
+                    
+                    # Cria um calendário completo do período filtrado para o gráfico não pular dias vazios
+                    todas_datas = pd.date_range(start=dt_ini, end=dt_fim)
+                    df_todas_datas = pd.DataFrame({'DATA': todas_datas})
+                    df_perdas_dia = pd.merge(df_todas_datas, df_perdas_dia, on='DATA', how='left').fillna(0)
+                    df_perdas_dia = df_perdas_dia.sort_values('DATA')
+                    
+                    # Monta o gráfico de eixo duplo
+                    fig_perdas = make_subplots(specs=[[{"secondary_y": True}]])
+                    
+                    # Barras Laranjas (Peças)
+                    text_pecas_perdidas = df_perdas_dia['Pecas_Perdidas'].apply(lambda x: f"<b>{int(x):,}</b>".replace(',', '.') if x > 0 else "")
+                    fig_perdas.add_trace(
+                        go.Bar(
+                            x=df_perdas_dia['DATA'], 
+                            y=df_perdas_dia['Pecas_Perdidas'], 
+                            name="Peças Perdidas", 
+                            marker_color='#F59E0B', # Laranja
+                            opacity=1.0,
+                            text=text_pecas_perdidas,
+                            textposition='outside',
+                            textfont=dict(color='#F59E0B', size=12),
+                            cliponaxis=False,
+                            hovertemplate="Data: %{x|%d/%m/%Y}<br>Faltas no dia: %{customdata}<br>Peças Perdidas: %{y:,.0f}<extra></extra>",
+                            customdata=df_perdas_dia['Qtd_Faltas']
+                        ), 
+                        secondary_y=False
+                    )
+                    
+                    # Linha Azul (M³)
+                    text_m3_perdidos = df_perdas_dia['M3_Perdidos'].apply(lambda x: f"<b>{x:.1f}</b>".replace('.', ',') if x > 0 else "")
+                    fig_perdas.add_trace(
+                        go.Scatter(
+                            x=df_perdas_dia['DATA'], 
+                            y=df_perdas_dia['M3_Perdidos'], 
+                            name="m³ Perdido", 
+                            mode='lines+markers+text',
+                            line=dict(color='#0086FF', width=4), # Azul
+                            marker=dict(size=9, color='#FFFFFF', line=dict(width=3, color='#0086FF')),
+                            text=text_m3_perdidos,
+                            textposition='top center',
+                            textfont=dict(color='#0086FF', size=13),
+                            cliponaxis=False,
+                            hovertemplate="Data: %{x|%d/%m/%Y}<br>m³ Perdido: %{y:,.1f}<extra></extra>"
+                        ), 
+                        secondary_y=True
+                    )
+                    
+                    # Layout premium e clean
+                    fig_perdas.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        margin=dict(l=0, r=0, t=40, b=0), 
+                        height=420, 
+                        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1),
+                        hovermode="x unified",
+                        font_family="Inter"
+                    )
+                    
+                    fig_perdas.update_xaxes(showgrid=False, tickformat="%d/%m", tickfont=dict(color='#64748B', size=11, weight='bold'))
+                    fig_perdas.update_yaxes(title_text="Peças Perdidas", secondary_y=False, showgrid=True, gridcolor='#F1F5F9', showticklabels=False, zeroline=False)
+                    fig_perdas.update_yaxes(title_text="m³ Perdido", secondary_y=True, showgrid=False, showticklabels=False, zeroline=False)
+                    
+                    st.markdown('<div class="MAGALOG-card">', unsafe_allow_html=True)
+                    st.plotly_chart(fig_perdas, use_container_width=True, config={'displayModeBar': False})
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
+
 
     except Exception as e:
         st.error(f"Erro no módulo de Gestão de Pessoas: {e}")
