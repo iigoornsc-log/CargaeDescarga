@@ -720,12 +720,12 @@ def render_home_dashboard():
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">assignment_ind</span></div>
                     <div class="MAGALOG-feature-title">Registro de Absenteísmo</div>
-                    <div class="MAGALOG-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
+                    <div class="MAGALOG-feature-text">Lance faltas, BH, DSR, atestados e mantenha o registro atualizado em tempo real de forma simples.</div>
                 </div>
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">local_shipping</span></div>
                     <div class="MAGALOG-feature-title">Gestão de Docas</div>
-                    <div class="MAGALOG-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
+                    <div class="MAGALOG-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples, gerando Logs para analises e feedbacks</div>
                 </div>
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">calendar_month</span></div>
@@ -792,7 +792,6 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
-        "Visão Geral",
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
