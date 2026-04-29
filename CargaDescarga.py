@@ -21,6 +21,44 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+    /* Aplica a fonte Inter no painel sem esmagar os ícones nativos */
+    html, body, [class*="st-"] { 
+        font-family: 'Inter', sans-serif; 
+    }
+
+    /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
+    .icon-MAGALOG {
+        font-family: 'Material Symbols Rounded' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 1;
+        font-size: inherit;
+    }
+
+    /* --- BLINDAGEM MÁXIMA DOS ÍCONES DA SIDEBAR --- */
+    /* Força os botões de abrir/fechar a traduzirem o texto em ícones */
+    [data-testid="collapsedControl"] *, 
+    [data-testid="stSidebarCollapseButton"] *,
+    .material-icons, 
+    .material-symbols-rounded {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+        font-style: normal !important;
+        font-weight: normal !important;
+        font-variant: normal !important;
+        text-transform: none !important;
+        line-height: 1 !important;
+        -webkit-font-smoothing: antialiased !important;
+    }
+
+
 
 
 st.markdown("""
