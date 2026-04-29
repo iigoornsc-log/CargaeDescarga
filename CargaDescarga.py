@@ -48,10 +48,16 @@ st.markdown("""
         font-size: inherit;
     }
 
-    /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
-    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
+        /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
+    .material-icons, .material-symbols-rounded {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
     }
+    
+    /* Devolve a fonte nativa pro botão de recolher do Streamlit para o ícone voltar a aparecer */
+    [data-testid="stSidebarCollapseButton"] * {
+        font-family: inherit !important;
+    }
+
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
     @keyframes Glow {
