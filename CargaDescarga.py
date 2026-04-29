@@ -933,7 +933,6 @@ pagina_selecionada = st.sidebar.radio(
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
-        "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)",
         "Absenteísmo (RH)",
