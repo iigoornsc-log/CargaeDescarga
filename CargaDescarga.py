@@ -792,6 +792,7 @@ st.sidebar.markdown("""
 pagina_selecionada = st.sidebar.radio(
     "Navegação",
     [
+        "Visão Geral",
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
