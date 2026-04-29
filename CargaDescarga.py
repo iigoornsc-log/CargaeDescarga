@@ -1585,7 +1585,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             with c_btn1:
                                 if st.button("Pausar", key=f"btn_pse_{row['DOCA']}_{index}", use_container_width=True):
                                     popup_pausar_operacao(row['DOCA'], row['AGENDA'], row['CONFERENTE'])
-                                                        with c_btn2:
+                            with c_btn2:
                                 if st.button("Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                     clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                     
