@@ -21,12 +21,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-    /* Aplica a fonte Inter no painel sem esmagar os ícones nativos */
+
     html, body, [class*="st-"] { 
         font-family: 'Inter', sans-serif; 
     }
 
-    /* Classe para alinhar os ícones no HTML perfeitamente com o texto */
     .icon-MAGALOG {
         font-family: 'Material Symbols Rounded' !important;
         font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
