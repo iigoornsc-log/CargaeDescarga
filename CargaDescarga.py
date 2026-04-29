@@ -1260,29 +1260,54 @@ elif pagina_selecionada == "Gestão de Docas":
         agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
         agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
         linhas_para_gravar = []
-
+        
         cat_atual = "NÃO INFORMADA"
         if not df_aux.empty:
             match_atual = df_aux[df_aux['AGENDA WMS'] == str(agenda_n).strip()]
             if not match_atual.empty: cat_atual = str(match_atual.iloc[0].get('LINHA', match_atual.iloc[0].get('CATEGORIA', ''))).upper()
-
+            
+        # =======================================================
+        # NOVA LÓGICA DE TRANSFERÊNCIA (O fim do erro "ENCERRADO")
+        # =======================================================
         if conflitos_n and not is_pausa:
+            # 1. Agrupa quem está saindo por cada doca antiga
+            docas_afetadas = {}
             for pessoa, doca_antiga in conflitos_n.items():
+                if doca_antiga not in docas_afetadas: docas_afetadas[doca_antiga] = []
+                docas_afetadas[doca_antiga].append(pessoa)
+                
+            # 2. Atualiza a equipe das docas que perderam funcionários
+            for doca_antiga, pessoas_saindo in docas_afetadas.items():
                 if doca_antiga in info_docas_n:
                     agenda_antiga = info_docas_n[doca_antiga]['agenda']
                     conf_antiga = info_docas_n[doca_antiga]['conferente']
+                    equipe_original = info_docas_n[doca_antiga]['equipe']
+                    
                     cat_antiga = "NÃO INFORMADA"
                     if not df_aux.empty:
                         match_ant = df_aux[df_aux['AGENDA WMS'] == str(agenda_antiga).strip()]
                         if not match_ant.empty: cat_antiga = str(match_ant.iloc[0].get('LINHA', match_ant.iloc[0].get('CATEGORIA', ''))).upper()
-                    linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, "ENCERRADO", cat_antiga])
-
+                        
+                    # Calcula quem sobrou na doca antiga
+                    equipe_restante = [p for p in equipe_original if p not in pessoas_saindo]
+                    
+                    # Se tirou todo mundo, a doca antiga entra em Pausa automática
+                    if not equipe_restante:
+                        linhas_para_gravar.append([agora_str, str(doca_antiga), str(agenda_antiga), str(conf_antiga), "PAUSADO - TRANSFERÊNCIA", cat_antiga])
+                    else:
+                        # Se sobrou gente, regrava apenas os remanescentes para atualizar o card
+                        for p_restante in equipe_restante:
+                            linhas_para_gravar.append([agora_str, str(doca_antiga), str(agenda_antiga), str(conf_antiga), p_restante, cat_antiga])
+                            
+        # =======================================================
+        # Gravação da Nova Doca (A que está recebendo a equipe)
+        # =======================================================
         if is_pausa:
             linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), f"PAUSADO - {motivo_pausa}", cat_atual])
         else:
             for pessoa in equipe_n:
                 linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), pessoa, cat_atual])
-
+                
         try:
             client = conectar_google()
             sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
@@ -1290,8 +1315,9 @@ elif pagina_selecionada == "Gestão de Docas":
             ws_log.append_rows(linhas_para_gravar)
             return True
         except Exception as e:
-            st.error(f"Erro ao gravar: {e}")
+            st.error(f"Erro ao gravar transferência: {e}")
             return False
+
 
     @st.dialog("START na Carga (Alocar Equipe)")
     def popup_start_carga(doca_sel, agenda_sel, conferente_sel, is_retomada=False, equipe_padrao=None):
