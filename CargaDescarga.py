@@ -795,7 +795,6 @@ pagina_selecionada = st.sidebar.radio(
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
-        "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)",
         "Absenteísmo (RH)"
@@ -1255,18 +1254,18 @@ elif pagina_selecionada == "Gestão de Docas":
                         carregar_log_produtividade.clear()
                         st.rerun()
 
-    @st.dialog("Gerenciar Operador da Doca")
+    @st.dialog("Gerenciar Doca")
     def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
         doca_origem_str = str(doca_origem).strip()
         st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
-        operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
+        operador_sel = st.selectbox("Selecione o Auxiliar que deseja movimentar:", equipe_atual)
         acao = st.radio("O que deseja fazer com este colaborador?", ["Retirar da Operação (Ficará Livre)", "Transferir para outra Doca ativa"])
         docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
         doca_destino = None
         if "Transferir" in acao:
             if not docas_ativas: st.warning("Não há outras docas em processo no momento para transferir.")
             else:
-                opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
+                opcoes_formatadas = [f"Doca {d} (Conferente: {info_docas_global[d]['conferente']})" for d in docas_ativas]
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
@@ -1440,7 +1439,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             if st.button("Retomar Operação", key=f"btn_ret_{row['DOCA']}_{index}", use_container_width=True, type="primary"):
                                 popup_start_carga(row['DOCA'], row['AGENDA'], row['CONFERENTE'], is_retomada=True, equipe_padrao=pessoas_antes_pausa)
                         else:
-                            st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Auxiliares Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                             
                             c_eq, c_btn1, c_btn2 = st.columns([4, 3, 3])
                             with c_btn1:
