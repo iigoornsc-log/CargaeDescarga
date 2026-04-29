@@ -18,7 +18,7 @@ import io
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALOG CORPORATIVO)
 # ==========================================================
 st.set_page_config(
-    page_title="Carga e Descarga | MAGALOG", 
+    page_title="testetesteteste", 
     page_icon="https://play-lh.googleusercontent.com/WogWYMVkkivEHGyHAZvKtFZ4F3mklNQI-PQ6vsOMdKTSZWqr7etD9XHuPKIY0NkzZqk=w240-h480-rw", # Pode ser qualquer link de imagem
     layout="wide", 
     initial_sidebar_state="expanded"
@@ -933,6 +933,7 @@ pagina_selecionada = st.sidebar.radio(
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
+        "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)",
         "Absenteísmo (RH)",
@@ -1260,54 +1261,29 @@ elif pagina_selecionada == "Gestão de Docas":
         agora_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
         agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
         linhas_para_gravar = []
-        
+
         cat_atual = "NÃO INFORMADA"
         if not df_aux.empty:
             match_atual = df_aux[df_aux['AGENDA WMS'] == str(agenda_n).strip()]
             if not match_atual.empty: cat_atual = str(match_atual.iloc[0].get('LINHA', match_atual.iloc[0].get('CATEGORIA', ''))).upper()
-            
-        # =======================================================
-        # NOVA LÓGICA DE TRANSFERÊNCIA (O fim do erro "ENCERRADO")
-        # =======================================================
+
         if conflitos_n and not is_pausa:
-            # 1. Agrupa quem está saindo por cada doca antiga
-            docas_afetadas = {}
             for pessoa, doca_antiga in conflitos_n.items():
-                if doca_antiga not in docas_afetadas: docas_afetadas[doca_antiga] = []
-                docas_afetadas[doca_antiga].append(pessoa)
-                
-            # 2. Atualiza a equipe das docas que perderam funcionários
-            for doca_antiga, pessoas_saindo in docas_afetadas.items():
                 if doca_antiga in info_docas_n:
                     agenda_antiga = info_docas_n[doca_antiga]['agenda']
                     conf_antiga = info_docas_n[doca_antiga]['conferente']
-                    equipe_original = info_docas_n[doca_antiga]['equipe']
-                    
                     cat_antiga = "NÃO INFORMADA"
                     if not df_aux.empty:
                         match_ant = df_aux[df_aux['AGENDA WMS'] == str(agenda_antiga).strip()]
                         if not match_ant.empty: cat_antiga = str(match_ant.iloc[0].get('LINHA', match_ant.iloc[0].get('CATEGORIA', ''))).upper()
-                        
-                    # Calcula quem sobrou na doca antiga
-                    equipe_restante = [p for p in equipe_original if p not in pessoas_saindo]
-                    
-                    # Se tirou todo mundo, a doca antiga entra em Pausa automática
-                    if not equipe_restante:
-                        linhas_para_gravar.append([agora_str, str(doca_antiga), str(agenda_antiga), str(conf_antiga), "PAUSADO - TRANSFERÊNCIA", cat_antiga])
-                    else:
-                        # Se sobrou gente, regrava apenas os remanescentes para atualizar o card
-                        for p_restante in equipe_restante:
-                            linhas_para_gravar.append([agora_str, str(doca_antiga), str(agenda_antiga), str(conf_antiga), p_restante, cat_antiga])
-                            
-        # =======================================================
-        # Gravação da Nova Doca (A que está recebendo a equipe)
-        # =======================================================
+                    linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, "ENCERRADO", cat_antiga])
+
         if is_pausa:
             linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), f"PAUSADO - {motivo_pausa}", cat_atual])
         else:
             for pessoa in equipe_n:
                 linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), pessoa, cat_atual])
-                
+
         try:
             client = conectar_google()
             sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
@@ -1315,9 +1291,8 @@ elif pagina_selecionada == "Gestão de Docas":
             ws_log.append_rows(linhas_para_gravar)
             return True
         except Exception as e:
-            st.error(f"Erro ao gravar transferência: {e}")
+            st.error(f"Erro ao gravar: {e}")
             return False
-
 
     @st.dialog("START na Carga (Alocar Equipe)")
     def popup_start_carga(doca_sel, agenda_sel, conferente_sel, is_retomada=False, equipe_padrao=None):
@@ -1621,48 +1596,8 @@ elif pagina_selecionada == "Gestão de Docas":
                                     tempo_str = f"{horas:02d}:{mins:02d}"
                                     
                                     cat_final = str(info['LINHA']).upper()
-                                    
-                                    # ==========================================
-                                    # BUSCA DIRETA NA FONTE (RECEBIMENTO E EXPEDIÇÃO)
-                                    # ==========================================
-                                    pecas_bruto = 0.0
-                                    m3_bruto = 0.0
-                                    
-                                    def limpar_numero_planilha(val):
-                                        if pd.isna(val): return 0.0
-                                        s = str(val).strip()
-                                        if s in ['', '-', 'NAN', 'NONE']: return 0.0
-                                        if '.' in s and ',' in s: s = s.replace('.', '').replace(',', '.')
-                                        elif ',' in s: s = s.replace(',', '.')
-                                        try: return float(s)
-                                        except: return 0.0
-
-                                    # 1. Tenta achar a agenda na aba de RECEBIMENTO (aux)
-                                    col_ag_rec = next((c for c in df_aux_rec.columns if 'AGENDA' in str(c).upper()), 'AGENDA WMS')
-                                    match_rec = df_aux_rec[df_aux_rec[col_ag_rec].astype(str).str.strip() == agenda_str]
-                                    
-                                    if not match_rec.empty:
-                                        # Puxa exato das colunas PEÇAS e CUB do Recebimento
-                                        pecas_bruto = limpar_numero_planilha(match_rec.iloc[0].get('PEÇAS', 0))
-                                        m3_bruto = limpar_numero_planilha(match_rec.iloc[0].get('CUB', 0))
-                                    else:
-                                        # 2. Se não achou, vai caçar na aba de EXPEDIÇÃO (auxexp)
-                                        col_id_exp = next((c for c in df_aux_exp.columns if 'ID CARGA' in str(c).upper()), 'ID Carga')
-                                        match_exp = df_aux_exp[df_aux_exp[col_id_exp].astype(str).str.strip() == agenda_str]
-                                        
-                                        if not match_exp.empty:
-                                            # Puxa exato das colunas de Total da Expedição
-                                            col_pcs_exp = next((c for c in df_aux_exp.columns if 'TOTAL PEÇ' in str(c).upper() or 'TOTAL PEC' in str(c).upper()), 'Total Peças')
-                                            col_m3_exp = next((c for c in df_aux_exp.columns if 'TOTAL M³' in str(c).upper() or 'TOTAL M3' in str(c).upper()), 'Total M³')
-                                            
-                                            pecas_bruto = limpar_numero_planilha(match_exp.iloc[0].get(col_pcs_exp, 0))
-                                            m3_bruto = limpar_numero_planilha(match_exp.iloc[0].get(col_m3_exp, 0))
-                                    
-                                    # RATEIO MATEMÁTICO JUSTO (Divide pela equipe)
-                                    qtd_pessoas = len(auxiliares_lista) if len(auxiliares_lista) > 0 else 1
-                                    pecas_final = pecas_bruto / qtd_pessoas
-                                    m3_final = m3_bruto / qtd_pessoas
-                                    # ==========================================
+                                    pecas_final = info.get('PEÇAS_BRUTO', 0)
+                                    m3_final = info.get('M3_BRUTO', 0)
                                     
                                     linhas_conclusao_multiplas = []
                                     for pessoa in auxiliares_lista:
@@ -4283,4 +4218,11 @@ Agradeço e sigo à disposição! ♡"""
                             st.markdown("<div style='color:#94A3B8; font-size:12px; text-align:center; padding-top:10px;'>Defina o valor para liberar ações.</div>", unsafe_allow_html=True)
                             
                     st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+
+
+
+
 
