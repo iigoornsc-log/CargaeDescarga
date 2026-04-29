@@ -1623,13 +1623,42 @@ elif pagina_selecionada == "Gestão de Docas":
                                     cat_final = str(info['LINHA']).upper()
                                     
                                     # ==========================================
-                                    # MÁGICA: CAÇADOR UNIVERSAL E RATEIO DE PEÇAS
+                                    # BUSCA DIRETA NA FONTE (RECEBIMENTO E EXPEDIÇÃO)
                                     # ==========================================
-                                    # Tenta puxar de todas as abas (Recebimento, Expedição, etc)
-                                    pecas_bruto = float(info.get('PEÇAS_VAL', info.get('PEÇAS_BRUTO', info.get('VAL_PECAS', info.get('PEÇAS', 0)))))
-                                    m3_bruto = float(info.get('M3_VAL', info.get('M3_BRUTO', info.get('VAL_M3', info.get('M³', 0)))))
+                                    pecas_bruto = 0.0
+                                    m3_bruto = 0.0
                                     
-                                    # Divide o total pelo tamanho da equipe (Se for 0, divide por 1 para não dar erro)
+                                    def limpar_numero_planilha(val):
+                                        if pd.isna(val): return 0.0
+                                        s = str(val).strip()
+                                        if s in ['', '-', 'NAN', 'NONE']: return 0.0
+                                        if '.' in s and ',' in s: s = s.replace('.', '').replace(',', '.')
+                                        elif ',' in s: s = s.replace(',', '.')
+                                        try: return float(s)
+                                        except: return 0.0
+
+                                    # 1. Tenta achar a agenda na aba de RECEBIMENTO (aux)
+                                    col_ag_rec = next((c for c in df_aux_rec.columns if 'AGENDA' in str(c).upper()), 'AGENDA WMS')
+                                    match_rec = df_aux_rec[df_aux_rec[col_ag_rec].astype(str).str.strip() == agenda_str]
+                                    
+                                    if not match_rec.empty:
+                                        # Puxa exato das colunas PEÇAS e CUB do Recebimento
+                                        pecas_bruto = limpar_numero_planilha(match_rec.iloc[0].get('PEÇAS', 0))
+                                        m3_bruto = limpar_numero_planilha(match_rec.iloc[0].get('CUB', 0))
+                                    else:
+                                        # 2. Se não achou, vai caçar na aba de EXPEDIÇÃO (auxexp)
+                                        col_id_exp = next((c for c in df_aux_exp.columns if 'ID CARGA' in str(c).upper()), 'ID Carga')
+                                        match_exp = df_aux_exp[df_aux_exp[col_id_exp].astype(str).str.strip() == agenda_str]
+                                        
+                                        if not match_exp.empty:
+                                            # Puxa exato das colunas de Total da Expedição
+                                            col_pcs_exp = next((c for c in df_aux_exp.columns if 'TOTAL PEÇ' in str(c).upper() or 'TOTAL PEC' in str(c).upper()), 'Total Peças')
+                                            col_m3_exp = next((c for c in df_aux_exp.columns if 'TOTAL M³' in str(c).upper() or 'TOTAL M3' in str(c).upper()), 'Total M³')
+                                            
+                                            pecas_bruto = limpar_numero_planilha(match_exp.iloc[0].get(col_pcs_exp, 0))
+                                            m3_bruto = limpar_numero_planilha(match_exp.iloc[0].get(col_m3_exp, 0))
+                                    
+                                    # RATEIO MATEMÁTICO JUSTO (Divide pela equipe)
                                     qtd_pessoas = len(auxiliares_lista) if len(auxiliares_lista) > 0 else 1
                                     pecas_final = pecas_bruto / qtd_pessoas
                                     m3_final = m3_bruto / qtd_pessoas
@@ -1655,7 +1684,6 @@ elif pagina_selecionada == "Gestão de Docas":
                                                 st.success("Doca finalizada com sucesso!")
                                                 carregar_log_produtividade.clear()
                                                 st.rerun()
-
                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
                             
