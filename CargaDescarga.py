@@ -1585,7 +1585,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             with c_btn1:
                                 if st.button("Pausar", key=f"btn_pse_{row['DOCA']}_{index}", use_container_width=True):
                                     popup_pausar_operacao(row['DOCA'], row['AGENDA'], row['CONFERENTE'])
-                            with c_btn2:
+                                                        with c_btn2:
                                 if st.button("Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
                                     clique_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
                                     
@@ -1596,8 +1596,19 @@ elif pagina_selecionada == "Gestão de Docas":
                                     tempo_str = f"{horas:02d}:{mins:02d}"
                                     
                                     cat_final = str(info['LINHA']).upper()
-                                    pecas_final = info.get('PEÇAS_BRUTO', 0)
-                                    m3_final = info.get('M3_BRUTO', 0)
+                                    
+                                    # ==========================================
+                                    # MÁGICA: CAÇADOR UNIVERSAL E RATEIO DE PEÇAS
+                                    # ==========================================
+                                    # Tenta puxar de todas as abas (Recebimento, Expedição, etc)
+                                    pecas_bruto = float(info.get('PEÇAS_VAL', info.get('PEÇAS_BRUTO', info.get('VAL_PECAS', info.get('PEÇAS', 0)))))
+                                    m3_bruto = float(info.get('M3_VAL', info.get('M3_BRUTO', info.get('VAL_M3', info.get('M³', 0)))))
+                                    
+                                    # Divide o total pelo tamanho da equipe (Se for 0, divide por 1 para não dar erro)
+                                    qtd_pessoas = len(auxiliares_lista) if len(auxiliares_lista) > 0 else 1
+                                    pecas_final = pecas_bruto / qtd_pessoas
+                                    m3_final = m3_bruto / qtd_pessoas
+                                    # ==========================================
                                     
                                     linhas_conclusao_multiplas = []
                                     for pessoa in auxiliares_lista:
@@ -1619,6 +1630,7 @@ elif pagina_selecionada == "Gestão de Docas":
                                                 st.success("Doca finalizada com sucesso!")
                                                 carregar_log_produtividade.clear()
                                                 st.rerun()
+
                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
                             
