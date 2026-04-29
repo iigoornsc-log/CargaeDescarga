@@ -18,7 +18,7 @@ import io
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALOG CORPORATIVO)
 # ==========================================================
 st.set_page_config(
-    page_title="Gestão Operacional 2900 - MAGALOG", 
+    page_title="testetesteteste", 
     page_icon="https://play-lh.googleusercontent.com/WogWYMVkkivEHGyHAZvKtFZ4F3mklNQI-PQ6vsOMdKTSZWqr7etD9XHuPKIY0NkzZqk=w240-h480-rw", # Pode ser qualquer link de imagem
     layout="wide", 
     initial_sidebar_state="expanded"
@@ -1267,16 +1267,36 @@ elif pagina_selecionada == "Gestão de Docas":
             match_atual = df_aux[df_aux['AGENDA WMS'] == str(agenda_n).strip()]
             if not match_atual.empty: cat_atual = str(match_atual.iloc[0].get('LINHA', match_atual.iloc[0].get('CATEGORIA', ''))).upper()
 
+        # --- LÓGICA CORRIGIDA: ATUALIZA A DOCA ANTIGA SEM MATAR QUEM FICOU ---
         if conflitos_n and not is_pausa:
-            for pessoa, doca_antiga in conflitos_n.items():
+            docas_afetadas = set(conflitos_n.values())
+            
+            for doca_antiga in docas_afetadas:
                 if doca_antiga in info_docas_n:
                     agenda_antiga = info_docas_n[doca_antiga]['agenda']
                     conf_antiga = info_docas_n[doca_antiga]['conferente']
+                    equipe_antiga = info_docas_n[doca_antiga]['equipe'].copy()
+                    
+                    # Identifica quem está saindo DESTA doca específica e remove da equipe
+                    pessoas_saindo = [p for p, d in conflitos_n.items() if d == doca_antiga]
+                    for p in pessoas_saindo:
+                        if p in equipe_antiga:
+                            equipe_antiga.remove(p)
+                            
+                    # Busca a categoria da doca antiga
                     cat_antiga = "NÃO INFORMADA"
                     if not df_aux.empty:
                         match_ant = df_aux[df_aux['AGENDA WMS'] == str(agenda_antiga).strip()]
                         if not match_ant.empty: cat_antiga = str(match_ant.iloc[0].get('LINHA', match_ant.iloc[0].get('CATEGORIA', ''))).upper()
-                    linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, "ENCERRADO", cat_antiga])
+                    
+                    if not equipe_antiga:
+                        # Se não sobrou ninguém (todos foram transferidos), a doca encerra.
+                        linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, "ENCERRADO", cat_antiga])
+                    else:
+                        # Se sobrou gente, regrava apenas os que ficaram com o horário atualizado
+                        for p_restante in equipe_antiga:
+                            linhas_para_gravar.append([agora_str, doca_antiga, agenda_antiga, conf_antiga, p_restante, cat_antiga])
+        # ---------------------------------------------------------------------
 
         if is_pausa:
             linhas_para_gravar.append([agora_str, str(doca_n).strip(), str(agenda_n).strip(), str(conferente_n).strip(), f"PAUSADO - {motivo_pausa}", cat_atual])
@@ -4218,11 +4238,3 @@ Agradeço e sigo à disposição! ♡"""
                             st.markdown("<div style='color:#94A3B8; font-size:12px; text-align:center; padding-top:10px;'>Defina o valor para liberar ações.</div>", unsafe_allow_html=True)
                             
                     st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
