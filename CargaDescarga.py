@@ -10,16 +10,21 @@ import re
 import datetime
 import time
 from datetime import date
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
 
 # ==========================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E CSS (THEME MAGALOG CORPORATIVO)
 # ==========================================================
 st.set_page_config(
-    page_title="Carga e Descarga | MAGALOG", 
+    page_title="testetesteteste", 
     page_icon="https://play-lh.googleusercontent.com/WogWYMVkkivEHGyHAZvKtFZ4F3mklNQI-PQ6vsOMdKTSZWqr7etD9XHuPKIY0NkzZqk=w240-h480-rw", # Pode ser qualquer link de imagem
     layout="wide", 
     initial_sidebar_state="expanded"
 )
+
+
 
 st.markdown("""
     <style>
@@ -46,16 +51,10 @@ st.markdown("""
         font-size: inherit;
     }
 
-        /* Aplique ícones customizados SOMENTE onde você usa */
-.icon-MAGALOG {
-    font-family: 'Material Symbols Rounded' !important;
-}
-    
-    /* Devolve a fonte nativa pro botão de recolher do Streamlit para o ícone voltar a aparecer */
-    [data-testid="stSidebarCollapseButton"] * {
-        font-family: inherit !important;
+    /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
+    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
     }
-
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
     @keyframes Glow {
@@ -404,6 +403,80 @@ def carregar_historico_escalas():
             if tentativa == 2: return pd.DataFrame()
             time.sleep(1.5)
 
+
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
+
+import json
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
+
+def salvar_recibo_no_drive(html_content, agenda_numero):
+    try:
+        escopos = ['https://www.googleapis.com/auth/drive']
+        google_json = st.secrets["google_json"]
+        chaves = json.loads(google_json)
+
+        credenciais = Credentials.from_service_account_info(chaves, scopes=escopos)
+        drive_service = build('drive', 'v3', credentials=credenciais)
+
+        # Cria como Google Docs (não HTML puro)
+        file_metadata = {
+            'name': f'Recibo_OS_{agenda_numero}',
+            'parents': ['0AI6HL7wIJQwZUk9PVA'],
+            'mimeType': 'application/vnd.google-apps.document'
+        }
+
+        media = MediaIoBaseUpload(
+            io.BytesIO(html_content.encode('utf-8')),
+            mimetype='text/html',
+            resumable=True
+        )
+
+        arquivo = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id',
+            supportsAllDrives=True
+        ).execute()
+
+        file_id = arquivo.get('id')
+
+        # 🔥 Agora exporta como PDF
+        pdf = drive_service.files().export(
+            fileId=file_id,
+            mimeType='application/pdf'
+        ).execute()
+
+        # 🔥 Salva o PDF final no Drive
+        file_metadata_pdf = {
+            'name': f'Recibo_OS_{agenda_numero}.pdf',
+            'parents': ['0AI6HL7wIJQwZUk9PVA']
+        }
+
+        media_pdf = MediaIoBaseUpload(
+            io.BytesIO(pdf),
+            mimetype='application/pdf',
+            resumable=True
+        )
+
+        arquivo_pdf = drive_service.files().create(
+            body=file_metadata_pdf,
+            media_body=media_pdf,
+            fields='id',
+            supportsAllDrives=True
+        ).execute()
+
+        return arquivo_pdf.get('id')
+
+    except Exception as e:
+        st.error(f"Erro ao salvar no Drive: {e}")
+        return None
+
+
 def salvar_escala_ia(linhas_para_salvar):
     try:
         client = conectar_google()
@@ -417,6 +490,67 @@ def salvar_escala_ia(linhas_para_salvar):
         return True
     except Exception as e:
         return False
+
+@st.cache_data(ttl=60)
+def carregar_dados_cobranca():
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            
+            # Base Principal
+            dados_painel = sh.worksheet("Painel de Controle").get_all_values()
+            df_painel = pd.DataFrame(dados_painel[1:], columns=dados_painel[0]) if len(dados_painel) > 1 else pd.DataFrame()
+            
+            # Base LG (Motoristas e Veículos)
+            dados_lg = sh.worksheet("Base LG").get_all_values()
+            df_lg = pd.DataFrame(dados_lg[1:], columns=dados_lg[0]) if len(dados_lg) > 1 else pd.DataFrame()
+            
+            return df_painel, df_lg
+        except Exception as e:
+            if tentativa == 2: return pd.DataFrame(), pd.DataFrame()
+            time.sleep(1.5)
+
+def atualizar_status_pagamento(agenda, novo_status):
+    try:
+        client = conectar_google()
+        sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+        ws = sh.worksheet("Painel de Controle")
+        
+        # Encontra a linha da agenda exata
+        cell = ws.find(str(agenda).strip())
+        if cell:
+            header = ws.row_values(1)
+            # Cria a coluna STATUS PAGAMENTO caso não exista
+            if 'STATUS PAGAMENTO' in header:
+                col_idx = header.index('STATUS PAGAMENTO') + 1
+            else:
+                col_idx = len(header) + 1
+                ws.update_cell(1, col_idx, 'STATUS PAGAMENTO')
+            
+            # Atualiza o status
+            ws.update_cell(cell.row, col_idx, novo_status)
+            return True
+        return False
+    except Exception as e:
+        return False
+
+@st.cache_data(ttl=60)
+def carregar_transportadoras_local():
+    for tentativa in range(3):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            dados = sh.worksheet("Transportadoras").get_all_values()
+            if len(dados) > 1:
+                df = pd.DataFrame(dados[1:], columns=dados[0])
+                df.columns = df.columns.astype(str).str.strip().str.upper()
+                return df
+            return pd.DataFrame()
+        except:
+            if tentativa == 2: return pd.DataFrame()
+            time.sleep(1.5)
+
 
 
 # ==========================================================
@@ -724,12 +858,12 @@ def render_home_dashboard():
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">assignment_ind</span></div>
                     <div class="MAGALOG-feature-title">Registro de Absenteísmo</div>
-                    <div class="MAGALOG-feature-text">Lance faltas, BH, DSR, atestados e mantenha o registro atualizado em tempo real de forma simples.</div>
+                    <div class="MAGALOG-feature-text">Lance faltas, BH, DSR, atestados e acompanhe o status da equipe de forma prática.</div>
                 </div>
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">local_shipping</span></div>
                     <div class="MAGALOG-feature-title">Gestão de Docas</div>
-                    <div class="MAGALOG-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples, gerando Logs para analises e feedbacks</div>
+                    <div class="MAGALOG-feature-text">Visão operacional, ajuste equipes demandas e planejamentos de maneira simples</div>
                 </div>
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">calendar_month</span></div>
@@ -799,9 +933,11 @@ pagina_selecionada = st.sidebar.radio(
         "Gestão de Docas", 
         "Gerador de Equipes (I.A.)",
         "Registro Absenteísmo",
+        "Registro de Alinhamento", 
         "Produtividade (NS & Equipe)", 
         "Financeiro (Diretoria)",
-        "Absenteísmo (RH)"
+        "Absenteísmo (RH)",
+        "Controle de Cobrança"
     ]
 )
 
@@ -1258,18 +1394,18 @@ elif pagina_selecionada == "Gestão de Docas":
                         carregar_log_produtividade.clear()
                         st.rerun()
 
-    @st.dialog("Gerenciar Doca")
+    @st.dialog("Gerenciar Operador da Doca")
     def popup_gerenciar_operador(doca_origem, equipe_atual, info_docas_global):
         doca_origem_str = str(doca_origem).strip()
         st.markdown(f"<div style='color:#64748B; margin-bottom:15px;'>Modificando a equipe da <b>Doca {doca_origem_str}</b></div>", unsafe_allow_html=True)
-        operador_sel = st.selectbox("Selecione o Auxiliar que deseja movimentar:", equipe_atual)
+        operador_sel = st.selectbox("Selecione o Operador que deseja movimentar:", equipe_atual)
         acao = st.radio("O que deseja fazer com este colaborador?", ["Retirar da Operação (Ficará Livre)", "Transferir para outra Doca ativa"])
         docas_ativas = [d for d in info_docas_global.keys() if str(d).strip() != doca_origem_str]
         doca_destino = None
         if "Transferir" in acao:
             if not docas_ativas: st.warning("Não há outras docas em processo no momento para transferir.")
             else:
-                opcoes_formatadas = [f"Doca {d} (Conferente: {info_docas_global[d]['conferente']})" for d in docas_ativas]
+                opcoes_formatadas = [f"Doca {d} (Líder: {info_docas_global[d]['conferente']})" for d in docas_ativas]
                 doca_destino = st.selectbox("Transferir para qual Doca?", opcoes_formatadas).split(" ")[1] 
                 
         st.markdown('<br>', unsafe_allow_html=True)
@@ -1443,7 +1579,7 @@ elif pagina_selecionada == "Gestão de Docas":
                             if st.button("Retomar Operação", key=f"btn_ret_{row['DOCA']}_{index}", use_container_width=True, type="primary"):
                                 popup_start_carga(row['DOCA'], row['AGENDA'], row['CONFERENTE'], is_retomada=True, equipe_padrao=pessoas_antes_pausa)
                         else:
-                            st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Auxiliares Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background-color: #F1F5F9; padding: 12px; border-radius: 8px; border: 1px dashed #CBD5E1; margin-bottom: 15px;'><div style='font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase;'>Operadores Alocados:</div>{html_equipe_cards}</div>", unsafe_allow_html=True)
                             
                             c_eq, c_btn1, c_btn2 = st.columns([4, 3, 3])
                             with c_btn1:
@@ -1460,19 +1596,8 @@ elif pagina_selecionada == "Gestão de Docas":
                                     tempo_str = f"{horas:02d}:{mins:02d}"
                                     
                                     cat_final = str(info['LINHA']).upper()
-                                    
-                                    # ==========================================
-                                    # MÁGICA: CAÇADOR UNIVERSAL E RATEIO DE PEÇAS
-                                    # ==========================================
-                                    # Tenta puxar de todas as abas (Recebimento, Expedição, etc)
-                                    pecas_bruto = float(info.get('PEÇAS_VAL', info.get('PEÇAS_BRUTO', info.get('VAL_PECAS', info.get('PEÇAS', 0)))))
-                                    m3_bruto = float(info.get('M3_VAL', info.get('M3_BRUTO', info.get('VAL_M3', info.get('M³', 0)))))
-                                    
-                                    # Divide o total pelo tamanho da equipe (Se for 0, divide por 1 para não dar erro)
-                                    qtd_pessoas = len(auxiliares_lista) if len(auxiliares_lista) > 0 else 1
-                                    pecas_final = pecas_bruto / qtd_pessoas
-                                    m3_final = m3_bruto / qtd_pessoas
-                                    # ==========================================
+                                    pecas_final = info.get('PEÇAS_BRUTO', 0)
+                                    m3_final = info.get('M3_BRUTO', 0)
                                     
                                     linhas_conclusao_multiplas = []
                                     for pessoa in auxiliares_lista:
@@ -1494,7 +1619,6 @@ elif pagina_selecionada == "Gestão de Docas":
                                                 st.success("Doca finalizada com sucesso!")
                                                 carregar_log_produtividade.clear()
                                                 st.rerun()
-
                             
                             st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True) 
                             
@@ -2561,22 +2685,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                                 
                             with col_g2:
-                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 5px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
+                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
                                 
-                                # NOVO: Filtro interativo para separar a visão por Operação
-                                filtro_atraso = st.radio(
-                                    "Visão por Área:", 
-                                    ["Geral", "RECEBIMENTO", "EXPEDIÇÃO"], 
-                                    horizontal=True,
-                                    label_visibility="collapsed" # Esconde o label para ficar mais limpo
-                                )
-                                
-                                # Filtra apenas as agendas que NÃO estão no prazo
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
-                                
-                                # NOVO: Aplica o filtro de operação selecionado no Radio
-                                if filtro_atraso != "Geral":
-                                    df_atrasos = df_atrasos[df_atrasos['OPERACAO_CALC'] == filtro_atraso]
                                 
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
@@ -2588,13 +2699,13 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                         values='Qtd', 
                                         names='Motivo', 
                                         hole=0.45, # Rosca mais gordinha
-                                        color_discrete_sequence=px.colors.sequential.Reds_r # Mantém tons de vermelho (Atenção)
+                                        color_discrete_sequence=px.colors.sequential.Reds_r
                                     )
                                     
                                     # Posicionamento inteligente da legenda (Lateral) e Margens (Respiro)
                                     fig2.update_layout(
-                                        margin=dict(l=10, r=10, t=10, b=20), # Margem superior reduzida para caber o filtro
-                                        height=320, # Altura levemente ajustada para harmonizar com o radio button
+                                        margin=dict(l=10, r=10, t=20, b=20), 
+                                        height=350, 
                                         showlegend=True, 
                                         legend=dict(
                                             orientation="v", # Vertical
@@ -2619,10 +2730,9 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     
                                     st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
                                 else: 
-                                    st.info(f"Nenhum atraso registrado na visão '{filtro_atraso}' para este período.")
+                                    st.info("Nenhum atraso registrado no período.")
                                     
                                 st.markdown('</div>', unsafe_allow_html=True)
-
 
                              # =========================================================
                             # NOVA TABELA: HISTÓRICO DE NÍVEL DE SERVIÇO E DESVIOS
@@ -3423,7 +3533,689 @@ elif pagina_selecionada == "Gerador de Equipes (I.A.)":
                             desenhar_card_equipe(f"CARREG. {i+1}", eq, "#F59E0B", "upload")
                         idx_col += 1
 
+# ==========================================================
+# MÓDULO 8: CONTROLE DE COBRANÇA (Precificação e WhatsApp)
+# ==========================================================
+elif pagina_selecionada == "Controle de Cobrança":
+    import urllib.parse
+    
+    render_hero(
+        'Controle de Cobrança Carga e Descarga',
+        'Precifique as cargas em tempo real, defina o valor do frete e envie cobranças via WhatsApp.',
+        'MAGALOG • Automação Financeira'
+    )
+    
+    # --- FUNÇÕES LOCAIS EXCLUSIVAS DESTE MÓDULO ---
+    @st.cache_data(ttl=60)
+    def carregar_tabela_frete_local():
+        for tentativa in range(3):
+            try:
+                client = conectar_google()
+                sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+                dados = sh.worksheet("FRETE").get_all_values()
+                if len(dados) > 1:
+                    df = pd.DataFrame(dados[1:], columns=dados[0])
+                    df.columns = df.columns.astype(str).str.strip().str.upper()
+                    return df
+                return pd.DataFrame()
+            except:
+                if tentativa == 2: return pd.DataFrame()
+                time.sleep(1.5)
 
+    def gravar_precificacao(agenda_wms, concater, valor):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            ws = sh.worksheet("Painel de Controle")
+            
+            cell = ws.find(str(agenda_wms).strip())
+            if cell:
+                header = [str(h).strip().upper() for h in ws.row_values(1)]
+                
+                # Acha ou cria a coluna CAT / TP CARRO
+                if 'CAT / TP CARRO' in header: col_cat = header.index('CAT / TP CARRO') + 1
+                else: col_cat = len(header) + 1; ws.update_cell(1, col_cat, 'CAT / TP CARRO')
+                
+                # Acha ou cria a coluna VALOR
+                if 'VALOR' in header: col_val = header.index('VALOR') + 1
+                else: col_val = len(header) + 1; ws.update_cell(1, col_val, 'VALOR')
+                
+                # Atualiza as duas células
+                ws.update_cell(cell.row, col_cat, concater)
+                ws.update_cell(cell.row, col_val, valor)
+                return True
+            return False
+        except Exception as e:
+            st.error(f"Erro ao salvar precificação: {e}")
+            return False
 
+    # NOVA FUNÇÃO: Grava direto no Checkbox "PAG" da planilha
+    def atualizar_status_pagamento(agenda, novo_status):
+        try:
+            client = conectar_google()
+            sh = client.open_by_key("1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U")
+            ws = sh.worksheet("Painel de Controle")
+            
+            cell = ws.find(str(agenda).strip())
+            if cell:
+                header = [str(h).strip().upper() for h in ws.row_values(1)]
+                
+                # Procura a coluna PAG (Onde fica o Checkbox)
+                if 'PAG' in header: col_idx = header.index('PAG') + 1
+                else: col_idx = len(header) + 1; ws.update_cell(1, col_idx, 'PAG')
+                
+                # Traduz "Pago" para TRUE (marca o checkbox) e "Pendente" para FALSE
+                val_to_write = "TRUE" if novo_status == "Pago" else "FALSE"
+                ws.update_cell(cell.row, col_idx, val_to_write)
+                return True
+            return False
+        except Exception as e:
+            st.error(f"Erro ao atualizar pagamento: {e}")
+            return False
 
+    df_painel, df_lg = carregar_dados_cobranca()
+    df_frete = carregar_tabela_frete_local()
+    
+    # Lista do Dropdown de Frete
+    lista_fretes = ["SELECIONE O TIPO DE CARGA E VEÍCULO..."]
+    if not df_frete.empty and 'CONCATER' in df_frete.columns and 'VALOR' in df_frete.columns:
+        for _, r in df_frete.iterrows():
+            conc = str(r['CONCATER']).strip()
+            val = str(r['VALOR']).strip()
+            if conc: lista_fretes.append(f"{conc} ➖ R$ {val}")
+    
+    if df_painel.empty:
+        st.warning("Não foi possível carregar a base do Painel de Controle.")
+    else:
+        # ==========================================
+        # 1. TRATAMENTO E O "PROCV" EM PYTHON (BLINDADO)
+        # ==========================================
+        df_painel.columns = df_painel.columns.astype(str).str.strip().str.upper()
+        df_painel = df_painel.loc[:, ~df_painel.columns.duplicated()].copy() 
+        
+        col_ag_wms = next((c for c in df_painel.columns if 'AGENDA' in c), 'AGENDA WMS')
+        col_dt_ag = next((c for c in df_painel.columns if 'DATA AGENDA' in c), 'DATA AGENDA')
+        
+        # Mapeando direto do Painel
+        col_forn_seller = next((c for c in df_painel.columns if 'FORNECEDOR' in c or 'SELLER' in c), 'FORNECEDOR/SELLER')
+        col_mot_painel = next((c for c in df_painel.columns if 'MOTOR' in c), 'NOME DO MOTORISTA')
+        col_placa_painel = next((c for c in df_painel.columns if 'PLACA' in c), 'PLACA')
+        col_com_painel = next((c for c in df_painel.columns if 'COMANDA' in c), 'COMANDA')
+        
+        col_carro_painel = next((c for c in df_painel.columns if c in ['CARRO', 'VEICULO', 'VEÍCULO']), None)
+        if not col_carro_painel: col_carro_painel = next((c for c in df_painel.columns if 'CARRO' in c or 'VEIC' in c), 'CARRO')
+        
+        df_painel['AGENDA_CLEAN'] = df_painel[col_ag_wms].astype(str).str.strip().str.upper()
+        df_painel['DATA_DT'] = pd.to_datetime(df_painel[col_dt_ag].astype(str).str.split(' ').str[0], format='%d/%m/%Y', errors='coerce').dt.date
+        
+        if not df_lg.empty:
+            df_lg.columns = df_lg.columns.astype(str).str.strip().str.upper()
+            df_lg = df_lg.loc[:, ~df_lg.columns.duplicated()].copy()
+            
+            col_ag_lg = next((c for c in df_lg.columns if 'AGENDA' in c), 'CODAGENDA')
+            col_tel   = next((c for c in df_lg.columns if 'TELEFONE' in c or 'NUMERO' in c or 'CELULAR' in c or 'FONE' in c), 'NÚMEROTELEFONE')
+            
+            for coluna_necessaria in [col_ag_lg, col_tel]:
+                if coluna_necessaria not in df_lg.columns: df_lg[coluna_necessaria] = ""
+                
+            df_lg['AGENDA_CLEAN'] = df_lg[col_ag_lg].astype(str).str.strip().str.upper()
+            df_lg = df_lg.drop_duplicates(subset=['AGENDA_CLEAN'], keep='last')
+            
+            df_lg_renamed = df_lg.rename(columns={col_tel: 'NÚMEROTELEFONE'})
+            if 'NÚMEROTELEFONE' not in df_lg_renamed.columns: df_lg_renamed['NÚMEROTELEFONE'] = ""
+            
+            df_merged = pd.merge(df_painel, df_lg_renamed[['AGENDA_CLEAN', 'NÚMEROTELEFONE']], on='AGENDA_CLEAN', how='left')
+            df_merged = df_merged.loc[:, ~df_merged.columns.duplicated()].copy()
+        else:
+            df_merged = df_painel.copy()
+            df_merged['NÚMEROTELEFONE'] = ""
+            
+        # --- BLOCO DE INTELIGÊNCIA: FILTROS LOGÍSTICOS E FINANCEIROS ---
+        
+        # 1. Filtra as Filiais e CDs Magalu (Agora pega em cheio os CDs numerados)
+        def eh_interno(forn):
+            if pd.isna(forn): return False
+            f = str(forn).upper().strip()
+            if f.startswith(('MAGAZINE', 'FILIAL', 'CD')): return True
+            return False
+        
+        if col_forn_seller in df_merged.columns:
+            mask_interno = df_merged[col_forn_seller].apply(eh_interno)
+            df_merged = df_merged[~mask_interno]
+
+        # 2. Filtra os Status Ausente e Comercial
+        col_status_log = next((c for c in df_merged.columns if c == 'STATUS' or c == 'STATUS AGENDA'), None)
+        if col_status_log:
+            mask_ausente_comercial = df_merged[col_status_log].astype(str).str.upper().isin(['AUSENTE', 'COMERCIAL', 'DIVER. COMERCIAL', 'DIVER COMERCIAL'])
+            df_merged = df_merged[~mask_ausente_comercial]
+
+        # 3. Mapeia a coluna "PAG" (Checkbox) para o status financeiro do sistema
+        col_pag_checkbox = next((c for c in df_merged.columns if c == 'PAG' or c == 'PAG.'), None)
+        if col_pag_checkbox:
+            def mapear_pagamento(val):
+                v = str(val).strip().upper()
+                if v in ['TRUE', '1', 'SIM', 'VERDADEIRO']: return 'Pago'
+                return 'Pendente'
+            df_merged['STATUS PAGAMENTO'] = df_merged[col_pag_checkbox].apply(mapear_pagamento)
+        else:
+            df_merged['STATUS PAGAMENTO'] = 'Pendente'
+
+        # ==========================================
+        # 2. FILTROS E KPIS (BLINDADO)
+
+        st.markdown("### <span class='icon-MAGALOG'>filter_alt</span> Filtros da Operação", unsafe_allow_html=True)
+        
+        c_f1, c_f2, c_f3 = st.columns(3)
+        with c_f1: data_cobranca = st.date_input("Data da Agenda", value=pd.Timestamp.now().date())
+        with c_f2: status_filtro = st.selectbox("Status Pagamento", ["Todos", "Pendente", "Cobrado", "Pago"])
+        with c_f3: busca_placa = st.text_input("Buscar Placa ou Agenda", placeholder="Ex: ABC1234")
+            
+        df_filtrado = df_merged[df_merged['DATA_DT'] == data_cobranca].copy()
+        
+        if status_filtro != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['STATUS PAGAMENTO'].str.title() == status_filtro]
+            
+        if busca_placa:
+            busca_placa = busca_placa.upper().strip()
+            df_filtrado = df_filtrado[
+                df_filtrado[col_placa_painel].str.upper().str.contains(busca_placa, na=False) |
+                df_filtrado['AGENDA_CLEAN'].str.contains(busca_placa, na=False)
+            ]
+            
+        col_valor = next((c for c in df_filtrado.columns if 'VALOR' in str(c).upper() or 'R$' in str(c).upper()), None)
+        if not col_valor:
+            df_filtrado['VALOR'] = "0,00"
+            col_valor = 'VALOR'
+            
+        total_agendas = len(df_filtrado)
+        
+        def limpar_moeda_kpi(v):
+            s = str(v).upper().replace('R$', '').replace(' ', '').strip()
+            if s in ['', 'NAN', 'NONE', 'NULL', 'NAOÉCOBRADO', 'NÃO É COBRADO']: return 0.0
+            if '.' in s and ',' in s: s = s.replace('.', '').replace(',', '.')
+            elif ',' in s: s = s.replace(',', '.')
+            try: return float(s)
+            except: return 0.0
+            
+        df_filtrado['VALOR_NUM'] = df_filtrado[col_valor].apply(limpar_moeda_kpi)
+        
+        # BLINDAGEM MÁXIMA (ANTI-CRASH): Tenta forçar a matemática. Se o Pandas bugar com dia vazio, vira 0.0 automático.
+        try:
+            total_cobrado = float(df_filtrado[df_filtrado['STATUS PAGAMENTO'].str.upper() == 'PAGO']['VALOR_NUM'].sum())
+        except:
+            total_cobrado = 0.0
+            
+        try:
+            aguardando = float(df_filtrado[df_filtrado['STATUS PAGAMENTO'].str.upper().isin(['PENDENTE', 'COBRADO'])]['VALOR_NUM'].sum())
+        except:
+            aguardando = 0.0
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        def render_kpi_cobranca(titulo, valor, subtitulo, cor):
+            st.markdown(f'''
+            <div class="kpi-card" style="border-top: 4px solid {cor}; height: 130px; padding: 10px; text-align: center; background: #FFFFFF; border-radius: 16px; border: 1px solid #F1F5F9; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); margin-bottom: 12px;">
+                <div style="color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">{titulo}</div>
+                <div style="font-size:28px; font-weight: 900; letter-spacing: -0.5px; color:{cor};">{valor}</div>
+                <div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{subtitulo}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        k1, k2, k3 = st.columns(3)
+        with k1: render_kpi_cobranca("Total Agendas (Filtro)", total_agendas, "Cargas no pátio", "#0086FF")
+        with k2: render_kpi_cobranca("Total Pago (R$)", f"R$ {total_cobrado:,.2f}".replace(',','X').replace('.',',').replace('X','.'), "Confirmados na conta", "#10B981")
+        with k3: render_kpi_cobranca("Aguardando Pagto (R$)", f"R$ {aguardando:,.2f}".replace(',','X').replace('.',',').replace('X','.'), "Pendentes e Cobrados", "#F59E0B")
+        
+        # ==========================================
+        # 3. RENDERIZAÇÃO EM LINHAS (PRECIFICAÇÃO INTERATIVA)
+        # ==========================================
+        st.markdown("<hr style='margin: 15px 0; border-top: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #0F172A; margin-bottom: 20px;'><span class='icon-MAGALOG' style='color:#0086FF;'>request_quote</span> Fila de Precificação e Cobrança</h4>", unsafe_allow_html=True)
+        
+        st.markdown("""
+<style>
+
+/* BASE */
+div[class*="st-key-btn_zap_"] a,
+div[class*="st-key-btn_pago_"] button,
+div[class*="st-key-btn_voltar_"] button,
+div[class*="st-key-btn_recibo_"] button {
+    height: 42px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+    letter-spacing: .2px !important;
+    transition: all .18s ease-in-out !important;
+}
+
+/* ZAP AZUL NEON */
+div[class*="st-key-btn_zap_"] a {
+    background: linear-gradient(135deg, #0086FF, #00C2FF) !important;
+    box-shadow: 0 0 14px rgba(0, 134, 255, .55) !important;
+}
+
+/* PAGO VERDE NEON */
+div[class*="st-key-btn_pago_"] button {
+    background: linear-gradient(135deg, #00E676, #00B86B) !important;
+    box-shadow: 0 0 14px rgba(0, 230, 118, .55) !important;
+}
+
+/* VOLTAR VERMELHO NEON */
+div[class*="st-key-btn_voltar_"] button {
+    background: linear-gradient(135deg, #FF1744, #D50000) !important;
+    box-shadow: 0 0 14px rgba(255, 23, 68, .55) !important;
+}
+
+/* RECIBO ROXO NEON */
+div[class*="st-key-btn_recibo_"] button {
+    background: linear-gradient(135deg, #A855F7, #7C3AED) !important;
+    box-shadow: 0 0 14px rgba(168, 85, 247, .55) !important;
+}
+
+/* HOVER */
+div[class*="st-key-btn_zap_"] a:hover,
+div[class*="st-key-btn_pago_"] button:hover,
+div[class*="st-key-btn_voltar_"] button:hover,
+div[class*="st-key-btn_recibo_"] button:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    filter: brightness(1.12) !important;
+}
+
+/* MATA O EXPAND_MORE DO POPOVER */
+div[class*="st-key-btn_recibo_"] button [data-testid="stIconMaterial"],
+div[class*="st-key-btn_recibo_"] button span:has(+ span),
+div[class*="st-key-btn_recibo_"] button svg {
+    display: none !important;
+}
+
+div[class*="st-key-btn_recibo_"] button::after {
+    content: "" !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+        
+        if df_filtrado.empty:
+            st.info("Nenhuma agenda localizada para a data/filtros selecionados.")
+        else:
+            # RESETAMOS O INDEX PARA GARANTIR QUE CADA 'IDX' SEJA ÚNICO NA TELA
+            for idx, row in df_filtrado.reset_index(drop=True).iterrows():
+                
+                # ==========================================
+                # EXTRAÇÃO DE DADOS (BLINDADA CONTRA N/D)
+                # ==========================================
+                def extrair_dado(coluna, padrao="N/D"):
+                    val = row.get(coluna, padrao)
+                    if isinstance(val, pd.Series): return str(val.iloc[0]).strip()
+                    if pd.isna(val) or str(val).strip() == '': return padrao
+                    return str(val).strip()
+
+                agenda = extrair_dado('AGENDA_CLEAN')
+                status_pag = str(row.get('STATUS PAGAMENTO', 'Pendente')).title()
+                
+                # Agora PUXA TUDO da base do próprio Painel
+                motorista = extrair_dado(col_mot_painel, 'Não Informado').title()
+                
+                # CORREÇÃO DEFINITIVA DO FORNECEDOR E DA CATEGORIA
+                forn_seller = row.get('FORNECEDOR/SELLER', row.get('FORNECEDOR', 'N/D'))
+                if pd.isna(forn_seller) or str(forn_seller).strip() == '': forn_seller = 'N/D'
+                forn_seller = str(forn_seller).upper().strip()
+                
+                col_categoria_real = next((c for c in df_painel.columns if 'CATEGORIA' in c), 'CATEGORIA')
+                categoria_carga = extrair_dado(col_categoria_real, 'N/D').upper()
+                
+                placa = extrair_dado(col_placa_painel, 'S/ Placa').upper()
+                comanda = extrair_dado(col_com_painel, 'N/D') 
+
+                
+                # Puxa veículo e corta se vier "CATEGORIA-VEICULO"
+                tipo_veic_lg = extrair_dado(col_carro_painel, 'Não Informado').upper()
+                if '-' in tipo_veic_lg: tipo_veic_lg = tipo_veic_lg.split('-', 1)[1].strip()
+                
+                # Apenas TELEFONE puxado da Base LG
+                telefone = extrair_dado('NÚMEROTELEFONE', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+                if telefone and not telefone.startswith('55') and telefone != 'N/D': telefone = '55' + telefone
+                
+                # Tratamento do Valor e Categoria Atribuída
+                valor_atual_banco = extrair_dado(col_valor, '')
+                col_cat_tp = next((c for c in df_painel.columns if 'CAT / TP CARRO' in c.upper()), None)
+                cat_atual_banco = extrair_dado(col_cat_tp, '') if col_cat_tp else ""
+                
+                ja_precificado = (valor_atual_banco not in ['', '0', '0,00', '0.00', 'R$ 0,00', 'N/D'])
+                
+                # Inteligência de Cores
+                if status_pag == 'Pago':
+                    cor_borda = "#10B981"; bg_badge = "#D1FAE5"; cor_badge = "#065F46"
+                elif status_pag == 'Cobrado':
+                    cor_borda = "#3B82F6"; bg_badge = "#DBEAFE"; cor_badge = "#1E40AF"
+                else:
+                    cor_borda = "#F59E0B"; bg_badge = "#FEF3C7"; cor_badge = "#92400E"
+                    
+                with st.container():
+                    st.markdown(f"""
+                    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 5px solid {cor_borda}; border-radius: 12px; padding: 20px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <div style="background: #F1F5F9; padding: 6px 12px; border-radius: 8px; font-weight: 900; color: #0F172A; font-size: 16px;">{placa}</div>
+                                <div style="font-size: 13px; color: #475569;"><b>Agenda:</b> {agenda} &nbsp;|&nbsp; <b>Comanda:</b> {comanda}</div>
+                            </div>
+                            <div style="background: {bg_badge}; color: {cor_badge}; font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 999px; text-transform: uppercase;">{status_pag}</div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: #475569; margin-bottom: 15px;">
+                            <div><span class='icon-MAGALOG' style='font-size:16px; vertical-align:middle; margin-right:4px;'>storefront</span><b>Fornecedor:</b> {forn_seller}</div>
+                            <div><span class='icon-MAGALOG' style='font-size:16px; vertical-align:middle; margin-right:4px;'>person</span><b>Motorista:</b> {motorista} ({tipo_veic_lg})</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    c_in1, c_in2, c_in3 = st.columns([4, 2, 2])
+                    
+                    # Bloco 1: Seleção do Valor (Dropdown)
+                    with c_in1:
+                        if ja_precificado:
+                            st.markdown(f"<div style='margin-top:2px; font-size:12px; color:#64748B; font-weight:700;'>Categoria Atribuída:</div><div style='font-size:14px; color:#0F172A; font-weight:800; background:#F8FAFC; padding:8px; border-radius:6px; border:1px solid #E2E8F0;'>{cat_atual_banco}</div>", unsafe_allow_html=True)
+                        else:
+                            selecao_frete = st.selectbox("Definir Categoria / Tipo de Veículo", options=lista_fretes, key=f"sel_{agenda}_{idx}", label_visibility="collapsed")
+                    
+                    # Bloco 2: Botão de Salvar ou Exibição do Valor
+                    with c_in2:
+                        if ja_precificado:
+                            v_formatado = valor_atual_banco if valor_atual_banco.startswith('R$') else f"R$ {valor_atual_banco}"
+                            st.markdown(f"<div style='margin-top:2px; font-size:12px; color:#64748B; font-weight:700;'>Valor do Frete:</div><div style='font-size:16px; color:#0086FF; font-weight:900; background:#E6F2FF; padding:7px; border-radius:6px; text-align:center; border:1px dashed #BAE6FD;'>{v_formatado}</div>", unsafe_allow_html=True)
+                        else:
+                            if st.button("💾 Gravar Valor", key=f"btn_save_{agenda}_{idx}", type="primary", use_container_width=True):
+                                if selecao_frete == "SELECIONE O TIPO DE CARGA E VEÍCULO...":
+                                    st.error("Selecione uma opção válida.")
+                                else:
+                                    with st.spinner("Gravando..."):
+                                        partes = selecao_frete.split(' ➖ R$ ')
+                                        concater_salvar = partes[0].strip()
+                                        valor_salvar = partes[1].strip()
+                                        
+                                        if gravar_precificacao(agenda, concater_salvar, valor_salvar):
+                                            st.success("Salvo!")
+                                            carregar_dados_cobranca.clear()
+                                            st.rerun()
+                    
+                                        # Bloco 3: Ações (WhatsApp, Pagamento e Recibo)
+                    with c_in3:
+                        if ja_precificado:
+                            texto_wa = f"""Olá Sr(a) {motorista}
+
+✓ A etapa de entrada das notas fiscais está tudo OK, agora só aguardar a descarga. Para adiantarmos o processo, esses são os dados para pagamento da descarga:
+
+✦ DADOS DO VEÍCULO
+• Comanda: {comanda}
+• Placa: {placa}
+• Agenda: {agenda}
+• Tipo Veiculo: {cat_atual_banco.split('-')[1] if '-' in cat_atual_banco else cat_atual_banco}
+
+✦ DADOS DE PAGAMENTO
+• Valor: R$ {valor_atual_banco.replace('R$', '').strip()}
+• CHAVE PIX: 24.230.747.0001.02
+• Magalu Log Serviços Logísticos LTDA
+
+➥ Aceitamos apenas cartão de débito e pix.
+𝑝𝑎𝑟𝑎 𝑝𝑎𝑔𝑎𝑚𝑒𝑛𝑡𝑜𝑠 𝑛𝑜 𝑑𝑒𝑏𝑖𝑡𝑜 𝑠𝑒 𝑑𝑖𝑟𝑒𝑐𝑖𝑜𝑛𝑎𝑟 𝑎 𝑠𝑎𝑙𝑎 𝑑𝑜 𝑟𝑒𝑐𝑒𝑏𝑖𝑚𝑒𝑛𝑡𝑜 𝑎𝑠𝑠𝑖𝑚 𝑞𝑢𝑒 𝑒𝑛𝑐𝑜𝑠𝑡𝑎𝑟 𝑛𝑎 𝑑𝑜𝑐𝑎.
+➥ Envio do comprovante de pagamento em PDF.
+
+Agradeço e sigo à disposição! ♡"""
+                            link_wa = f"https://wa.me/{telefone}?text={urllib.parse.quote(texto_wa)}" if telefone and telefone != 'N/D' else "#"
+                            
+                            c_btn1, c_btn2, c_btn3 = st.columns([1, 1, 1.2])
+                            
+                            with c_btn1:
+                                with st.container(key=f"btn_zap_{agenda}_{idx}"):
+                                    if telefone and telefone != 'N/D':
+                                        st.link_button("Cobrar", link_wa, use_container_width=True)
+                                    else:
+                                        st.button("Sem Tel", key=f"d_zap_{agenda}_{idx}", disabled=True, use_container_width=True)
+                            
+                            with c_btn2:
+                                if status_pag != 'Pago':
+                                    with st.container(key=f"btn_pago_{agenda}_{idx}"):
+                                        if st.button("✔ Pago", key=f"pg_{agenda}_{idx}", use_container_width=True):
+                                            if atualizar_status_pagamento(agenda, "Pago"):
+                                                carregar_dados_cobranca.clear()
+                                                st.rerun()
+                                else:
+                                    with st.container(key=f"btn_voltar_{agenda}_{idx}"):
+                                        if st.button("↩ Voltar", key=f"est_{agenda}_{idx}", use_container_width=True):
+                                            if atualizar_status_pagamento(agenda, "Pendente"):
+                                                carregar_dados_cobranca.clear()
+                                                st.rerun()
+                            
+                            with c_btn3:
+                                with st.container(key=f"btn_recibo_{agenda}_{idx}"):
+                                    # A MÁGICA: Tudo que está "recuado" abaixo dessa linha fica escondido no Pop-up!
+                                    with st.popover("Recibo", use_container_width=True):
+                                        st.markdown("<div style='font-size:13px; font-weight:800; color:#0F172A; margin-bottom:10px;'>Emitir Recibo A4</div>", unsafe_allow_html=True)
+                                        
+                                        # Puxa o CNPJ da aba Transportadoras
+                                        df_transp = carregar_transportadoras_local()
+                                        col_cnpj = next((c for c in df_transp.columns if 'CNPJ' in c), None)
+                                        col_razao = next((c for c in df_transp.columns if 'RAZ' in c or 'NOME' in c), None)
+                                        
+                                        opcoes_transp = ["Selecione a Transportadora..."]
+                                        if not df_transp.empty and col_razao:
+                                            opcoes_transp += sorted(df_transp[col_razao].dropna().astype(str).unique().tolist())
+                                        
+                                        transp_sel = st.selectbox("Transportadora", options=opcoes_transp, key=f"transp_{agenda}_{idx}")
+                                        placa_carreta = st.text_input("Placa da Carreta", key=f"plcar_{agenda}_{idx}")
+                                        forma_pag = st.selectbox("Forma de Pagamento", ["Pix", "Débito", "Carta de Crédito"], key=f"fpag_{agenda}_{idx}")
+                                        nf_recibo = st.text_input("Nº Nota Fiscal (Opcional)", key=f"nf_{agenda}_{idx}")
+                                        assistente_adm = st.text_input("Assistente Adm", key=f"adm_{agenda}_{idx}")
+                                        obs_recibo = st.text_area("Observação (Opcional)", key=f"obs_{agenda}_{idx}", height=68)
+                                        
+                                        # Busca o CNPJ instantaneamente
+                                        cnpj_sel = ""
+                                        if transp_sel != "Selecione a Transportadora..." and col_cnpj and col_razao:
+                                            df_match = df_transp[df_transp[col_razao].astype(str) == transp_sel]
+                                            if not df_match.empty: cnpj_sel = str(df_match[col_cnpj].iloc[0])
+                                            
+                                        # GERAÇÃO DO HTML FORMATO A4 COM SEU DESIGN CUSTOMIZADO E FONTES EXATAS
+                                        data_hoje = data_cobranca.strftime('%d/%m/%Y')
+                                        veic_cortado = cat_atual_banco.split('-')[1] if '-' in cat_atual_banco else cat_atual_banco
+                                        v_limpo = valor_atual_banco.replace('R$', '').strip()
+                                        
+                                        html_recibo = f"""
+                                        <html>
+                                        <head>
+                                        <title>Recibo de Descarga - OS {agenda}</title>
+                                        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+                                        <style>
+                                            @page {{
+                                                size: A4 portrait;
+                                                margin: 0;
+                                            }}
+                                            body {{
+                                                margin: 0;
+                                                padding: 0;
+                                                background: #fff;
+                                                color: #000;
+                                            }}
+                                            .pagina {{
+                                                width: 794px;
+                                                height: 1123px;
+                                                box-sizing: border-box;
+                                                padding: 58px 76px 55px 76px;
+                                                position: relative;
+                                            }}
+                                            .topo {{
+                                                display: flex;
+                                                justify-content: space-between;
+                                                align-items: flex-start;
+                                                width: 100%;
+                                            }}
+                                            .logo-box {{
+                                                width: 220px;
+                                            }}
+                                            .logo {{
+                                                width: 220px;
+                                                height: auto;
+                                                display: block;
+                                            }}
+                                            .ordem {{
+                                                text-align: center;
+                                                margin-top: 2px;
+                                                margin-right: 5px;
+                                                font-family: 'Montserrat', sans-serif;
+                                            }}
+                                            .ordem-titulo {{
+                                                font-size: 25px;
+                                                font-weight: 700;
+                                                line-height: 25px;
+                                            }}
+                                            .ordem-numero {{
+                                                font-size: 17px;
+                                                font-weight: 700;
+                                                margin-top: 4px;
+                                            }}
+                                            .titulo {{
+                                                text-align: center;
+                                                font-family: 'Montserrat', sans-serif;
+                                                font-size: 24px;
+                                                font-weight: 700;
+                                                margin-top: 83px;
+                                                margin-bottom: 34px;
+                                            }}
+                                            .conteudo {{
+                                                margin-left: 13px;
+                                                line-height: 19px;
+                                            }}
+                                            .linha {{
+                                                margin: 0;
+                                                padding: 0;
+                                                margin-bottom: 2px;
+                                            }}
+                                            b {{
+                                                font-family: 'Montserrat', sans-serif;
+                                                font-size: 12px;
+                                            }}
+                                            span.valor {{
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 10px;
+                                            }}
+                                            .espaco {{
+                                                height: 25px;
+                                            }}
+                                            .rodape {{
+                                                text-align: center;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 13px;
+                                                line-height: 15px;
+                                                margin-top: 31px;
+                                                font-weight: 400;
+                                            }}
+                                            .declaracao {{
+                                                text-align: center;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 14px;
+                                                line-height: 16px;
+                                                margin-top: 29px;
+                                                font-weight: 700;
+                                            }}
+                                            .assinatura {{
+                                                margin-top: 57px;
+                                                margin-left: 0px;
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                font-size: 14px;
+                                            }}
+                                            @media print {{
+                                                body {{
+                                                    -webkit-print-color-adjust: exact;
+                                                    print-color-adjust: exact;
+                                                }}
+                                            }}
+                                        </style>
+                                        </head>
+                                        <body onload="setTimeout(function(){{ window.print(); }}, 700);">
+                                        <div class="pagina">
+                                            <div class="topo">
+                                                <div class="logo-box">
+                                                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTU68FtjfYluSz6o-6YMgxPz9Ixvht3lK-9Fw&s" class="logo" alt="Logo Magalu">
+                                                </div>
+                                                <div class="ordem">
+                                                    <div class="ordem-titulo">Ordem De Serviço</div>
+                                                    <div class="ordem-numero">N°&nbsp;&nbsp;{agenda}</div>
+                                                </div>
+                                            </div>
+                                            <div class="titulo">Recibo de Descarga</div>
+                                            <div class="conteudo">
+                                                <p class="linha"><b>- Transportador:</b> <span class="valor">{transp_sel if transp_sel != "Selecione a Transportadora..." else "-"}</span></p>
+                                                <p class="linha"><b>- CNPJ:</b> <span class="valor">{cnpj_sel if cnpj_sel else "-"}</span></p>
+                                                <p class="linha"><b>- Motorista:</b> <span class="valor">{motorista}</span></p>
+                                                <p class="linha"><b>- Telefone:</b> <span class="valor">{telefone}</span></p>
+                                                <p class="linha"><b>- Tipo de veículo:</b> <span class="valor">{tipo_veic_lg}</span></p>
+                                                <p class="linha"><b>- Categoria:</b> <span class="valor">{categoria_carga}</span></p>
+                                                <p class="linha"><b>- Placa do carro:</b> <span class="valor">{placa}</span></p>
+                                                <p class="linha"><b>- Placa da carreta:</b> <span class="valor">{placa_carreta if placa_carreta else "-"}</span></p>
+                                                <div class="espaco"></div>
+                                                <p class="linha"><b>- Data da Descarga:</b> <span class="valor">{data_hoje}</span></p>
+                                                <p class="linha"><b>- Serviço prestado:</b> <span class="valor">Descarga.</span></p>
+                                                <p class="linha"><b>- Local de descarga:</b> <span class="valor">Magazine Luiza - CD 2900</span></p>
+                                                <div class="espaco"></div>
+                                                <p class="linha"><b>- N° de agenda:</b> <span class="valor">{agenda}</span></p>
+                                                <p class="linha"><b>- Valor da Descarga conforme tabela:</b> <span class="valor">R$ {v_limpo}</span></p>
+                                                <p class="linha"><b>- Valor Pago:</b> <span class="valor">R$ {v_limpo}</span></p>
+                                                <p class="linha"><b>- Motivo do pagamento divergente:</b> <span class="valor">-</span></p>
+                                                <p class="linha"><b>- Forma de pagamento:</b> <span class="valor">{forma_pag}</span></p>
+                                                <p class="linha"><b>- Assistente administrativo:</b> <span class="valor">{assistente_adm.upper() if assistente_adm else "-"}</span></p>
+                                                <p class="linha"><b>- Obs:</b> <span class="valor">{obs_recibo if obs_recibo else "-"}</span></p>
+                                                <p class="linha"><b>- N° Nota Fiscal:</b> <span class="valor">{nf_recibo if nf_recibo else "-"}</span></p>
+                                                <p class="linha"><b>N° Comanda:</b> <span class="valor">{comanda}</span></p>
+                                            </div>
+                                            <div class="rodape">
+                                                O CNPJ disposto neste recibo será o mesmo em que será emitida a nota fiscal.<br>
+                                                Em caso de divergência, entrar em contato com o assistente do CD imediatamente.
+                                            </div>
+                                            <div class="declaracao">
+                                                Declaro que os serviços prestados acima foram efetuados pela<br>
+                                                empresa Magazine Luiza conforme acordado em tabela.
+                                            </div>
+                                            <div class="assinatura">
+                                                ASS: _____________________________________________________________________
+                                            </div>
+                                        </div>
+                                        </body>
+                                        </html>
+                                        """
+                                                                                                        
+                                        
+                                        # BOTÃO NATIVO DO STREAMLIT PARA TRAVAR A EXECUÇÃO
+                                        if st.button("🖨️ GERAR, SALVAR E IMPRIMIR", key=f"print_drive_{agenda}_{idx}", type="primary", use_container_width=True):
+                                            
+                                            # 1. Primeiro: Executa o Python (Salva no Drive)
+                                            with st.spinner("Gerando recibo e arquivando no Google Drive..."):
+                                                id_arquivo = salvar_recibo_no_drive(html_recibo, agenda)
+                                                if id_arquivo:
+                                                    st.toast("✅ Recibo arquivado no Drive com sucesso!", icon="☁️")
+                                                else:
+                                                    st.toast("⚠️ O recibo não foi salvo no Drive.", icon="⚠️")
+                                            
+                                            # 2. Segundo: Injeta o JavaScript que "pula" na tela para imprimir
+                                            import streamlit.components.v1 as components
+                                            html_recibo_safe = html_recibo.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('</script>', '<\\/script>')
+                                            
+                                            js_print_automatico = f"""
+                                            <script>
+                                            // Executa imediatamente assim que o Python termina de carregar esta parte
+                                            var htmlContent = `{html_recibo_safe}`;
+                                            var printWin = window.open('', '_blank');
+                                            if(printWin) {{
+                                                printWin.document.open();
+                                                printWin.document.write(htmlContent);
+                                                printWin.document.close();
+                                            }} else {{
+                                                alert('Seu navegador bloqueou o pop-up! Por favor, vá na barra de endereços, libere os pop-ups (ícone vermelho) e clique no botão novamente.');
+                                            }}
+                                            </script>
+                                            """
+                                            # Roda o script de forma invisível (height=0)
+                                            components.html(js_print_automatico, height=0)
+                                            
+                        else:
+                            st.markdown("<div style='color:#94A3B8; font-size:12px; text-align:center; padding-top:10px;'>Defina o valor para liberar ações.</div>", unsafe_allow_html=True)
+                            
+                    st.markdown("</div>", unsafe_allow_html=True)
 
