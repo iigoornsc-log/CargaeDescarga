@@ -62,7 +62,7 @@ st.markdown("""
     /* 2. Botão de ABRIR (Fica flutuando no fundo claro do app quando fechada) */
     [data-testid="collapsedControl"] * {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-        color: #0086FF !important; /* Setinha Azul do Tema MAGALOG */
+        color: #1900ff !important; /* Setinha Azul do Tema MAGALOG */
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
