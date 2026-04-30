@@ -51,60 +51,62 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- SOLUÇÃO INFALÍVEL: BOTÕES DA SIDEBAR --- */
+/* --- EXTIRPANDO O ÍCONE DA SIDEBAR PELA RAIZ --- */
     
-    /* 1. Mata o texto maldito (tamanho zero e invisível) sem matar a área de clique */
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapseButton"] {
-        color: transparent !important; 
-        font-size: 0px !important; 
-        background: transparent !important;
-    }
-
-    /* 2. Mata qualquer ícone de imagem (SVG) nativo que tente aparecer */
-    [data-testid="collapsedControl"] svg,
-    [data-testid="stSidebarCollapseButton"] svg {
+    /* 1. Esconde ABSOLUTAMENTE TUDO (spans, textos vazados, svgs) dentro dos botões */
+    [data-testid="collapsedControl"] > *,
+    [data-testid="stSidebarCollapseButton"] > * {
         display: none !important;
     }
 
-    /* 3. Cria o botão "ABRIR MENU" visível, com tamanho e 100% clicável */
-    [data-testid="collapsedControl"]::after {
+    /* 2. Zera o fundo do botão nativo para ele virar uma tela em branco clicável */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"] {
+        background: transparent !important;
+        border: none !important;
+        color: transparent !important;
+        width: auto !important;
+        height: auto !important;
+        padding: 0 !important;
+    }
+
+    /* 3. Recria o "ABRIR MENU" limpo e azul (quando a aba tá fechada) */
+    [data-testid="collapsedControl"]::before {
         content: "☰ MENU";
+        font-family: 'Inter', sans-serif !important;
         font-size: 13px !important;
+        font-weight: 800 !important;
         color: #FFFFFF !important;
         background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
         padding: 10px 16px !important;
         border-radius: 8px !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 800 !important;
         box-shadow: 0 4px 12px rgba(0, 134, 255, 0.3) !important;
         display: inline-block !important;
-        pointer-events: auto !important;
+        cursor: pointer !important;
         letter-spacing: 0.5px !important;
     }
 
-    [data-testid="collapsedControl"]:hover::after {
+    [data-testid="collapsedControl"]:hover::before {
         transform: scale(1.05);
         transition: transform 0.2s ease;
     }
 
-    /* 4. Cria o botão "FECHAR" dentro da sidebar, visível e clicável */
-    [data-testid="stSidebarCollapseButton"]::after {
+    /* 4. Recria o "FECHAR ✕" sutil (quando a aba tá aberta) */
+    [data-testid="stSidebarCollapseButton"]::before {
         content: "FECHAR ✕";
-        font-size: 11px !important;
-        color: #94A3B8 !important;
         font-family: 'Inter', sans-serif !important;
+        font-size: 11px !important;
         font-weight: 800 !important;
+        color: #94A3B8 !important;
         display: inline-block !important;
-        pointer-events: auto !important;
         padding: 8px !important;
+        cursor: pointer !important;
         letter-spacing: 1px !important;
     }
     
-    [data-testid="stSidebarCollapseButton"]:hover::after {
+    [data-testid="stSidebarCollapseButton"]:hover::before {
         color: #FFFFFF !important;
     }
-
     /* 2. ANIMAÇÃO RGB LUIZALABS */
     @keyframes Glow {
         0% { background-position: 0% 50%; }
