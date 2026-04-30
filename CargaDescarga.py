@@ -52,6 +52,38 @@ st.markdown("""
     }
 
 /* ================================================= */
+/* CORREÇÃO GLOBAL DE ÍCONES MATERIAL (FINAL) */
+/* ================================================= */
+
+/* Corrige QUALQUER ícone Material no sistema */
+span[class*="material"],
+i[class*="material"] {
+    font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+    font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24 !important;
+    font-size: 24px !important;
+    line-height: 1 !important;
+}
+
+/* Corrige botão de abrir sidebar (FORA da sidebar) */
+[data-testid="collapsedControl"] {
+    font-family: 'Material Symbols Rounded' !important;
+}
+
+/* Remove texto feio tipo "double_arrow_right" */
+[data-testid="collapsedControl"] span {
+    font-family: 'Material Symbols Rounded' !important;
+    font-size: 24px !important;
+}
+
+/* Caso Streamlit use svg */
+[data-testid="collapsedControl"] svg {
+    width: 24px !important;
+    height: 24px !important;
+    fill: currentColor !important;
+}
+
+
+/* ================================================= */
 /* CORREÇÃO REAL DOS ÍCONES DA SIDEBAR - STREAMLIT */
 /* ================================================= */
 
