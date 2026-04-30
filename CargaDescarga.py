@@ -969,7 +969,7 @@ def render_home_dashboard():
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">monitoring</span></div>
                     <div class="MAGALOG-feature-title">Produtividade</div>
-                    <div class="MAGALOG-feature-text">KPIs mais corporativos para tempo médio, NSe leitura de performance por agenda e colaborador.</div>
+                    <div class="MAGALOG-feature-text">KPIs mais corporativos para tempo médio, SLA e leitura de performance por agenda e colaborador.</div>
                 </div>
                 <div class="MAGALOG-feature-card">
                     <div class="MAGALOG-feature-icon"><span class="icon-MAGALOG">attach_money</span></div>
@@ -2636,7 +2636,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                         qtd_fora_prazo = total_cargas - qtd_no_prazo
                         
                         sla_percent = (qtd_no_prazo / total_cargas * 100) if total_cargas > 0 else 0
-                        cor_NS= "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
+                        cor_sla = "#00C853" if sla_percent >= 90 else "#F59E0B" if sla_percent >= 75 else "#DC2626"
                         
                         # CORREÇÃO: Busca a coluna oficial de AUXILIARES da planilha para evitar rateio falso
                         col_qtd_aux = next((c for c in df_fin.columns if 'AUXILIAR' in c), None)
@@ -2677,7 +2677,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                                 
                             with c2: 
-                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_ns}; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">NSGeral</div><div class="kpi-value" style="font-size:28px; color:{cor_ns};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{qtd_no_prazo} no prazo<br>{qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla}; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">SLA Geral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{qtd_no_prazo} no prazo<br>{qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
                                 
                             with c3: 
                                 st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
