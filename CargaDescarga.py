@@ -51,7 +51,87 @@ st.markdown("""
         font-size: inherit;
     }
 
+/* ================================================= */
+/* RESET DEFINITIVO - SIDEBAR VOLTA COM ÍCONE NORMAL */
+/* ================================================= */
 
+/* NÃO esconder nada dentro dos botões */
+[data-testid="collapsedControl"] *,
+[data-testid="stSidebarCollapseButton"] * {
+    display: initial !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* remove textos criados artificialmente */
+[data-testid="collapsedControl"]::before,
+[data-testid="stSidebarCollapseButton"]::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* restaura botão de abrir */
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    padding: 8px !important;
+    margin: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    color: #0F172A !important;
+    overflow: visible !important;
+    z-index: 999999 !important;
+}
+
+/* restaura botão de fechar */
+[data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    padding: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    overflow: visible !important;
+    z-index: 999999 !important;
+}
+
+/* corrige SVG dos botões */
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 24px !important;
+    height: 24px !important;
+    color: inherit !important;
+    fill: currentColor !important;
+}
+
+/* impede que texto vazado tipo keyboard_double apareça */
+[data-testid="collapsedControl"] span,
+[data-testid="stSidebarCollapseButton"] span {
+    font-size: 0 !important;
+}
+
+/* mantém ícones Material funcionando no resto do app */
+.icon-MAGALOG {
+    font-family: 'Material Symbols Rounded' !important;
+    font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+    font-size: inherit;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+}
 
     
     /* 2. ANIMAÇÃO RGB LUIZALABS */
