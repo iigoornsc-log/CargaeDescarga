@@ -51,12 +51,7 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* ================================ */
-/* SIDEBAR MENU / FECHAR DEFINITIVO */
-/* ================================ */
-
-/* botão ABRIR quando sidebar está fechada */
-button[data-testid="collapsedControl"] {
+[data-testid="collapsedControl"] {
     position: fixed !important;
     top: 18px !important;
     left: 18px !important;
@@ -64,70 +59,26 @@ button[data-testid="collapsedControl"] {
     height: 46px !important;
     min-width: 120px !important;
     min-height: 46px !important;
-    padding: 0 !important;
-    border: none !important;
-    border-radius: 12px !important;
     background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
-    box-shadow: 0 8px 22px rgba(0,134,255,0.35) !important;
+    border-radius: 12px !important;
     z-index: 999999 !important;
-    overflow: visible !important;
 }
 
-/* esconde ícone/texto nativo do abrir */
-button[data-testid="collapsedControl"] * {
+[data-testid="collapsedControl"] * {
     display: none !important;
 }
 
-/* recria texto MENU */
-button[data-testid="collapsedControl"]::before {
+[data-testid="collapsedControl"]::before {
     content: "☰ MENU" !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 120px !important;
     height: 46px !important;
+    color: white !important;
     font-family: 'Inter', sans-serif !important;
     font-size: 13px !important;
     font-weight: 900 !important;
-    color: #FFFFFF !important;
-    letter-spacing: .6px !important;
-    white-space: nowrap !important;
-}
-
-/* botão FECHAR quando sidebar está aberta */
-button[data-testid="stSidebarCollapseButton"] {
-    width: 110px !important;
-    height: 38px !important;
-    min-width: 110px !important;
-    min-height: 38px !important;
-    padding: 0 !important;
-    margin: 10px 10px 0 auto !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255,255,255,0.16) !important;
-    background: rgba(255,255,255,0.08) !important;
-    z-index: 999999 !important;
-    overflow: visible !important;
-}
-
-/* esconde ícone/texto nativo do fechar */
-button[data-testid="stSidebarCollapseButton"] * {
-    display: none !important;
-}
-
-/* recria texto FECHAR */
-button[data-testid="stSidebarCollapseButton"]::before {
-    content: "FECHAR ✕" !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 110px !important;
-    height: 38px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 11px !important;
-    font-weight: 900 !important;
-    color: #FFFFFF !important;
-    letter-spacing: .8px !important;
-    white-space: nowrap !important;
 }
 
     
