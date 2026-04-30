@@ -51,18 +51,14 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- CORREÇÃO DAS SETINHAS NATIVAS DO STREAMLIT --- */
-    /* Força a fonte de ícones para não vazar o texto "double_arrow_right" */
-    [data-testid="stSidebarCollapseButton"] *, 
+/* --- CORREÇÃO DA SETA DA SIDEBAR --- */
+    /* Devolvemos o controle da fonte para o Streamlit e forçamos apenas a cor branca */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapseButton"] *,
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] svg,
     [data-testid="collapsedControl"] * {
-        font-family: 'Material Symbols Rounded', 'Material Icons' !important; 
-        color: #FFFFFF !important;
-    }
-
-    /* Proteção ABSOLUTA para as DUAS setinhas (abrir e fechar a sidebar) */
-    [data-testid="stSidebarCollapseButton"] *, 
-    [data-testid="collapsedControl"] * {
-        font-family: inherit !important; 
         color: #FFFFFF !important;
         fill: #FFFFFF !important;
     }
