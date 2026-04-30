@@ -51,18 +51,18 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- CORREÇÃO DEFINITIVA DAS SETAS DA SIDEBAR --- */
-    /* Protege contra a regra global da fonte 'Inter' e força os ícones nativos a voltarem a ser desenhos brancos */
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarCollapseButton"] *,
-    [data-testid="collapsedControl"],
-    [data-testid="collapsedControl"] *,
-    .stIconMaterial,
-    .material-symbols-rounded,
-    .material-icons {
+/* --- RESGATE DEFINITIVO DAS SETINHAS (ABRIR E FECHAR) --- */
+    
+    /* 1. Botão de FECHAR (Fica dentro da sidebar escura) */
+    [data-testid="stSidebarCollapseButton"] * {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-        color: #FFFFFF !important;
-        fill: #FFFFFF !important;
+        color: #FFFFFF !important; /* Setinha Branca */
+    }
+
+    /* 2. Botão de ABRIR (Fica flutuando no fundo claro do app quando fechada) */
+    [data-testid="collapsedControl"] * {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+        color: #0086FF !important; /* Setinha Azul do Tema MAGALOG */
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
