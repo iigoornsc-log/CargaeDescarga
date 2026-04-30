@@ -51,47 +51,54 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- SOLUÇÃO DEFINITIVA: SUBSTITUIR ÍCONE QUEBRADO POR TEXTO --- */
+/* --- SOLUÇÃO INFALÍVEL: BOTÕES DA SIDEBAR --- */
     
-    /* 1. Esconde tudo que o Streamlit tenta renderizar nativamente nesses botões */
-    [data-testid="collapsedControl"] > div,
+    /* 1. Mata o texto maldito (tamanho zero e invisível) sem matar a área de clique */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"] {
+        color: transparent !important; 
+        font-size: 0px !important; 
+        background: transparent !important;
+    }
+
+    /* 2. Mata qualquer ícone de imagem (SVG) nativo que tente aparecer */
     [data-testid="collapsedControl"] svg,
-    [data-testid="collapsedControl"] span,
-    [data-testid="stSidebarCollapseButton"] > div,
-    [data-testid="stSidebarCollapseButton"] svg,
-    [data-testid="stSidebarCollapseButton"] span {
+    [data-testid="stSidebarCollapseButton"] svg {
         display: none !important;
     }
 
-    /* 2. Cria o botão "ABRIR MENU" azul e moderno flutuando na tela */
+    /* 3. Cria o botão "ABRIR MENU" visível, com tamanho e 100% clicável */
     [data-testid="collapsedControl"]::after {
-        content: "☰ ABRIR MENU";
-        font-family: 'Inter', sans-serif !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
+        content: "☰ MENU";
+        font-size: 13px !important;
         color: #FFFFFF !important;
         background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
-        padding: 8px 14px !important;
+        padding: 10px 16px !important;
         border-radius: 8px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 800 !important;
         box-shadow: 0 4px 12px rgba(0, 134, 255, 0.3) !important;
+        display: inline-block !important;
+        pointer-events: auto !important;
         letter-spacing: 0.5px !important;
-        white-space: nowrap !important;
-        transition: transform 0.2s ease;
     }
 
     [data-testid="collapsedControl"]:hover::after {
         transform: scale(1.05);
+        transition: transform 0.2s ease;
     }
 
-    /* 3. Cria o botão de "FECHAR" dentro da sidebar */
+    /* 4. Cria o botão "FECHAR" dentro da sidebar, visível e clicável */
     [data-testid="stSidebarCollapseButton"]::after {
         content: "FECHAR ✕";
-        font-family: 'Inter', sans-serif !important;
         font-size: 11px !important;
-        font-weight: 800 !important;
         color: #94A3B8 !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 800 !important;
+        display: inline-block !important;
+        pointer-events: auto !important;
+        padding: 8px !important;
         letter-spacing: 1px !important;
-        transition: color 0.2s ease;
     }
     
     [data-testid="stSidebarCollapseButton"]:hover::after {
