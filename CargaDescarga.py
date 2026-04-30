@@ -51,14 +51,16 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- CORREÇÃO DA SETA DA SIDEBAR --- */
-    /* Devolvemos o controle da fonte para o Streamlit e forçamos apenas a cor branca */
+/* --- CORREÇÃO DEFINITIVA DAS SETAS DA SIDEBAR --- */
+    /* Protege contra a regra global da fonte 'Inter' e força os ícones nativos a voltarem a ser desenhos brancos */
     [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarCollapseButton"] svg,
     [data-testid="stSidebarCollapseButton"] *,
     [data-testid="collapsedControl"],
-    [data-testid="collapsedControl"] svg,
-    [data-testid="collapsedControl"] * {
+    [data-testid="collapsedControl"] *,
+    .stIconMaterial,
+    .material-symbols-rounded,
+    .material-icons {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
         color: #FFFFFF !important;
         fill: #FFFFFF !important;
     }
