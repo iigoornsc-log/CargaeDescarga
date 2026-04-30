@@ -52,8 +52,14 @@ st.markdown("""
     }
 
     /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
-    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
+    .material-icons, .material-symbols-rounded {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    }
+    
+    /* Proteção para o botão de fechar a sidebar não vazar o texto e ficar com a cor certa */
+    [data-testid="stSidebarCollapseButton"] * {
+        font-family: inherit !important;
+        color: #FFFFFF !important;
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
