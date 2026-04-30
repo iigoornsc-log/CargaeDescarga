@@ -51,62 +51,84 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- EXTIRPANDO O ÍCONE DA SIDEBAR PELA RAIZ --- */
+/* ========================================= */
+/* BOTÃO MENU / FECHAR SIDEBAR - CORRIGIDO */
+/* ========================================= */
+
+/* NÃO mata o botão, só esconde o conteúdo interno */
+[data-testid="collapsedControl"] svg,
+[data-testid="collapsedControl"] span,
+[data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stSidebarCollapseButton"] span {
+    display: none !important;
+}
+
+/* mantém área clicável real */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+/* botão quando sidebar está FECHADA */
+[data-testid="collapsedControl"] {
+    width: 96px !important;
+    height: 42px !important;
+    margin: 12px !important;
+    padding: 0 !important;
+}
+
+/* texto MENU */
+[data-testid="collapsedControl"]::before {
+    content: "☰ MENU" !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: #FFFFFF !important;
+    background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
+    padding: 10px 16px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0,134,255,0.35) !important;
+    letter-spacing: .5px !important;
+    white-space: nowrap !important;
+}
+
+/* botão quando sidebar está ABERTA */
+[data-testid="stSidebarCollapseButton"] {
+    width: 88px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    margin: 8px 8px 0 auto !important;
+}
+
+/* texto FECHAR */
+[data-testid="stSidebarCollapseButton"]::before {
+    content: "FECHAR ✕" !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: #94A3B8 !important;
+    letter-spacing: 1px !important;
+    white-space: nowrap !important;
+}
+
+/* hover */
+[data-testid="collapsedControl"]:hover::before {
+    transform: scale(1.05) !important;
+    transition: transform .2s ease !important;
+}
+
+[data-testid="stSidebarCollapseButton"]:hover::before {
+    color: #FFFFFF !important;
+}
+
     
-    /* 1. Esconde ABSOLUTAMENTE TUDO (spans, textos vazados, svgs) dentro dos botões */
-    [data-testid="collapsedControl"] > *,
-    [data-testid="stSidebarCollapseButton"] > * {
-        display: none !important;
-    }
-
-    /* 2. Zera o fundo do botão nativo para ele virar uma tela em branco clicável */
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapseButton"] {
-        background: transparent !important;
-        border: none !important;
-        color: transparent !important;
-        width: auto !important;
-        height: auto !important;
-        padding: 0 !important;
-    }
-
-    /* 3. Recria o "ABRIR MENU" limpo e azul (quando a aba tá fechada) */
-    [data-testid="collapsedControl"]::before {
-        content: "☰ MENU";
-        font-family: 'Inter', sans-serif !important;
-        font-size: 13px !important;
-        font-weight: 800 !important;
-        color: #FFFFFF !important;
-        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
-        padding: 10px 16px !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 12px rgba(0, 134, 255, 0.3) !important;
-        display: inline-block !important;
-        cursor: pointer !important;
-        letter-spacing: 0.5px !important;
-    }
-
-    [data-testid="collapsedControl"]:hover::before {
-        transform: scale(1.05);
-        transition: transform 0.2s ease;
-    }
-
-    /* 4. Recria o "FECHAR ✕" sutil (quando a aba tá aberta) */
-    [data-testid="stSidebarCollapseButton"]::before {
-        content: "FECHAR ✕";
-        font-family: 'Inter', sans-serif !important;
-        font-size: 11px !important;
-        font-weight: 800 !important;
-        color: #94A3B8 !important;
-        display: inline-block !important;
-        padding: 8px !important;
-        cursor: pointer !important;
-        letter-spacing: 1px !important;
-    }
-    
-    [data-testid="stSidebarCollapseButton"]:hover::before {
-        color: #FFFFFF !important;
-    }
     /* 2. ANIMAÇÃO RGB LUIZALABS */
     @keyframes Glow {
         0% { background-position: 0% 50%; }
