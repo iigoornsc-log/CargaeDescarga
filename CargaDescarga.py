@@ -2677,7 +2677,7 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                 st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #0086FF; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Total Agendas</div><div class="kpi-value" style="font-size:28px;">{total_cargas}</div></div>', unsafe_allow_html=True)
                                 
                             with c2: 
-                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_sla}; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">NSGeral</div><div class="kpi-value" style="font-size:28px; color:{cor_sla};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{qtd_no_prazo} no prazo<br>{qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
+                                st.markdown(f'<div class="kpi-card" style="border-top: 4px solid {cor_ns}; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">NSGeral</div><div class="kpi-value" style="font-size:28px; color:{cor_ns};">{sla_percent:.1f}%</div><div style="font-size:11px; color:#64748B; font-weight:700; margin-top:4px; line-height:1.4;">{qtd_no_prazo} no prazo<br>{qtd_fora_prazo} atrasos</div></div>', unsafe_allow_html=True)
                                 
                             with c3: 
                                 st.markdown(f'<div class="kpi-card" style="border-top: 4px solid #8B5CF6; height: 130px; padding: 10px; text-align: center;"><div class="kpi-title">Média m³/H</div><div class="kpi-value" style="font-size:28px;">{media_m3_hora:.2f}</div></div>', unsafe_allow_html=True)
