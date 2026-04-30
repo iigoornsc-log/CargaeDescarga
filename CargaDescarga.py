@@ -2801,9 +2801,22 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
 
                                 
                             with col_g2:
-                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 15px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
+                                st.markdown("""<div class="MAGALOG-card"><h4 style="color: #334155; margin-bottom: 5px;"><span class="icon-MAGALOG">pie_chart</span> Motivos de Atraso</h4>""", unsafe_allow_html=True)
                                 
+                                # NOVO: Filtro interativo para separar a visão por Operação
+                                filtro_atraso = st.radio(
+                                    "Visão por Área:", 
+                                    ["Geral", "RECEBIMENTO", "EXPEDIÇÃO"], 
+                                    horizontal=True,
+                                    label_visibility="collapsed" # Esconde o label para ficar mais limpo
+                                )
+                                
+                                # Filtra apenas as agendas que NÃO estão no prazo
                                 df_atrasos = df_agendas_unicas[~df_agendas_unicas[col_just].astype(str).str.upper().str.contains("NO PRAZO", na=False)]
+                                
+                                # NOVO: Aplica o filtro de operação selecionado no Radio
+                                if filtro_atraso != "Geral":
+                                    df_atrasos = df_atrasos[df_atrasos['OPERACAO_CALC'] == filtro_atraso]
                                 
                                 if not df_atrasos.empty:
                                     df_motivos = df_atrasos[col_just].value_counts().reset_index()
@@ -2815,13 +2828,13 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                         values='Qtd', 
                                         names='Motivo', 
                                         hole=0.45, # Rosca mais gordinha
-                                        color_discrete_sequence=px.colors.sequential.Reds_r
+                                        color_discrete_sequence=px.colors.sequential.Reds_r # Mantém tons de vermelho (Atenção)
                                     )
                                     
                                     # Posicionamento inteligente da legenda (Lateral) e Margens (Respiro)
                                     fig2.update_layout(
-                                        margin=dict(l=10, r=10, t=20, b=20), 
-                                        height=350, 
+                                        margin=dict(l=10, r=10, t=10, b=20), # Margem superior reduzida para caber o filtro
+                                        height=320, # Altura levemente ajustada para harmonizar com o radio button
                                         showlegend=True, 
                                         legend=dict(
                                             orientation="v", # Vertical
@@ -2846,9 +2859,10 @@ elif pagina_selecionada == "Produtividade (NS & Equipe)":
                                     
                                     st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
                                 else: 
-                                    st.info("Nenhum atraso registrado no período.")
+                                    st.info(f"Nenhum atraso registrado na visão '{filtro_atraso}' para este período.")
                                     
                                 st.markdown('</div>', unsafe_allow_html=True)
+
 
                              # =========================================================
                             # NOVA TABELA: HISTÓRICO DE NÍVEL DE SERVIÇO E DESVIOS
