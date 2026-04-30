@@ -51,14 +51,12 @@ st.markdown("""
         font-size: inherit;
     }
 
-    /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
-    .material-icons, .material-symbols-rounded {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-    }
-    
-    /* --- CORREÇÃO DOS ÍCONES DA SIDEBAR E SISTEMA --- */
-    .material-icons, .material-symbols-rounded {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+/* --- CORREÇÃO DAS SETINHAS NATIVAS DO STREAMLIT --- */
+    /* Força a fonte de ícones para não vazar o texto "double_arrow_right" */
+    [data-testid="stSidebarCollapseButton"] *, 
+    [data-testid="collapsedControl"] * {
+        font-family: 'Material Symbols Rounded', 'Material Icons' !important; 
+        color: #FFFFFF !important;
     }
 
     /* Proteção ABSOLUTA para as DUAS setinhas (abrir e fechar a sidebar) */
