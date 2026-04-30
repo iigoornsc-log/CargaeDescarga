@@ -51,31 +51,51 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- PROTEÇÃO NUCLEAR: SETAS DA SIDEBAR --- */
-    /* Reseta qualquer herança maldita (espaçamento, maiúsculas, negrito) que quebra a ligatura do ícone */
-    [data-testid="collapsedControl"] *,
-    [data-testid="stSidebarCollapseButton"] * {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-        font-weight: 400 !important;
-        font-style: normal !important;
-        text-transform: none !important; /* Se herdar maiúscula, o ícone quebra */
-        letter-spacing: normal !important; /* Se herdar espaçamento, o ícone quebra */
-        word-wrap: normal !important;
-        white-space: nowrap !important;
-        direction: ltr !important;
-        font-variant-ligatures: normal !important; /* Força o texto a virar desenho */
+/* --- SOLUÇÃO DEFINITIVA: SUBSTITUIR ÍCONE QUEBRADO POR TEXTO --- */
+    
+    /* 1. Esconde tudo que o Streamlit tenta renderizar nativamente nesses botões */
+    [data-testid="collapsedControl"] > div,
+    [data-testid="collapsedControl"] svg,
+    [data-testid="collapsedControl"] span,
+    [data-testid="stSidebarCollapseButton"] > div,
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapseButton"] span {
+        display: none !important;
     }
 
-    /* 1. Botão FECHAR (Fundo escuro da aba = Setinha Branca) */
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarCollapseButton"] * {
+    /* 2. Cria o botão "ABRIR MENU" azul e moderno flutuando na tela */
+    [data-testid="collapsedControl"]::after {
+        content: "☰ ABRIR MENU";
+        font-family: 'Inter', sans-serif !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
         color: #FFFFFF !important;
+        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%) !important;
+        padding: 8px 14px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 134, 255, 0.3) !important;
+        letter-spacing: 0.5px !important;
+        white-space: nowrap !important;
+        transition: transform 0.2s ease;
     }
 
-    /* 2. Botão ABRIR (Fundo claro do App = Setinha Azul do Tema) */
-    [data-testid="collapsedControl"],
-    [data-testid="collapsedControl"] * {
-        color: #0086FF !important;
+    [data-testid="collapsedControl"]:hover::after {
+        transform: scale(1.05);
+    }
+
+    /* 3. Cria o botão de "FECHAR" dentro da sidebar */
+    [data-testid="stSidebarCollapseButton"]::after {
+        content: "FECHAR ✕";
+        font-family: 'Inter', sans-serif !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        color: #94A3B8 !important;
+        letter-spacing: 1px !important;
+        transition: color 0.2s ease;
+    }
+    
+    [data-testid="stSidebarCollapseButton"]:hover::after {
+        color: #FFFFFF !important;
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
