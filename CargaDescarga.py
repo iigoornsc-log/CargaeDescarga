@@ -51,18 +51,31 @@ st.markdown("""
         font-size: inherit;
     }
 
-/* --- RESGATE DEFINITIVO DAS SETINHAS (ABRIR E FECHAR) --- */
-    
-    /* 1. Botão de FECHAR (Fica dentro da sidebar escura) */
+/* --- PROTEÇÃO NUCLEAR: SETAS DA SIDEBAR --- */
+    /* Reseta qualquer herança maldita (espaçamento, maiúsculas, negrito) que quebra a ligatura do ícone */
+    [data-testid="collapsedControl"] *,
     [data-testid="stSidebarCollapseButton"] * {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-        color: #FFFFFF !important; /* Setinha Branca */
+        font-weight: 400 !important;
+        font-style: normal !important;
+        text-transform: none !important; /* Se herdar maiúscula, o ícone quebra */
+        letter-spacing: normal !important; /* Se herdar espaçamento, o ícone quebra */
+        word-wrap: normal !important;
+        white-space: nowrap !important;
+        direction: ltr !important;
+        font-variant-ligatures: normal !important; /* Força o texto a virar desenho */
     }
 
-    /* 2. Botão de ABRIR (Fica flutuando no fundo claro do app quando fechada) */
+    /* 1. Botão FECHAR (Fundo escuro da aba = Setinha Branca) */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapseButton"] * {
+        color: #FFFFFF !important;
+    }
+
+    /* 2. Botão ABRIR (Fundo claro do App = Setinha Azul do Tema) */
+    [data-testid="collapsedControl"],
     [data-testid="collapsedControl"] * {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
-        color: #1900ff !important; /* Setinha Azul do Tema MAGALOG */
+        color: #0086FF !important;
     }
 
     /* 2. ANIMAÇÃO RGB LUIZALABS */
